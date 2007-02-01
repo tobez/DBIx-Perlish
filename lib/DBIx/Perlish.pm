@@ -11,12 +11,90 @@ require Exporter;
 use base 'Exporter';
 
 $VERSION = '0.03';
-@EXPORT = qw(db_fetch);
+@EXPORT = qw(db_fetch db_update db_delete db_insert);
 
 use PadWalker;
 use DBIx::Perlish::Parse;
 
+sub db_fetch  (&) { DBIx::Perlish->fetch ($_[0]) }
+sub db_update (&) { DBIx::Perlish->update($_[0]) }
+sub db_delete (&) { DBIx::Perlish->delete($_[0]) }
+sub db_insert (&) { DBIx::Perlish->insert($_[0]) }
+
 my $default_object;
+
+sub get_dbh
+{
+	my ($lvl) = @_;
+	my $dbh;
+	if ($default_object) {
+		$dbh = $default_object->{dbh};
+	}
+	unless ($dbh) {
+		my $vars = PadWalker::peek_my($lvl);
+		$dbh = ${$vars->{'$dbh'}} if $vars->{'$dbh'};
+	}
+	unless ($dbh) {
+		my $vars = PadWalker::peek_our($lvl);
+		$dbh = ${$vars->{'$dbh'}} if $vars->{'$dbh'};
+	}
+	die "Database handle not set.  Maybe you forgot to call DBIx::Perlish::init()?\n" unless $dbh;
+	unless (ref $dbh && ref $dbh eq "DBI::db") { # XXX maybe relax for other things?
+		die "Invalid database handle found.\n";
+	}
+	$dbh;
+}
+
+sub init
+{
+	my %p;
+	if (@_ == 1) {
+		$p{dbh} = $_[0];
+	} else {
+		%p = @_;
+	}
+	die "The \"dbh\" parameter is required\n" unless $p{dbh};
+	unless (ref $p{dbh} && ref $p{dbh} eq "DBI::db") { # XXX maybe relax for other things?
+		die "Invalid database handle supplied in the \"dbh\" parameter.\n";
+	}
+	$default_object = DBIx::Perlish->new(dbh => $p{dbh});
+}
+
+sub new
+{
+	my ($class, %p) = @_;
+	unless (ref $p{dbh} && ref $p{dbh} eq "DBI::db") { # XXX maybe relax for other things?
+		die "Invalid database handle supplied in the \"dbh\" parameter.\n";
+	}
+	bless { dbh => $p{dbh} }, $class;
+}
+
+sub fetch
+{
+	my ($moi, $sub) = @_;
+	my $me = ref $moi ? $moi : {};
+
+	my ($sql, $values) = gen_sql($sub, "select");
+	$SQL = $sql; @BIND_VALUES = @$values;
+	my $dbh = $me->{dbh} || get_dbh(2);
+	my $r = $dbh->selectall_arrayref($sql, {Slice=>{}}, @$values) || [];
+	return wantarray ? @$r : $r->[0];
+}
+
+sub update
+{
+	die "update is not yet implemented\n";
+}
+
+sub delete
+{
+	die "delete is not yet implemented\n";
+}
+
+sub insert
+{
+	die "insert is not yet implemented\n";
+}
 
 sub gen_sql
 {
@@ -48,34 +126,6 @@ sub gen_sql
 	return ($sql, $v);
 }
 
-sub get_dbh
-{
-	my ($lvl) = @_;
-	my $dbh;
-	if ($default_object) {
-		$dbh = $default_object->{dbh};
-	}
-	unless ($dbh) {
-		my $vars = PadWalker::peek_my($lvl);
-		$dbh = ${$vars->{'$dbh'}} if $vars->{'$dbh'};
-	}
-	unless ($dbh) {
-		my $vars = PadWalker::peek_our($lvl);
-		$dbh = ${$vars->{'$dbh'}} if $vars->{'$dbh'};
-	}
-	die "Database handle not set.  Maybe you forgot to call DBIx::Perlish::init()?\n" unless $dbh;
-	$dbh;
-}
-
-sub db_fetch (&)
-{
-	my $sub = shift;
-	my ($sql, $values) = gen_sql($sub, "select");
-	$SQL = $sql; @BIND_VALUES = @$values;
-	my $dbh = get_dbh(2);
-	my $r = $dbh->selectall_arrayref($sql, {Slice=>{}}, @$values) || [];
-	return wantarray ? @$r : $r->[0];
-}
 
 1;
 __END__
@@ -205,7 +255,10 @@ code.
 
 =head3 init()
 
-Accepts named parameters.
+The C<init()> sub initializes procedural interface
+of the module.
+
+It accepts named parameters.
 Currently C<init()> understands only one such parameter,
 C<dbh>, which must be a valid DBI database handler.
 This parameter is required.
@@ -231,11 +284,23 @@ Examples:
 
 =head3 db_fetch {}
 
+Please see L</Query sub syntax> below for details of the
+syntax allowed in query subs.
+
 =head3 db_update {}
+
+Please see L</Query sub syntax> below for details of the
+syntax allowed in query subs.
 
 =head3 db_delete {}
 
+Please see L</Query sub syntax> below for details of the
+syntax allowed in query subs.
+
 =head3 db_insert {}
+
+Please see L</Query sub syntax> below for details of the
+syntax allowed in query subs.
 
 =head3 $SQL and @BIND_VALUES
 
@@ -425,6 +490,8 @@ This module would not have been written
 if not for the inspiration provided
 by Erlang's approach to Mnesia database queries syntax;
 I'd like to thank XXX for this.
+
+This work is in part sponsored by Telia Denmark.
 
 
 =head1 LICENSE AND COPYRIGHT

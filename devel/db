@@ -1,13 +1,17 @@
 #! /usr/bin/perl
+use warnings;
+use strict;
 use lib qw(lib);
 use DBI;
 use DBIx::Perlish;
 
-my $dbh = DBI->connect("dbi:SQLite:");
-$dbh->do("create table tbl (id int, name text)");
-$dbh->do("insert into tbl values (1,'hello')");
-$dbh->do("insert into tbl values (2,'fefe')");
-$dbh->do("insert into tbl values (42,'LIFF')");
+my $bh = DBI->connect("dbi:SQLite:");
+$bh->do("create table tbl (id int, name text)");
+$bh->do("insert into tbl values (1,'hello')");
+$bh->do("insert into tbl values (2,'fefe')");
+$bh->do("insert into tbl values (42,'LIFF')");
+
+DBIx::Perlish::init(dbh => $bh);
 
 my $x = 2;
 my $r = db_fetch { tbl->id / $x - 1 == 20 };
