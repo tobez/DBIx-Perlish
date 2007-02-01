@@ -1,0 +1,12 @@
+^_build
+^Build$
+^blib
+~$
+\.bak$
+^MANIFEST\.SKIP$
+CVS
+^devel/tt$
+^tags$
+^Makefile$
+^.cvsignore$
+pm_to_blib

@@ -1,0 +1,30 @@
+!_TAG_FILE_FORMAT	2	/extended format/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted/
+!_TAG_PROGRAM_AUTHOR	Michael Schaap	/mscha@mscha.com/
+!_TAG_PROGRAM_NAME	pltags	//
+!_TAG_PROGRAM_VERSION	2.21	/supports multiple tags and extended format/
+Parse	lib/DBIx/Perlish/Parse.pm	/^package DBIx::Perlish::Parse;$/;"	p	class:Parse
+Perlish	lib/DBIx/Perlish.pm	/^package DBIx::Perlish;$/;"	p	class:Perlish
+db_fetch	lib/DBIx/Perlish.pm	/^sub db_fetch (&)$/;"	s	class:Perlish
+gen_is	lib/DBIx/Perlish/Parse.pm	/^sub gen_is$/;"	s	class:Parse
+gen_sql	lib/DBIx/Perlish.pm	/^sub gen_sql$/;"	s	class:Perlish
+gen_want	lib/DBIx/Perlish/Parse.pm	/^sub gen_want$/;"	s	class:Parse
+get_all_children	lib/DBIx/Perlish/Parse.pm	/^sub get_all_children$/;"	s	class:Parse
+get_tab_field	lib/DBIx/Perlish/Parse.pm	/^sub get_tab_field$/;"	s	class:Parse
+get_table	lib/DBIx/Perlish/Parse.pm	/^sub get_table$/;"	s	class:Parse
+get_var	lib/DBIx/Perlish/Parse.pm	/^sub get_var$/;"	s	class:Parse
+init	lib/DBIx/Perlish/Parse.pm	/^sub init$/;"	s	class:Parse
+is	lib/DBIx/Perlish/Parse.pm	/^sub is$/;"	s	class:Parse
+is_const	lib/DBIx/Perlish/Parse.pm	/^sub is_const$/;"	s	class:Parse
+new_tab	lib/DBIx/Perlish/Parse.pm	/^sub new_tab$/;"	s	class:Parse
+new_var	lib/DBIx/Perlish/Parse.pm	/^sub new_var$/;"	s	class:Parse
+parse_entersub	lib/DBIx/Perlish/Parse.pm	/^sub parse_entersub$/;"	s	class:Parse
+parse_expr	lib/DBIx/Perlish/Parse.pm	/^sub parse_expr$/;"	s	class:Parse
+parse_list	lib/DBIx/Perlish/Parse.pm	/^sub parse_list$/;"	s	class:Parse
+parse_op	lib/DBIx/Perlish/Parse.pm	/^sub parse_op$/;"	s	class:Parse
+parse_sub	lib/DBIx/Perlish/Parse.pm	/^sub parse_sub$/;"	s	class:Parse
+parse_term	lib/DBIx/Perlish/Parse.pm	/^sub parse_term$/;"	s	class:Parse
+try_parse_attr_assignment	lib/DBIx/Perlish/Parse.pm	/^sub try_parse_attr_assignment$/;"	s	class:Parse
+want_	lib/DBIx/Perlish/Parse.pm	/^	sub want_$optype {$/;"	s	class:Parse
+want_const	lib/DBIx/Perlish/Parse.pm	/^sub want_const$/;"	s	class:Parse
+want_method	lib/DBIx/Perlish/Parse.pm	/^sub want_method$/;"	s	class:Parse

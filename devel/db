@@ -1,0 +1,15 @@
+#! /usr/bin/perl
+use lib qw(lib);
+use DBI;
+use DBIx::Perlish;
+
+my $dbh = DBI->connect("dbi:SQLite:");
+$dbh->do("create table tbl (id int, name text)");
+$dbh->do("insert into tbl values (1,'hello')");
+$dbh->do("insert into tbl values (2,'fefe')");
+$dbh->do("insert into tbl values (42,'LIFF')");
+
+my $x = 2;
+my $r = db_fetch { tbl->id / $x - 1 == 20 };
+print "$DBIx::Perlish::SQL\n";
+print "$r->{name}\n";

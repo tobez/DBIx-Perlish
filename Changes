@@ -1,0 +1,15 @@
+Revision history for DBIx-Perlish
+
+0.03  Thu Feb  1 13:08:29 2007
+       More docs.
+       Introduce $SQL & @BIND_VALUES globals (for debugging).
+
+0.02  Thu Feb  1 10:06:49 2007
+       Binary comparison operators work.
+       Four binary arithmetic operators work.
+       last unless 5..20 works.
+       First cut at working db_fetch {}.
+
+0.01  Fri Jan 26 14:54:23 2007
+       Initial release.
+

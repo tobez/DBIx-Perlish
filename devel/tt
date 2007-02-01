@@ -1,0 +1,33 @@
+#! /usr/bin/perl
+use strict;
+use warnings;
+use lib qw(lib);
+use DBIx::Perlish;
+$DBIx::Perlish::Parse::DEVEL = 1;
+
+sub s1 {
+	my $x : product_tree;
+	$x->circuit_number =~ /^FB-/;
+	$x->id == product_eda_adsl->id;
+};
+
+my $val = "god";
+sub s2 {
+	users->type eq $val,
+	users->id == superusers->user_id;
+};
+
+my $from = 0;  my $to = 30;
+sub s3 {
+	my $x : users;
+	last unless $from..$to;
+};
+
+sub s4 {
+	users->id / 2 == 21;
+}
+
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&s3, "select");
+print "$sql\n";
+print "values: ", join ", ", @$v;
+print "\n";
