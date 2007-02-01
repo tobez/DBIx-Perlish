@@ -425,6 +425,16 @@ by using Erlang's own syntax.
 I found this approach elegant, and thought "why something like this
 cannot be done in Perl"?
 
+=head 2 Comparison with other modules
+
+DBIx::SimplePerl
+
+Write something here.
+
+DBIx::SQL::Perlish
+
+As far as I know, this is a vaporware for now.
+
 =head1 INTERFACE 
 
 =for author to fill in:
