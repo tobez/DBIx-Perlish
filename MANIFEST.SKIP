@@ -6,6 +6,7 @@
 ^MANIFEST\.SKIP$
 CVS
 ^devel/tt$
+^devel/db$
 ^tags$
 ^Makefile$
 ^.cvsignore$
