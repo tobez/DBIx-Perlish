@@ -76,7 +76,7 @@ sub fetch
 
 	($me->{sql}, $me->{bind_values}) = gen_sql($sub, "select");
 	$SQL = $me->{sql}; @BIND_VALUES = @{$me->{bind_values}};
-	my $dbh = $me->{dbh} || get_dbh(2);
+	my $dbh = $me->{dbh} || get_dbh(3);
 	my $r = $dbh->selectall_arrayref($me->{sql}, {Slice=>{}}, @{$me->{bind_values}}) || [];
 	return wantarray ? @$r : $r->[0];
 }
