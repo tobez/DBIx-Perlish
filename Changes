@@ -1,5 +1,13 @@
 Revision history for DBIx-Perlish
 
+0.04  Thu Feb  1 13:08:29 2007
+       More docs.
+       Added OO interface.
+       Added init().
+       Fixed parsing of the constants in perl 5.8.4.
+       Added support for return ($u->id, foo => $z->name).
+       Added suppression of some warnings.
+
 0.03  Thu Feb  1 13:08:29 2007
        More docs.
        Introduce $SQL & @BIND_VALUES globals (for debugging).
