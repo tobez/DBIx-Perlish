@@ -425,7 +425,7 @@ by using Erlang's own syntax.
 I found this approach elegant, and thought "why something like this
 cannot be done in Perl"?
 
-=head 2 Comparison with other modules
+=head2 Comparison with other modules
 
 DBIx::SimplePerl
 
