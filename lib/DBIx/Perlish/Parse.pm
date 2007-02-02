@@ -477,4 +477,13 @@ sub init
 	return { alias => "t01", file => '??', line => '??' };
 }
 
+# Borrowed from IO::All by Ingy döt Net.
+my $old_warn_handler = $SIG{__WARN__}; 
+$SIG{__WARN__} = sub { 
+	if ($_[0] !~ /^Useless use of .+ \(.+\) in void context/) {
+		goto &$old_warn_handler if $old_warn_handler;
+		warn(@_);
+	}
+};
+
 1;

@@ -25,7 +25,7 @@ sub s3 {
 
 sub s4 {
 	my $u : users;
-	$u->id / 2 == 21,
+	$u->id / 2 == 21;
 	return ($u->name, blah => $u->id);
 }
 
