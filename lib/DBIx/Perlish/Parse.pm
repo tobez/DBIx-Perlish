@@ -54,12 +54,16 @@ gen_is("logop");
 
 sub is_const
 {
-	my $op = shift;
+	my ($S, $op) = @_;
 	return () unless is_svop($op, "const");
+	my $sv = $op->sv;
+	if (!$$sv) {
+		$sv = $S->{padlist}->ARRAYelt($op->targ);
+	}
 	if (wantarray) {
-		return (${$op->sv->object_2svref}, $op->sv);
+		return (${$sv->object_2svref}, $sv);
 	} else {
-		return ${$op->sv->object_2svref};
+		return ${$sv->object_2svref};
 	}
 }
 
@@ -94,13 +98,21 @@ gen_want("null");
 sub want_const
 {
 	my ($S, $op) = @_;
-	${want_svop($S, $op, "const")->object_2svref};
+	my $sv = want_svop($S, $op, "const");
+	if (!$$sv) {
+		$sv = $S->{padlist}->ARRAYelt($op->targ);
+	}
+	${$sv->object_2svref};
 }
 
 sub want_method
 {
 	my ($S, $op) = @_;
-	${want_svop($S, $op, "method_named")->object_2svref};
+	my $sv = want_svop($S, $op, "method_named");
+	if (!$$sv) {
+		$sv = $S->{padlist}->ARRAYelt($op->targ);
+	}
+	${$sv->object_2svref};
 }
 
 # getters
@@ -150,7 +162,7 @@ sub get_tab_field
 	my $op = want_unop($S, $unop, "entersub");
 	want_op($S, $op, "pushmark");
 	$op = $op->sibling;
-	my $tab = is_const($op);
+	my $tab = is_const($S, $op);
 	if ($tab) {
 		$tab = new_tab($S, $tab);
 	} elsif (is_op($op, "padsv")) {
@@ -199,9 +211,9 @@ sub try_parse_attr_assignment
 	$op = want_unop($S, $op);
 	return unless is_op($op, "pushmark");
 	$op = $op->sibling;
-	return unless is_const($op) eq "attributes";
+	return unless is_const($S, $op) eq "attributes";
 	$op = $op->sibling;
-	return unless is_const($op);
+	return unless is_const($S, $op);
 	$op = $op->sibling;
 	return unless is_unop($op, "srefgen");
 	my $op1 = want_unop($S, $op);
@@ -209,7 +221,7 @@ sub try_parse_attr_assignment
 	return unless is_op($op1, "padsv");
 	my $varn = "my #" . $op1->targ;
 	$op = $op->sibling;
-	my $attr = is_const($op);
+	my $attr = is_const($S, $op);
 	return unless $attr;
 	$op = $op->sibling;
 	return unless is_svop($op, "method_named");
@@ -237,7 +249,7 @@ sub parse_term
 	} elsif (is_binop($op)) {
 		my $expr = parse_expr($S, $op);
 		return "($expr)";
-	} elsif (my ($const,$sv) = is_const($op)) {
+	} elsif (my ($const,$sv) = is_const($S, $op)) {
 		if (ref $sv eq "B::IV" || ref $sv eq "B::NV") {
 			# This is surely a number, so we can
 			# safely inline it in the SQL.
@@ -266,7 +278,7 @@ sub parse_term
 sub parse_simple_term
 {
 	my ($S, $op) = @_;
-	if (my $const = is_const($op)) {
+	if (my $const = is_const($S, $op)) {
 		return $const;
 	} elsif (is_op($op, "padsv")) {
 		my $var = "my #" . $op->targ;
