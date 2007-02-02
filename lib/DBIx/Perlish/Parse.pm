@@ -239,6 +239,48 @@ sub parse_list
 	}
 }
 
+sub parse_return
+{
+	my ($S, $op) = @_;
+	my @op = get_all_children($op);
+	bailout "there should be at most one return statement" if $S->{returns};
+	$S->{returns} = [];
+	my $last_alias;
+	for $op (@op) {
+		my %rv = parse_return_value($S, $op);
+		if (exists $rv{field}) {
+			if (defined $last_alias) {
+				push @{$S->{returns}}, "$rv{field} as $last_alias";
+				undef $last_alias;
+			} else {
+				push @{$S->{returns}}, $rv{field};
+			}
+		} elsif (exists $rv{alias}) {
+			bailout "bad alias name \"$rv{alias}\""
+				unless $rv{alias} =~ /^\w+$/;
+			bailout "cannot alias an alias"
+				if defined $last_alias;
+			$last_alias = $rv{alias};
+		}
+	}
+}
+
+sub parse_return_value
+{
+	my ($S, $op) = @_;
+
+	if (is_unop($op, "entersub")) {
+		my ($t, $f) = get_tab_field($S, $op);
+		return field => "$t.$f";
+	} elsif (my $const = is_const($S, $op)) {
+		return alias => $const;
+	} elsif (is_op($op, "pushmark")) {
+		return ();
+	} else {
+		bailout "error parsing return values";
+	}
+}
+
 sub parse_term
 {
 	my ($S, $op) = @_;
@@ -368,6 +410,8 @@ sub parse_op
 		parse_list($S, $op);
 	} elsif (is_listop($op, "lineseq")) {
 		parse_list($S, $op);
+	} elsif (is_listop($op, "return")) {
+		parse_return($S, $op);
 	} elsif (is_binop($op)) {
 		push @{$S->{where}}, parse_expr($S, $op);
 	} elsif (is_logop($op, "or")) {

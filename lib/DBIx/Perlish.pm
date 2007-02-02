@@ -105,7 +105,13 @@ sub gen_sql
 
 	my $S = DBIx::Perlish::Parse::init();
 	DBIx::Perlish::Parse::parse_sub($S, $sub);
-	my $sql = "select * from ";
+	my $sql = "select ";
+	if ($S->{returns}) {
+		$sql .= join ", ", @{$S->{returns}};
+	} else {
+		$sql .= "*";
+	}
+	$sql .= " from ";
 	my %tabs;
 	for my $var (keys %{$S->{vars}}) {
 		$tabs{$S->{var_alias}->{$var}} =
