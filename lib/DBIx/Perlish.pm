@@ -10,7 +10,7 @@ use vars qw($VERSION @EXPORT $SQL @BIND_VALUES);
 require Exporter;
 use base 'Exporter';
 
-$VERSION = '0.04';
+$VERSION = '0.05';
 @EXPORT = qw(db_fetch db_update db_delete db_insert);
 
 use PadWalker;
@@ -74,11 +74,17 @@ sub fetch
 	my ($moi, $sub) = @_;
 	my $me = ref $moi ? $moi : {};
 
-	($me->{sql}, $me->{bind_values}) = gen_sql($sub, "select");
+	my $nret;
+	($me->{sql}, $me->{bind_values}, $nret) = gen_sql($sub, "select");
 	$SQL = $me->{sql}; @BIND_VALUES = @{$me->{bind_values}};
 	my $dbh = $me->{dbh} || get_dbh(3);
-	my $r = $dbh->selectall_arrayref($me->{sql}, {Slice=>{}}, @{$me->{bind_values}}) || [];
-	return wantarray ? @$r : $r->[0];
+	if ($nret > 1) {
+		my $r = $dbh->selectall_arrayref($me->{sql}, {Slice=>{}}, @{$me->{bind_values}}) || [];
+		return wantarray ? @$r : $r->[0];
+	} else {
+		my $r = $dbh->selectcol_arrayref($me->{sql}, {}, @{$me->{bind_values}}) || [];
+		return wantarray ? @$r : $r->[0];
+	}
 }
 
 sub update
@@ -106,8 +112,10 @@ sub gen_sql
 	my $S = DBIx::Perlish::Parse::init();
 	DBIx::Perlish::Parse::parse_sub($S, $sub);
 	my $sql = "select ";
+	my $nret = 9999;
 	if ($S->{returns}) {
 		$sql .= join ", ", @{$S->{returns}};
+		$nret = @{$S->{returns}};
 	} else {
 		$sql .= "*";
 	}
@@ -132,7 +140,7 @@ sub gen_sql
 		$sql .= " offset $S->{offset}";
 	}
 	my $v = $S->{values} || [];
-	return ($sql, $v);
+	return ($sql, $v, $nret);
 }
 
 
@@ -146,7 +154,7 @@ DBIx::Perlish - a perlish interface to SQL databases
 
 =head1 VERSION
 
-This document describes DBIx::Perlish version 0.04
+This document describes DBIx::Perlish version 0.05
 
 
 =head1 SYNOPSIS

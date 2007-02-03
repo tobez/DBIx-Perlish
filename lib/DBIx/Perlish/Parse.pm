@@ -335,12 +335,59 @@ sub parse_simple_term
 	}
 }
 
+sub try_parse_subselect
+{
+	my ($S, $sop) = @_;
+	my $sub = $sop->last->first;
+	return unless is_unop($sub, "entersub");
+	$sub = $sub->first if is_unop($sub->first, "null");
+	return unless is_op($sub->first, "pushmark");
+
+	my $rg = $sub->first->sibling;
+	return if is_null($rg);
+	my $dbfetch = $rg->sibling;
+	return if is_null($dbfetch);
+	return unless is_null($dbfetch->sibling);
+
+	return unless is_unop($rg, "refgen");
+	$rg = $rg->first if is_unop($rg->first, "null");
+	return unless is_op($rg->first, "pushmark");
+	my $codeop = $rg->first->sibling;
+	return unless is_svop($codeop, "anoncode");
+
+	$dbfetch = $dbfetch->first if is_unop($dbfetch->first, "null");
+	$dbfetch = $dbfetch->first;
+	return unless is_svop($dbfetch, "gv");
+	return unless is_null($dbfetch->sibling);
+
+	my $gv = $dbfetch->sv;
+	if (!$$gv) {
+		$gv = $S->{padlist}->ARRAYelt($dbfetch->targ);
+	}
+	return unless ref $gv eq "B::GV";
+	return unless $gv->NAME eq "db_fetch";
+
+	my $cv = $codeop->sv;
+	if (!$$cv) {
+		$cv = $S->{padlist}->ARRAYelt($codeop->targ);
+	}
+	my $subref = $cv->object_2svref;
+
+	# XXX This should be able to handle situations
+	# when internal select refers to external things.
+	# This might be easy, or it might be not.
+	my ($sql, $vals) = DBIx::Perlish::gen_sql($subref, "select");
+
+	my $left = parse_term($S, $sop->first);
+	push @{$S->{values}}, @$vals;
+	return "$left in ($sql)";
+}
+
 my %binop_map = (
 	eq       => "=",
 	seq      => "=",
 	ne       => "<>",
 	sne      => "<>",
-	lt       => "<",
 	slt      => "<",
 	gt       => ">",
 	sgt      => ">",
@@ -359,14 +406,22 @@ sub parse_expr
 	my ($S, $op) = @_;
 	my $sqlop;
 	if ($sqlop = $binop_map{$op->name}) {
-		# do nothing
+		my $left = parse_term($S, $op->first);
+		my $right = parse_term($S, $op->last);
+
+		return "$left $sqlop $right";
+	} elsif ($op->name eq "lt") {
+		if (is_unop($op->last, "negate")) {
+			my $r = try_parse_subselect($S, $op);
+			return $r if $r;
+		}
+		# if the "subselect theory" fails, try a normal binop
+		my $left = parse_term($S, $op->first);
+		my $right = parse_term($S, $op->last);
+		return "$left < $right";
 	} else {
 		bailout $S, "unsupported binop " . $op->name;
 	}
-	my $left = parse_term($S, $op->first);
-	my $right = parse_term($S, $op->last);
-
-	return "$left $sqlop $right";
 }
 
 sub parse_entersub

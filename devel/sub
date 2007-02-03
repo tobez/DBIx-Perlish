@@ -1,0 +1,29 @@
+#! /usr/bin/perl
+use warnings;
+use strict;
+use lib qw(lib);
+use DBI;
+use DBIx::Perlish;
+$DBIx::Perlish::Parse::DEVEL = 1;
+
+my $dbh = DBI->connect("dbi:SQLite:");
+$dbh->do("create table tbl (id int, name text)");
+$dbh->do("insert into tbl values (1,'hello')");
+$dbh->do("insert into tbl values (2,'fefe')");
+$dbh->do("insert into tbl values (42,'LIFF')");
+$dbh->do("insert into tbl values (666,'argh')");
+$dbh->do("create table t2 (id int, tbl_id int)");
+$dbh->do("insert into t2 values (1,42)");
+$dbh->do("insert into t2 values (2,666)");
+$dbh->do("insert into t2 values (3,2)");
+
+my @r = db_fetch {
+	my $t : tbl;
+	$t->id <- db_fetch {
+		t2->id < 3;
+		return t2->tbl_id;
+	};
+	return $t->name;
+};
+print "$DBIx::Perlish::SQL\n";
+print "$_\n" for @r;
