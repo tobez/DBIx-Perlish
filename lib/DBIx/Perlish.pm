@@ -165,9 +165,20 @@ This document describes DBIx::Perlish version 0.05
     my $dbh = DBI->connect(...);
     DBIx::Perlish::init($dbh);
 
+    # selects:
     my @rows = db_fetch {
         my $x : users;
-        $x->id != 0,
+        $x->id != 0;
+        $x->name !~ /\@/;
+    };
+
+    # sub-selects:
+    my @rows = db_fetch {
+        my $x : users;
+        $x->id <- db_fetch {
+            table2->col == 2 || table2->col == 3;
+            return table2->user_id;
+        };
         $x->name !~ /\@/;
     };
 
