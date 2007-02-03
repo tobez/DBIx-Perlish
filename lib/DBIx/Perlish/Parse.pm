@@ -376,7 +376,17 @@ sub try_parse_subselect
 	# XXX This should be able to handle situations
 	# when internal select refers to external things.
 	# This might be easy, or it might be not.
-	my ($sql, $vals) = DBIx::Perlish::gen_sql($subref, "select");
+	my %gen_args = %{$S->{gen_args}};
+	if ($gen_args{prefix}) {
+		$gen_args{prefix} = "$gen_args{prefix}_$S->{subselect}";
+	} else {
+		$gen_args{prefix} = $S->{subselect};
+	}
+	$S->{subselect}++;
+	my ($sql, $vals, $nret) = DBIx::Perlish::gen_sql($subref, "select", %gen_args);
+	if ($nret != 1) {
+		bailout $S, "subselect query sub must return exactly one value\n";
+	}
 
 	my $left = parse_term($S, $sop->first);
 	push @{$S->{values}}, @$vals;
@@ -529,7 +539,15 @@ sub parse_sub
 
 sub init
 {
-	return { alias => "t01", file => '??', line => '??' };
+	my %args = @_;
+	my $S = {
+		gen_args  => \%args,
+		file      => '??',
+		line      => '??',
+		subselect => 's01',
+	};
+	$S->{alias} = $args{prefix} ? "$args{prefix}_t01" : "t01";
+	$S;
 }
 
 # Borrowed from IO::All by Ingy döt Net.

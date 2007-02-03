@@ -107,9 +107,9 @@ sub bind_values { $_[0]->{bind_values} ? @{$_[0]->{bind_values}} : () }
 
 sub gen_sql
 {
-	my ($sub, $operation, $flavor) = @_;
+	my ($sub, $operation, %args) = @_;
 
-	my $S = DBIx::Perlish::Parse::init();
+	my $S = DBIx::Perlish::Parse::init(%args);
 	DBIx::Perlish::Parse::parse_sub($S, $sub);
 	my $sql = "select ";
 	my $nret = 9999;
