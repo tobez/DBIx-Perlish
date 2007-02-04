@@ -10,7 +10,7 @@ use vars qw($VERSION @EXPORT $SQL @BIND_VALUES);
 require Exporter;
 use base 'Exporter';
 
-$VERSION = '0.06';
+$VERSION = '0.07';
 @EXPORT = qw(db_fetch db_update db_delete db_insert);
 
 use PadWalker;
@@ -178,7 +178,7 @@ DBIx::Perlish - a perlish interface to SQL databases
 
 =head1 VERSION
 
-This document describes DBIx::Perlish version 0.06
+This document describes DBIx::Perlish version 0.07
 
 
 =head1 SYNOPSIS

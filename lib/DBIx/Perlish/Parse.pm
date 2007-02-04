@@ -305,6 +305,8 @@ sub parse_term
 		} else {
 			return "$t.$f";
 		}
+	} elsif (is_unop($op, "null")) {
+		return parse_term($S, $op->first, %p);
 	} elsif (is_unop($op, "not")) {
 		my $subop = $op-> first;
 		if (ref($subop) eq "B::PMOP" && $subop->name eq "match") {
@@ -320,6 +322,11 @@ sub parse_term
 	} elsif (is_binop($op)) {
 		my $expr = parse_expr($S, $op);
 		return "($expr)";
+	} elsif (is_logop($op, "or")) {
+		my $or = parse_or($S, $op);
+		bailout $S, "looks like a limiting range inside an expression\n"
+			unless $or;
+		return "($or)";
 	} elsif (my ($const,$sv) = is_const($S, $op)) {
 		if (ref $sv eq "B::IV" || ref $sv eq "B::NV") {
 			# This is surely a number, so we can
@@ -577,8 +584,11 @@ sub parse_or
 		bailout $S, "range operator expected" unless defined $to;
 		$S->{offset} = $from;
 		$S->{limit}  = $to-$from+1;
+		return;
 	} else {
-		bailout $S, "\"or\" is not supported at the moment";
+		my $left  = parse_term($S, $op->first);
+		my $right = parse_term($S, $op->first->sibling);
+		return "$left or $right";
 	}
 }
 
@@ -597,7 +607,8 @@ sub parse_op
 	} elsif (is_unop($op, "not")) {
 		push @{$S->{where}}, parse_term($S, $op);
 	} elsif (is_logop($op, "or")) {
-		parse_or($S, $op);
+		my $or = parse_or($S, $op);
+		push @{$S->{where}}, $or if $or;
 	} elsif (is_unop($op, "leavesub")) {
 		parse_op($S, $op->first);
 	} elsif (is_unop($op, "null")) {
@@ -630,6 +641,7 @@ sub parse_op
 		print "name: ", $op->name, "\n";
 		print "desc: ", $op->desc, "\n";
 		print "targ: ", $op->targ, "\n";
+		bailout $S, "???";
 	}
 }
 

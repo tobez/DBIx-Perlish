@@ -1,5 +1,9 @@
 Revision history for DBIx-Perlish
 
+0.07  Sun Feb  4 23:18:07 2007
+       Added regex support for SQLite.
+       Added support for "OR".
+
 0.06  Sun Feb  4 19:07:15 2007
        Db_delete & delete implemented.
        Native regexes are used if supported by RDBMS.
