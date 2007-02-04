@@ -312,6 +312,44 @@ Examples:
 
 =head3 db_fetch {}
 
+The C<db_fetch {}> function parses the supplied query sub,
+converts it into corresponding SQL statement, and executes
+it.
+
+What it returns depends on two things: the context and the
+return statement in the query sub, if any.
+
+If there is a return statement which specifies exactly one
+column, and C<db_fetch {}> is called in the scalar context,
+a single scalar representing the requested column is returned
+for the first row of selected data.  Example:
+
+    my $somename = db_fetch { return user->name };
+
+If there is a return statement which specifies exactly one
+column, and C<db_fetch {}> is called in the list context,
+an array containing the specified column for all selected
+rows is returned.  Example:
+
+    my @allnames = db_fetch { return user->name };
+
+When there is no return statement, or if 
+the return statement specifies multiple columns,
+then an individual row is represented by a hash
+reference with column names as the keys.
+
+In the scalar context, a single hashref is returned, which
+corresponds for the first row of selected data.  Example:
+
+    my $h = db_fetch { my $u : user };
+    print "name: $h->{name}, id: $h->{id}\n";
+
+In the list context, and array of hasrefs is returned,
+one element for one row of selected data:
+
+    my @users = db_fetch { my $u : user };
+    print "name: $_->{name}, id: $_->{id}\n" for @users;
+
 Please see L</Query sub syntax> below for details of the
 syntax allowed in query subs.
 
