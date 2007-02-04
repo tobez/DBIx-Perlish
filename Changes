@@ -1,5 +1,10 @@
 Revision history for DBIx-Perlish
 
+0.06  Sun Feb  4 19:07:15 2007
+       Db_delete & delete implemented.
+       Native regexes are used if supported by RDBMS.
+       Case-insensitive regex matching supported.
+
 0.05  Sat Feb  3 23:28:15 2007
        Subselects with <- syntax added.
 

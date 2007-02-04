@@ -10,7 +10,7 @@ use vars qw($VERSION @EXPORT $SQL @BIND_VALUES);
 require Exporter;
 use base 'Exporter';
 
-$VERSION = '0.05';
+$VERSION = '0.06';
 @EXPORT = qw(db_fetch db_update db_delete db_insert);
 
 use PadWalker;
@@ -97,7 +97,15 @@ sub update
 
 sub delete
 {
-	die "delete is not yet implemented\n";
+	my ($moi, $sub) = @_;
+	my $me = ref $moi ? $moi : {};
+
+	my $dbh = $me->{dbh} || get_dbh(3);
+	($me->{sql}, $me->{bind_values}) = gen_sql($sub, "delete",
+	     flavor => $dbh-> get_info($GetInfoType{SQL_DBMS_NAME})
+	);
+	$SQL = $me->{sql}; @BIND_VALUES = @{$me->{bind_values}};
+	$dbh->do($me->{sql}, {}, @{$me->{bind_values}});
 }
 
 sub insert
@@ -112,25 +120,36 @@ sub gen_sql
 {
 	my ($sub, $operation, %args) = @_;
 
-	my $S = DBIx::Perlish::Parse::init(%args);
+	my $S = DBIx::Perlish::Parse::init(%args, operation => $operation);
 	DBIx::Perlish::Parse::parse_sub($S, $sub);
-	my $sql = "select ";
+	my $sql;
 	my $nret = 9999;
-	if ($S->{returns}) {
-		$sql .= join ", ", @{$S->{returns}};
-		$nret = @{$S->{returns}};
-	} else {
-		$sql .= "*";
+	my $no_aliases;
+	if ($operation eq "select") {
+		$sql = "select ";
+		if ($S->{returns}) {
+			$sql .= join ", ", @{$S->{returns}};
+			$nret = @{$S->{returns}};
+		} else {
+			$sql .= "*";
+		}
+		$sql .= " from ";
+	} elsif ($operation eq "delete") {
+		$no_aliases = 1;
+		$sql = "delete from ";
 	}
-	$sql .= " from ";
 	my %tabs;
 	for my $var (keys %{$S->{vars}}) {
 		$tabs{$S->{var_alias}->{$var}} =
-			"$S->{vars}->{$var} $S->{var_alias}->{$var}";
+			$no_aliases ?
+				"$S->{vars}->{$var}" :
+				"$S->{vars}->{$var} $S->{var_alias}->{$var}";
 	}
 	for my $tab (keys %{$S->{tabs}}) {
 		$tabs{$S->{tab_alias}->{$tab}} =
-			"$tab $S->{tab_alias}->{$tab}";
+			$no_aliases ?
+				"$tab" :
+				"$tab $S->{tab_alias}->{$tab}";
 	}
 	$sql .= join ", ", map { $tabs{$_} } sort keys %tabs;
 	if ($S->{where}) {
@@ -157,7 +176,7 @@ DBIx::Perlish - a perlish interface to SQL databases
 
 =head1 VERSION
 
-This document describes DBIx::Perlish version 0.05
+This document describes DBIx::Perlish version 0.06
 
 
 =head1 SYNOPSIS
@@ -315,9 +334,12 @@ Examples:
 
 =head3 db_fetch {}
 
+The C<db_fetch {}> function queries and returns data from
+the database.
+
 The C<db_fetch {}> function parses the supplied query sub,
-converts it into corresponding SQL statement, and executes
-it.
+converts it into the corresponding SQL SELECT statement,
+and executes it.
 
 What it returns depends on two things: the context and the
 return statement in the query sub, if any.
@@ -353,20 +375,57 @@ one element for one row of selected data:
     my @users = db_fetch { my $u : user };
     print "name: $_->{name}, id: $_->{id}\n" for @users;
 
+L</Subqueries> are permitted in db_fetch's query subs.
+
 Please see L</Query sub syntax> below for details of the
 syntax allowed in query subs.
 
 =head3 db_update {}
+
+L</Subqueries> are permitted in db_update's query subs.
 
 Please see L</Query sub syntax> below for details of the
 syntax allowed in query subs.
 
 =head3 db_delete {}
 
+The C<db_delete {}> function deletes data from
+the database.
+
+The C<db_delete {}> function parses the supplied query sub,
+converts it into the corresponding SQL DELETE statement,
+and executes it.
+
+The function returns whatever DBI's C<do> method returns.
+
+A query sub of the C<db_delete {}> function must refer
+to precisely one table (disregarding tables referred to
+by subqueries).
+
+Neither C<return> statements nor C<last> statements are
+allowed in the C<db_delete {}> function's query subs.
+
+L</Subqueries> are permitted in db_delete's query subs.
+
 Please see L</Query sub syntax> below for details of the
 syntax allowed in query subs.
 
+Examples:
+
+    db_delete { $x : users } # delete all users
+
+    # delete with a subquery
+    db_delete {
+        my $u : users;
+        $u->name <- db_fetch {
+            visitors->origin eq "Uranus";
+            return visitors->name;
+        }
+    }
+
 =head3 db_insert {}
+
+L</Subqueries> are NOT permitted in db_insert's query subs.
 
 Please see L</Query sub syntax> below for details of the
 syntax allowed in query subs.
@@ -423,6 +482,9 @@ is equivalent to
 
     OFFSET 5 LIMIT 16
 
+=head3 Subqueries
+
+Bebebebe
 
 =head2 Object-oriented interface
 

@@ -181,10 +181,20 @@ sub get_tab_field
 
 # helpers
 
+sub maybe_one_table_only
+{
+	my ($S) = @_;
+	return if $S->{operation} eq "select";
+	if ($S->{tabs} || $S->{vars}) {
+		bailout "a $S->{operation}'s query sub can only refer to a single table";
+	}
+}
+
 sub new_tab
 {
 	my ($S, $tab) = @_;
 	unless ($S->{tabs}{$tab}) {
+		maybe_one_table_only($S);
 		$S->{tabs}{$tab} = 1;
 		$S->{tab_alias}{$tab} = $S->{alias};
 		$S->{alias}++;
@@ -195,6 +205,7 @@ sub new_tab
 sub new_var
 {
 	my ($S, $var, $tab) = @_;
+	maybe_one_table_only($S);
 	bailout $S, "cannot reuse $var for table $tab, it's already used by $S->{vars}{$var}"
 		if $S->{vars}{$var};
 	$S->{vars}{$var} = $tab;
@@ -243,6 +254,8 @@ sub parse_return
 {
 	my ($S, $op) = @_;
 	my @op = get_all_children($op);
+	bailout "there should be no \"return\" statements in $S->{operation}'s query sub"
+		unless $S->{operation} eq "select";
 	bailout "there should be at most one return statement" if $S->{returns};
 	$S->{returns} = [];
 	my $last_alias;
@@ -287,7 +300,11 @@ sub parse_term
 
 	if (is_unop($op, "entersub")) {
 		my ($t, $f) = get_tab_field($S, $op);
-		return "$t.$f";
+		if ($S->{operation} eq "delete") {
+			return $f;
+		} else {
+			return "$t.$f";
+		}
 	} elsif (is_unop($op, "not")) {
 		my $subop = $op-> first;
 		if (ref($subop) eq "B::PMOP" && $subop->name eq "match") {
@@ -527,6 +544,8 @@ sub parse_or
 {
 	my ($S, $op) = @_;
 	if (is_op($op->other, "last")) {
+		bailout "there should be no \"last\" statements in $S->{operation}'s query sub"
+			unless $S->{operation} eq "select";
 		my ($from, $to) = try_parse_range($S, $op->first);
 		bailout $S, "range operator expected" unless defined $to;
 		$S->{offset} = $from;
@@ -612,6 +631,7 @@ sub init
 		file      => '??',
 		line      => '??',
 		subselect => 's01',
+		operation => $args{operation},
 	};
 	$S->{alias} = $args{prefix} ? "$args{prefix}_t01" : "t01";
 	$S;
