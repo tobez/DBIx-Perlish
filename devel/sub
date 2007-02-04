@@ -19,7 +19,8 @@ $dbh->do("insert into t2 values (3,2)");
 
 my @r = db_fetch {
 	my $t : tbl;
-	$t->id <- db_fetch {
+	!($t->name eq "fefe");
+	!$t->id <- db_fetch {
 		t2->id < 3;
 		return t2->tbl_id;
 	};

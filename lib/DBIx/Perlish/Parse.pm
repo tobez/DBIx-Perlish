@@ -283,11 +283,18 @@ sub parse_return_value
 
 sub parse_term
 {
-	my ($S, $op) = @_;
+	my ($S, $op, %p) = @_;
 
 	if (is_unop($op, "entersub")) {
 		my ($t, $f) = get_tab_field($S, $op);
 		return "$t.$f";
+	} elsif (is_unop($op, "not")) {
+		my $term = parse_term($S, $op->first);
+		if ($p{not_after}) {
+			return "$term not";
+		} else {
+			return "not $term";
+		}
 	} elsif (is_binop($op)) {
 		my $expr = parse_expr($S, $op);
 		return "($expr)";
@@ -388,7 +395,7 @@ sub try_parse_subselect
 		bailout $S, "subselect query sub must return exactly one value\n";
 	}
 
-	my $left = parse_term($S, $sop->first);
+	my $left = parse_term($S, $sop->first, not_after => 1);
 	push @{$S->{values}}, @$vals;
 	return "$left in ($sql)";
 }
@@ -479,6 +486,8 @@ sub parse_op
 		parse_return($S, $op);
 	} elsif (is_binop($op)) {
 		push @{$S->{where}}, parse_expr($S, $op);
+	} elsif (is_unop($op, "not")) {
+		push @{$S->{where}}, parse_term($S, $op);
 	} elsif (is_logop($op, "or")) {
 		parse_or($S, $op);
 	} elsif (is_unop($op, "leavesub")) {
