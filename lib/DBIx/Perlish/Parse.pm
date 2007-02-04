@@ -289,11 +289,16 @@ sub parse_term
 		my ($t, $f) = get_tab_field($S, $op);
 		return "$t.$f";
 	} elsif (is_unop($op, "not")) {
-		my $term = parse_term($S, $op->first);
-		if ($p{not_after}) {
-			return "$term not";
+		my $subop = $op-> first;
+		if (ref($subop) eq "B::PMOP" && $subop->name eq "match") {
+			return parse_regex( $S, $subop, 1);
 		} else {
-			return "not $term";
+			my $term = parse_term($S, $subop);
+			if ($p{not_after}) {
+				return "$term not";
+			} else {
+				return "not $term";
+			}
 		}
 	} elsif (is_binop($op)) {
 		my $expr = parse_expr($S, $op);
@@ -448,6 +453,63 @@ sub parse_entersub
 	bailout $S, "cannot parse entersub" unless $tab;
 }
 
+sub parse_regex
+{
+	my ( $S, $op, $neg) = @_;
+	my ( $like, $case) = ( $op->precomp, $op-> pmflags & B::PMf_FOLD);
+
+	my ($tab, $field) = get_tab_field($S, $op->first);
+
+	my $flavor = lc($S-> {gen_args}-> {flavor} || '');
+	my $what = 'like';
+	
+	my $can_like = $like =~ /^\^?[-\s\w]*\$?$/; # like that begins with non-% can use indexes
+	
+	if ( $flavor eq 'mysql') {
+	
+		# mysql LIKE is case-insensitive
+		goto LIKE if not $case and $can_like;
+
+		return 
+			"$tab.$field ".
+			( $neg ? 'not ' : '') . 
+			'regexp ' .
+			( $case ? '' : 'binary ') .
+			"'$like'"
+			;
+	} elsif ( $flavor eq 'postgresql') {
+		# LIKE is case-sensitive
+		if ( $can_like) {
+			$what = 'ilike' if $case;
+			goto LIKE;
+		} 
+		return 
+			"$tab.$field ".
+			( $neg ? '!' : '') . 
+			'~' .
+			( $case ? '*' : '') .
+			" '$like'"
+			;
+	} else {
+		# XXX is SQL-standard LIKE case-sensitive or not?
+		die "Don't know how to set case-insensitive flag for this DBI flavor"
+			if $case;
+		die "Regex too complex for implementation using LIKE keyword: $like"
+			if $like =~ /(?<!\\)[\[\]\(\)\{\}\?\|]/;
+LIKE:
+		$like =~ s/%/\\%/g;
+		$like =~ s/_/\\_/g;
+		$like =~ s/\.\*/%/g;
+		$like =~ s/\./_/g;
+		$like = "%$like" unless $like =~ s|^\^||;
+		$like = "$like%" unless $like =~ s|\$$||;
+		return "$tab.$field " . 
+			( $neg ? 'not ' : '') . 
+			"$what '$like'"
+		;
+	}
+}
+
 sub try_parse_range
 {
 	my ($S, $op) = @_;
@@ -512,11 +574,7 @@ sub parse_op
 	} elsif (is_unop($op, "entersub")) {
 		parse_entersub($S, $op);
 	} elsif (ref($op) eq "B::PMOP" && $op->name eq "match") {
-		my $like = $op->precomp;
-		$like = "%$like" unless $like =~ s|^\^||;
-		$like = "$like%" unless $like =~ s|\$$||;
-		my ($tab, $field) = get_tab_field($S, $op->first);
-		push @{$S->{where}}, "$tab.$field like '$like'";
+		push @{$S->{where}}, parse_regex( $S, $op, 0);
 	} else {
 		print "$op\n";
 		if (ref($op) eq "B::PMOP") {

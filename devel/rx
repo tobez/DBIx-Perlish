@@ -1,0 +1,40 @@
+#! /usr/bin/perl
+use strict;
+use warnings;
+use lib qw(lib);
+use DBIx::Perlish;
+
+sub s1 {
+	my $x : x;
+	$x-> y !~ /^insensitive/i;
+};
+
+sub s2 {
+	my $x : x;
+	$x-> y =~ /SeNsItIvE$/;
+};
+
+sub s3 {
+	my $x : x;
+	$x-> y =~ /[insens](iti|ve)/i;
+};
+
+sub s4 {
+	my $x : x;
+	$x-> y !~ /[SeNS](Iti|Ve)/;
+};
+
+sub rx
+{
+	my ($sql, $v) = DBIx::Perlish::gen_sql( $_[1], "select", flavor => $_[0]);
+	$sql =~ s/.*t01.y//;
+	print "$_[0]: $sql\n";
+}
+
+for ( qw(pgsql mysql)) {
+	rx( $_, \&s1);
+	rx( $_, \&s2);
+	rx( $_, \&s3);
+	rx( $_, \&s4);
+}
+rx( 'unknown', \&s2);

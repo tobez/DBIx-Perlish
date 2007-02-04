@@ -15,6 +15,7 @@ $VERSION = '0.05';
 
 use PadWalker;
 use DBIx::Perlish::Parse;
+use DBI::Const::GetInfoType;
 
 sub db_fetch  (&) { DBIx::Perlish->fetch ($_[0]) }
 sub db_update (&) { DBIx::Perlish->update($_[0]) }
@@ -75,9 +76,11 @@ sub fetch
 	my $me = ref $moi ? $moi : {};
 
 	my $nret;
-	($me->{sql}, $me->{bind_values}, $nret) = gen_sql($sub, "select");
-	$SQL = $me->{sql}; @BIND_VALUES = @{$me->{bind_values}};
 	my $dbh = $me->{dbh} || get_dbh(3);
+	($me->{sql}, $me->{bind_values}, $nret) = gen_sql($sub, "select", 
+	     flavor => $dbh-> get_info($GetInfoType{SQL_DBMS_NAME})
+	);
+	$SQL = $me->{sql}; @BIND_VALUES = @{$me->{bind_values}};
 	if ($nret > 1) {
 		my $r = $dbh->selectall_arrayref($me->{sql}, {Slice=>{}}, @{$me->{bind_values}}) || [];
 		return wantarray ? @$r : $r->[0];
