@@ -507,6 +507,33 @@ sub parse_regex
 			( $case ? '*' : '') .
 			" '$like'"
 			;
+	} elsif ( $flavor eq 'sqlite') {
+		# SQLite as it is now is a bit tricky:
+		# - there is support for REGEXP with a func provided the user
+		#   supplies his own function;
+		# - LIKE is case-insensitive (for ASCII, anyway, there's a bug there);
+		# - GLOB is case-sensitive;
+		# - there is also support for MATCH - with a user func
+		# Since it does not appear that SQLite can use indices
+		# for prefix matches with simple LIKE statements, we
+		# just hijack REGEXP and MATCH for case-sensitive
+		# and case-insensitive cases.  If I am wrong on that,
+		# or if SQLite gets and ability to do index-based
+		# prefix matching, this logic can be modified accordingly.
+		if ($case) {
+			$what = "match";
+			$S->{gen_args}->{dbh}->func($what, 2, sub {
+				return scalar $_[1] =~ /\Q$_[0]\E/i;
+			}, "create_function");
+		} else {
+			$what = "regexp";
+			$S->{gen_args}->{dbh}->func($what, 2, sub {
+				return scalar $_[1] =~ /\Q$_[0]\E/;
+			}, "create_function");
+		}
+		push @{$S->{values}}, $like;
+		$what = $neg ? "not $what" : $what;
+		return "$tab.$field $what ?";
 	} else {
 		# XXX is SQL-standard LIKE case-sensitive or not?
 		die "Don't know how to set case-insensitive flag for this DBI flavor"

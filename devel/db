@@ -17,3 +17,7 @@ my $x = 2;
 my $r = db_fetch { tbl->id / $x - 1 == 20 };
 print "$DBIx::Perlish::SQL\n";
 print "$r->{name}\n";
+
+my @r = db_fetch { tbl->name !~ /f/i; return tbl->name };
+print "$DBIx::Perlish::SQL\n";
+print "@r\n";

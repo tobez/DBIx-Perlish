@@ -78,7 +78,8 @@ sub fetch
 	my $nret;
 	my $dbh = $me->{dbh} || get_dbh(3);
 	($me->{sql}, $me->{bind_values}, $nret) = gen_sql($sub, "select", 
-	     flavor => $dbh-> get_info($GetInfoType{SQL_DBMS_NAME})
+		flavor => $dbh-> get_info($GetInfoType{SQL_DBMS_NAME}),
+		dbh    => $dbh,
 	);
 	$SQL = $me->{sql}; @BIND_VALUES = @{$me->{bind_values}};
 	if ($nret > 1) {
@@ -102,7 +103,8 @@ sub delete
 
 	my $dbh = $me->{dbh} || get_dbh(3);
 	($me->{sql}, $me->{bind_values}) = gen_sql($sub, "delete",
-	     flavor => $dbh-> get_info($GetInfoType{SQL_DBMS_NAME})
+		flavor => $dbh-> get_info($GetInfoType{SQL_DBMS_NAME}),
+		dbh    => $dbh,
 	);
 	$SQL = $me->{sql}; @BIND_VALUES = @{$me->{bind_values}};
 	$dbh->do($me->{sql}, {}, @{$me->{bind_values}});
