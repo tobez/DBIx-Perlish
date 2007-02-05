@@ -649,11 +649,19 @@ A query sub can consist of the following types of statements:
 
 table variables declarations;
 
+=item *
+
 query filter statements;
+
+=item *
 
 return statements (only valid for fetch operations);
 
+=item *
+
 assignments (only valid for update operations);
+
+=item *
 
 result limiting statements (only valid for fetch operations).
 
