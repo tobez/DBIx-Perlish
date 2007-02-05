@@ -667,21 +667,69 @@ query filter statements;
 
 =item *
 
-return statements (only valid for fetch operations);
+return statements;
 
 =item *
 
-assignments (only valid for update operations);
+assignments;
 
 =item *
 
-result limiting statements (only valid for fetch operations).
+result limiting statements.
 
 =back
 
-The order of the statement is generally not important.
+The order of the statements is generally not important.
 
-...
+=head3 Table variables declarations
+
+Table variables declarations allow one to associate
+lexical variables with database tables.  They look
+like this:
+
+    my $var : tablename;
+
+It is possible to associate several variables with the
+same table;  this is the preferable mechanism if self-joins
+are desired.
+
+Please note that L</db_update {}> and L</db_delete {}> must
+only refer to a single table.
+
+=head3 Query filter statements
+
+Query filter statements have a general form of Perl expressions.
+Binary comparison operators, logical "or" (both high and lower
+precedence form), matching operators =~ and !~, binary arithmetic
+operators, and unary ! are all valid in the filters.
+
+Individual terms can refer to a table column using dereferencing
+syntax (either C<table-E<gt>column> or C<$tablevar-E<gt>column>),
+to an integer, floating point, or string constant, to a scalar
+lexical variable from an outer scope, or to a function call.
+
+Function calls can take an arbitrary number of arguments.
+Each argument to a function must currently be a term,
+although it is expected that more general expressions will
+be supported in the future.
+The function call appear verbatim in the resulting SQL,
+with the arguments translated from Perl syntax to SQL
+syntax.  For example:
+
+    lower($t1->name) eq lower($t2->lastname);
+
+=head3 Return statements
+
+Return statements determine which columns are returned by
+a query under what names.
+Each element in the return statement blah blah XXX
+
+Return statements are only valid in L</db_fetch {}>.
+
+=head3 Assignments
+(only valid for update operations);
+=head3 Result limiting statements
+(only valid for fetch operations).
 
 The C<last> command is special.
 If it stands on its own anywhere in the query sub, it means "stop
@@ -704,6 +752,14 @@ Bebebebe
 =head2 Object-oriented interface
 
 =head3 new()
+
+Constructs and returns a new DBIx::Perlish object.
+
+Takes a single mandatory named parameter, C<dbh>,
+which must be a valid DBI database handler.
+
+Can throw an exception if the supplied parameters
+are incorrect.
 
 =head3 fetch()
 
@@ -777,29 +833,6 @@ I found this approach elegant, and thought "why something like this
 cannot be done in Perl"?
 
 
-=head1 DIAGNOSTICS
-
-=for author to fill in:
-    List every single error and warning message that the module can
-    generate (even the ones that will "never happen"), with a full
-    explanation of each problem, one or more likely causes, and any
-    suggested remedies.
-
-=over
-
-=item C<< Error message here, perhaps with %s placeholders >>
-
-[Description of error here]
-
-=item C<< Another error message here >>
-
-[Description of error here]
-
-[Et cetera, et cetera]
-
-=back
-
-
 =head1 CONFIGURATION AND ENVIRONMENT
 
 DBIx::Perlish requires no configuration files or environment variables.
@@ -849,10 +882,6 @@ GROUP BY clause;
 
 =item *
 
-use of SQL functions;
-
-=item *
-
 EXISTS-style sub-queries;
 
 =item *
@@ -862,7 +891,24 @@ of sub-queries from the inner scope.
 
 =back
 
-Surely I've missed some other things.
+Although variables closed over the query sub can be used
+in it, only simple scalars are understood at the moment.
+You can write
+
+    my $n = 42;
+    db_fetch {
+        table->id == $n;
+    };
+
+but the following currently does not work:
+
+    my $n = { a => 1, meaning => 42 };
+    db_fetch {
+        table->id == $n->{meaning};
+    };
+
+Similarly, variable interpolation inside regular
+expression is also supported.
 
 If you would like to see something implemented,
 or find a nice Perlish syntax for some SQL feature,
