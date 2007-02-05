@@ -91,9 +91,20 @@ sub fetch
 	}
 }
 
+# XXX refactor update/delete into a single implemention if possible?
 sub update
 {
-	die "update is not yet implemented\n";
+	my ($moi, $sub) = @_;
+	my $me = ref $moi ? $moi : {};
+
+	my $dbh = $me->{dbh} || get_dbh(3);
+	($me->{sql}, $me->{bind_values}) = gen_sql($sub, "update",
+		flavor => $dbh-> get_info($GetInfoType{SQL_DBMS_NAME}),
+		dbh    => $dbh,
+	);
+	$SQL = $me->{sql}; @BIND_VALUES = @{$me->{bind_values}};
+	print "$SQL\n";
+	$dbh->do($me->{sql}, {}, @{$me->{bind_values}});
 }
 
 sub delete
@@ -150,6 +161,11 @@ sub gen_sql
 	} elsif ($operation eq "delete") {
 		$no_aliases = 1;
 		$sql = "delete from ";
+	} elsif ($operation eq "update") {
+		$no_aliases = 1;
+		$sql = "update ";
+	} else {
+		die "unsupported operation: $operation\n";
 	}
 	my %tabs;
 	for my $var (keys %{$S->{vars}}) {
@@ -165,6 +181,12 @@ sub gen_sql
 				"$tab $S->{tab_alias}->{$tab}";
 	}
 	$sql .= join ", ", map { $tabs{$_} } sort keys %tabs;
+
+	if ($S->{sets} && @{$S->{sets}}) {
+		$sql .= " set ";
+		$sql .= join ", ", @{$S->{sets}};
+	}
+
 	if ($S->{where}) {
 		$sql .= " where " . join " and ", @{$S->{where}};
 	}
@@ -174,7 +196,8 @@ sub gen_sql
 	if ($S->{offset}) {
 		$sql .= " offset $S->{offset}";
 	}
-	my $v = $S->{values} || [];
+	my $v = $S->{set_values} || [];
+	push @$v, @{$S->{values} || []};
 	return ($sql, $v, $nret);
 }
 

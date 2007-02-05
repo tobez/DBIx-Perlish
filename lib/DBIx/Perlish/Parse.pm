@@ -159,7 +159,7 @@ sub get_var
 
 sub get_tab_field
 {
-	my ($S, $unop) = @_;
+	my ($S, $unop, $expect_lvalue) = @_;
 	my $op = want_unop($S, $unop, "entersub");
 	want_op($S, $op, "pushmark");
 	$op = $op->sibling;
@@ -176,6 +176,10 @@ sub get_tab_field
 	$op = $op->sibling;
 	my $field = want_method($S, $op);
 	$op = $op->sibling;
+	if ($expect_lvalue) {
+		want_unop($S, $op, "rv2cv");
+		$op = $op->sibling;
+	}
 	want_null($S, $op);
 	($tab, $field);
 }
@@ -186,7 +190,7 @@ sub maybe_one_table_only
 {
 	my ($S) = @_;
 	return if $S->{operation} eq "select";
-	if ($S->{tabs} || $S->{vars}) {
+	if ($S->{tabs} && keys %{$S->{tabs}} or $S->{vars} && keys %{$S->{vars}}) {
 		bailout "a $S->{operation}'s query sub can only refer to a single table";
 	}
 }
@@ -301,7 +305,7 @@ sub parse_term
 
 	if (is_unop($op, "entersub")) {
 		my ($t, $f) = get_tab_field($S, $op);
-		if ($S->{operation} eq "delete") {
+		if ($S->{operation} eq "delete" || $S->{operation} eq "update") {
 			return $f;
 		} else {
 			return "$t.$f";
@@ -474,6 +478,17 @@ sub parse_expr
 		my $left = parse_term($S, $op->first);
 		my $right = parse_term($S, $op->last);
 		return "$left < $right";
+	} elsif ($op->name eq "sassign") {
+		bailout $S, "assignments are no understood in $S->{operation}'s query sub"
+			unless $S->{operation} eq "update";
+		my ($tab, $f) = get_tab_field($S, $op->last, "lvalue");
+		my $saved_values = $S->{values};
+		$S->{values} = [];
+		my $set = parse_term($S, $op->first);
+		push @{$S->{set_values}}, @{$S->{values}};
+		$S->{values} = $saved_values;
+		push @{$S->{sets}}, "$f = $set";
+		return ();
 	} else {
 		bailout $S, "unsupported binop " . $op->name;
 	}
@@ -682,6 +697,9 @@ sub init
 		subselect => 's01',
 		operation => $args{operation},
 	};
+	$S->{values} = [];
+	$S->{sets} = [];
+	$S->{set_values} = [];
 	$S->{alias} = $args{prefix} ? "$args{prefix}_t01" : "t01";
 	$S;
 }

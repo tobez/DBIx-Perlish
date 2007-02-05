@@ -1,5 +1,8 @@
 Revision history for DBIx-Perlish
 
+NEXT
+       Added db_update().
+
 0.08
        Added support of subselects on threaded perls.
        Regexes on older versions of SQLite made to work.

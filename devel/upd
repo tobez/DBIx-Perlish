@@ -1,0 +1,43 @@
+#! /usr/bin/perl
+use warnings;
+use strict;
+use lib qw(lib);
+use DBI;
+use DBIx::Perlish;
+$DBIx::Perlish::Parse::DEVEL = 1;
+
+my $dbh = DBI->connect("dbi:SQLite:");
+$dbh->do("create table tbl (id int, name text)");
+
+db_insert 'tbl', {
+	id   => 1,
+	name => 'hello',
+}, {
+	id   => 2,
+	name => 'fefe',
+}, {
+	id   => 41,
+	name => 'huhu',
+};
+
+db_update {
+	tbl->id == 41;
+	tbl->id = tbl->id + 1;
+	tbl->name = "luff";
+};
+
+if (0) {
+db_update {
+	my $t : tbl;
+	$t->id == 40;
+	$t = {
+		id   => $t->id + 2,
+		name => "LIFF",
+	};
+};
+}
+
+my $x = 2;
+my $r = db_fetch { tbl->id / $x - 1 == 20 };
+print "$DBIx::Perlish::SQL\n";
+print "$r->{name}\n";
