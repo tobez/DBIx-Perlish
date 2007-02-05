@@ -1,5 +1,9 @@
 Revision history for DBIx-Perlish
 
+NEXT
+       Added support of subselects on threaded perls.
+       Regexes on older versions of SQLite made to work.
+
 0.07  Sun Feb  4 23:18:07 2007
        Added regex support for SQLite.
        Added support for "OR".
