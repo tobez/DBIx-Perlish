@@ -1,8 +1,9 @@
 Revision history for DBIx-Perlish
 
-NEXT
+0.08
        Added support of subselects on threaded perls.
        Regexes on older versions of SQLite made to work.
+       Implemented db_insert().
 
 0.07  Sun Feb  4 23:18:07 2007
        Added regex support for SQLite.
