@@ -51,6 +51,7 @@ gen_is("svop");
 gen_is("null");
 gen_is("binop");
 gen_is("logop");
+gen_is("padop");
 
 sub is_const
 {
@@ -393,12 +394,20 @@ sub try_parse_subselect
 
 	$dbfetch = $dbfetch->first if is_unop($dbfetch->first, "null");
 	$dbfetch = $dbfetch->first;
-	return unless is_svop($dbfetch, "gv");
+	my ($gv_on_pad, $gv_idx);
+	if (is_svop($dbfetch, "gv")) {
+		$gv_idx = $dbfetch->targ;
+	} elsif (is_padop($dbfetch, "gv")) {
+		$gv_idx = $dbfetch->padix;
+		$gv_on_pad = 1;
+	} else {
+		return;
+	}
 	return unless is_null($dbfetch->sibling);
 
-	my $gv = $dbfetch->sv;
-	if (!$$gv) {
-		$gv = $S->{padlist}->ARRAYelt($dbfetch->targ);
+	my $gv = $gv_on_pad ? "" : $dbfetch->sv;
+	if (!$gv || !$$gv) {
+		$gv = $S->{padlist}->ARRAYelt($gv_idx);
 	}
 	return unless ref $gv eq "B::GV";
 	return unless $gv->NAME eq "db_fetch";
@@ -539,8 +548,9 @@ sub parse_regex
 			}, "create_function");
 		}
 		push @{$S->{values}}, $like;
-		$what = $neg ? "not $what" : $what;
-		return "$tab.$field $what ?";
+		# $what = $neg ? "not $what" : $what;
+		# return "$tab.$field $what ?";
+		return ($neg ? "not " : "") . "$what(?, $tab.$field)";
 	} else {
 		# XXX is SQL-standard LIKE case-sensitive or not?
 		die "Don't know how to set case-insensitive flag for this DBI flavor"
@@ -679,7 +689,7 @@ sub init
 # Borrowed from IO::All by Ingy döt Net.
 my $old_warn_handler = $SIG{__WARN__}; 
 $SIG{__WARN__} = sub { 
-	if ($_[0] !~ /^Useless use of .+ \(.+\) in void context/) {
+	if ($_[0] !~ /^Useless use of .+ in void context/) {
 		goto &$old_warn_handler if $old_warn_handler;
 		warn(@_);
 	}

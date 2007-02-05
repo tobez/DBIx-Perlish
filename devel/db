@@ -4,6 +4,7 @@ use strict;
 use lib qw(lib);
 use DBI;
 use DBIx::Perlish;
+$DBIx::Perlish::Parse::DEVEL = 1;
 
 my $dbh = DBI->connect("dbi:SQLite:");
 $dbh->do("create table tbl (id int, name text)");
