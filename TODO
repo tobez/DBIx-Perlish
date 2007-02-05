@@ -1,0 +1,12 @@
+$Id$
+
+- lone db_fetch as EXISTS (select * from ...);
+- support outer tables referencing in subqueries;
+- support explicit "and" and "&&";
+- anything which looks like a function call -> function call;
+- good syntax for order by;
+- order by;
+- good syntax for group by;
+- group by;
+- insert;
+- update;
