@@ -13,7 +13,6 @@ use base 'Exporter';
 $VERSION = '0.09';
 @EXPORT = qw(db_fetch db_update db_delete db_insert);
 
-use PadWalker;
 use DBIx::Perlish::Parse;
 use DBI::Const::GetInfoType;
 
@@ -31,13 +30,16 @@ sub get_dbh
 	if ($default_object) {
 		$dbh = $default_object->{dbh};
 	}
-	unless ($dbh) {
-		my $vars = PadWalker::peek_my($lvl);
-		$dbh = ${$vars->{'$dbh'}} if $vars->{'$dbh'};
-	}
-	unless ($dbh) {
-		my $vars = PadWalker::peek_our($lvl);
-		$dbh = ${$vars->{'$dbh'}} if $vars->{'$dbh'};
+	eval { require PadWalker; };
+	unless ($@) {
+		unless ($dbh) {
+			my $vars = PadWalker::peek_my($lvl);
+			$dbh = ${$vars->{'$dbh'}} if $vars->{'$dbh'};
+		}
+		unless ($dbh) {
+			my $vars = PadWalker::peek_our($lvl);
+			$dbh = ${$vars->{'$dbh'}} if $vars->{'$dbh'};
+		}
 	}
 	die "Database handle not set.  Maybe you forgot to call DBIx::Perlish::init()?\n" unless $dbh;
 	unless (ref $dbh && ref $dbh eq "DBI::db") { # XXX maybe relax for other things?
@@ -291,7 +293,7 @@ code.
 
 The module is not intended to replace 100% of SQL used in your program.
 There is a hope, however, that it can be used to replace
-80 to 95% of it.
+a substantial portion of it.
 
 The C<DBIx::Perlish> module quite intentionally neither implements
 nor cares about database administration tasks like schema design
@@ -372,7 +374,7 @@ It is also fully compatible with the "clean and tidy" method.
 =head3 init()
 
 The C<init()> sub initializes procedural interface
-of the module.
+to the module.
 
 It accepts named parameters.
 Currently C<init()> understands only one such parameter,
@@ -403,7 +405,7 @@ Examples:
 The C<db_fetch {}> function queries and returns data from
 the database.
 
-The C<db_fetch {}> function parses the supplied query sub,
+The function parses the supplied query sub,
 converts it into the corresponding SQL SELECT statement,
 and executes it.
 
@@ -474,6 +476,8 @@ L</Subqueries> are permitted in db_fetch's query subs.
 Please see L</Query sub syntax> below for details of the
 syntax allowed in query subs.
 
+The C<db_fetch {}> function is exported by default.
+
 =head3 db_update {}
 
 The C<db_update {}> function updates rows of a database table.
@@ -532,6 +536,8 @@ Please note a certain ugliness in C<tbl()> in the last example,
 so it is probably better to either use table vars, or stick to the
 single assignment syntax of the first example.
 
+The C<db_update {}> function is exported by default.
+
 
 =head3 db_delete {}
 
@@ -576,6 +582,9 @@ Examples:
         }
     }
 
+The C<db_delete {}> function is exported by default.
+
+
 =head3 db_insert()
 
 The C<db_insert()> function inserts rows into a
@@ -603,6 +612,9 @@ a valid database handle to use.
 
 In addition, if the database handle is configured to throw exceptions,
 the function might throw any of the exceptions thrown by DBI.
+
+The C<db_insert {}> function is exported by default.
+
 
 =head3 $SQL and @BIND_VALUES
 
@@ -666,6 +678,8 @@ assignments (only valid for update operations);
 result limiting statements (only valid for fetch operations).
 
 =back
+
+The order of the statement is generally not important.
 
 ...
 
@@ -731,11 +745,11 @@ Example:
     $db->query(sub { users->name eq "john" });
     print join(", ", $db->bind_values), "\n";
 
+
 =head2 Implementation details and more ideology
 
 To achieve its purpose, this module uses neither operator
-overloading, like C<Tangram> does, nor source filters, like the
-concept module C<DBIx::SQL::Perlish> does.
+overloading nor source filters.
 
 The operator overloading would only work if individual tables were
 represented by Perl objects.  This means that an object-relational
@@ -761,24 +775,6 @@ by using Erlang's own syntax.
 
 I found this approach elegant, and thought "why something like this
 cannot be done in Perl"?
-
-=head2 Comparison with other modules
-
-DBIx::SimplePerl
-
-Write something here.
-
-DBIx::SQL::Perlish
-
-As far as I know, this is a vaporware for now.
-
-=head1 INTERFACE 
-
-=for author to fill in:
-    Write a separate section listing the public components of the modules
-    interface. These normally consist of either subroutines that may be
-    exported, or methods that may be called on objects belonging to the
-    classes provided by the module.
 
 
 =head1 DIAGNOSTICS
@@ -806,49 +802,29 @@ As far as I know, this is a vaporware for now.
 
 =head1 CONFIGURATION AND ENVIRONMENT
 
-=for author to fill in:
-    A full explanation of any configuration system(s) used by the
-    module, including the names and locations of any configuration
-    files, and the meaning of any environment variables or properties
-    that can be set. These descriptions must also include details of any
-    configuration language used.
-  
 DBIx::Perlish requires no configuration files or environment variables.
 
 
 =head1 DEPENDENCIES
 
-=for author to fill in:
-    A list of all the other modules that this module relies upon,
-    including any restrictions on versions, and an indication whether
-    the module is part of the standard Perl distribution, part of the
-    module's distribution, or must be installed separately. ]
+The C<DBIx::Perlish> module needs at least perl 5.8.0, quite possibly
+a somewhat higher version.  I have only tested it on
+5.8.8 and 5.8.4.
 
-None.
+This module requires C<DBI> to do anything useful.
+
+In order to support the special handling of the C<$dbh> variable,
+C<PadWalker> needs to be installed.
+
+Other modules used are parts of the standard Perl distribution.
 
 
 =head1 INCOMPATIBILITIES
-
-=for author to fill in:
-    A list of any modules that this module cannot be used in conjunction
-    with. This may be due to name conflicts in the interface, or
-    competition for system or program resources, or due to internal
-    limitations of Perl (for example, many modules that use source code
-    filters are mutually incompatible).
 
 None reported.
 
 
 =head1 BUGS AND LIMITATIONS
-
-=for author to fill in:
-    A list of known problems with the module, together with some
-    indication Whether they are likely to be fixed in an upcoming
-    release. Also a list of restrictions on the features the module
-    does provide: data types that cannot be handled, performance issues
-    and the circumstances in which they may arise, practical
-    limitations on the size of data sets, special cases that are not
-    (yet) handled, etc.
 
 No bugs have been reported.
 
@@ -856,6 +832,41 @@ Please report any bugs or feature requests to
 C<bug-dbix-perlish@rt.cpan.org>, or through the web interface at
 L<http://rt.cpan.org>.
 
+The module has a lot of limitations.
+Currently, the following SQL features are not supported
+(only those features for which I would like to add support
+in the future are listed), in no particular order:
+
+=over
+
+=item *
+
+ORDER BY clause;
+
+=item *
+
+GROUP BY clause;
+
+=item *
+
+use of SQL functions;
+
+=item *
+
+EXISTS-style sub-queries;
+
+=item *
+
+the ability to refer to tables mentioned in the outer scope 
+of sub-queries from the inner scope.
+
+=back
+
+Surely I've missed some other things.
+
+If you would like to see something implemented,
+or find a nice Perlish syntax for some SQL feature,
+please let me know!
 
 =head1 AUTHOR
 
@@ -873,7 +884,8 @@ and Phil Regnauld.
 This module would not have been written
 if not for the inspiration provided
 by Erlang's approach to Mnesia database queries syntax;
-I'd like to thank XXX for this.
+I'd like to thank the person who came up with that idea -
+according to some, it was Hans Nilsson, but I am not sure.
 
 This work is in part sponsored by Telia Denmark.
 
