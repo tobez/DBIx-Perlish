@@ -29,7 +29,13 @@ sub s4 {
 	return ($u->name, blah => $u->id);
 }
 
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&s4, "select");
+sub funcall {
+	my $u : users;
+	lower($u->name) eq "hehe";
+	return ($u->name, blah => $u->id);
+}
+
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&funcall, "select");
 print "$sql\n";
 print "values: ", join ", ", @$v;
 print "\n";

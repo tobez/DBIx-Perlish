@@ -1,5 +1,8 @@
 Revision history for DBIx-Perlish
 
+NEXT
+       Added support for simple funcalls.
+
 0.09  Mon Feb  5 14:27:52 2007
        Added db_update().
 

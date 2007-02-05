@@ -304,6 +304,8 @@ sub parse_term
 	my ($S, $op, %p) = @_;
 
 	if (is_unop($op, "entersub")) {
+		my $funcall = try_funcall($S, $op);
+		return $funcall if $funcall;
 		my ($t, $f) = get_tab_field($S, $op);
 		if ($S->{operation} eq "delete" || $S->{operation} eq "update") {
 			return $f;
@@ -475,6 +477,37 @@ sub parse_simple_assign
 	push @{$S->{set_values}}, @{$S->{values}};
 	$S->{values} = $saved_values;
 	push @{$S->{sets}}, "$f = $set";
+}
+
+sub callarg
+{
+	my ($S, $op) = @_;
+	$op = $op->first if is_unop($op, "null");
+	return () if is_op($op, "pushmark");
+	return $op;
+}
+
+sub try_funcall
+{
+	my ($S, $op) = @_;
+	my @args;
+	if (is_unop($op, "entersub")) {
+		$op = $op->first;
+		$op = $op->first if is_unop($op, "null");
+		while (1) {
+			last if is_null($op);
+			push @args, callarg($S, $op);
+			$op = $op->sibling;
+		}
+		return unless @args;
+		$op = pop @args;
+		return unless is_svop($op, "gv") || is_padop($op, "gv");
+		my $gv = get_gv($S, $op);
+		return unless $gv;
+		my $func = $gv->NAME;
+		my @terms = map { parse_term($S, $_) } @args;
+		return "$func(" . join(", ", @terms) . ")";
+	}
 }
 
 sub parse_multi_assign
