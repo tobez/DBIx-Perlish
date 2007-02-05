@@ -140,9 +140,9 @@ sub get_table
 sub get_var
 {
 	my ($S, $op) = @_;
-	if (ref($op) eq "B::OP" && $op->name eq "padsv") {
+	if (is_op($op, "padsv")) {
 		return "my #" . $op->targ;
-	} elsif (ref($op) eq "B::UNOP" && $op->name eq "null") {
+	} elsif (is_unop($op, "null")) {
 		$op = $op->first;
 		want_svop($S, $op, "gvsv");
 		return "*" . $op->gv->NAME;
@@ -376,6 +376,29 @@ sub parse_simple_term
 	}
 }
 
+sub get_gv
+{
+	my ($S, $op) = @_;
+
+	my ($gv_on_pad, $gv_idx);
+	if (is_svop($op, "gv")) {
+		$gv_idx = $op->targ;
+	} elsif (is_padop($op, "gv")) {
+		$gv_idx = $op->padix;
+		$gv_on_pad = 1;
+	} else {
+		return;
+	}
+	return unless is_null($op->sibling);
+
+	my $gv = $gv_on_pad ? "" : $op->sv;
+	if (!$gv || !$$gv) {
+		$gv = $S->{padlist}->ARRAYelt($gv_idx);
+	}
+	return unless ref $gv eq "B::GV";
+	$gv;
+}
+
 sub try_parse_subselect
 {
 	my ($S, $sop) = @_;
@@ -398,22 +421,8 @@ sub try_parse_subselect
 
 	$dbfetch = $dbfetch->first if is_unop($dbfetch->first, "null");
 	$dbfetch = $dbfetch->first;
-	my ($gv_on_pad, $gv_idx);
-	if (is_svop($dbfetch, "gv")) {
-		$gv_idx = $dbfetch->targ;
-	} elsif (is_padop($dbfetch, "gv")) {
-		$gv_idx = $dbfetch->padix;
-		$gv_on_pad = 1;
-	} else {
-		return;
-	}
-	return unless is_null($dbfetch->sibling);
-
-	my $gv = $gv_on_pad ? "" : $dbfetch->sv;
-	if (!$gv || !$$gv) {
-		$gv = $S->{padlist}->ARRAYelt($gv_idx);
-	}
-	return unless ref $gv eq "B::GV";
+	my $gv = get_gv($S, $dbfetch);
+	return unless $gv;
 	return unless $gv->NAME eq "db_fetch";
 
 	my $cv = $codeop->sv;
@@ -440,6 +449,81 @@ sub try_parse_subselect
 	my $left = parse_term($S, $sop->first, not_after => 1);
 	push @{$S->{values}}, @$vals;
 	return "$left in ($sql)";
+}
+
+sub parse_assign
+{
+	my ($S, $op) = @_;
+
+	bailout $S, "assignments are no understood in $S->{operation}'s query sub"
+		unless $S->{operation} eq "update";
+	if (is_unop($op->first, "srefgen")) {
+		parse_multi_assign($S, $op);
+	} else {
+		parse_simple_assign($S, $op);
+	}
+}
+
+sub parse_simple_assign
+{
+	my ($S, $op) = @_;
+
+	my ($tab, $f) = get_tab_field($S, $op->last, "lvalue");
+	my $saved_values = $S->{values};
+	$S->{values} = [];
+	my $set = parse_term($S, $op->first);
+	push @{$S->{set_values}}, @{$S->{values}};
+	$S->{values} = $saved_values;
+	push @{$S->{sets}}, "$f = $set";
+}
+
+sub parse_multi_assign
+{
+	my ($S, $op) = @_;
+
+	my $hashop = $op->first;
+	want_unop($S, $hashop, "srefgen");
+	$hashop = $hashop->first;
+	$hashop = $hashop->first while is_unop($hashop, "null");
+	want_listop($S, $hashop, "anonhash");
+
+	my $saved_values = $S->{values};
+	$S->{values} = [];
+
+	my $want_const = 1;
+	my $field;
+	for my $c (get_all_children($hashop)) {
+		next if is_op($c, "pushmark");
+		if ($want_const) {
+			$field = want_const($S, $c);
+			$want_const = 0;
+		} else {
+			my $set = parse_term($S, $c);
+			push @{$S->{set_values}}, @{$S->{values}};
+			push @{$S->{sets}}, "$field = $set";
+			$S->{values} = [];
+			$want_const = 1;
+			$field = undef;
+		}
+	}
+
+	$S->{values} = $saved_values;
+
+	$op = $op->last;
+
+	my $tab;
+	if (is_op($op, "padsv")) {
+		my $var = get_var($S, $op);
+		$tab = $S->{vars}{$var};
+	} elsif (is_unop($op, "entersub")) {
+		$op = $op->first;
+		$op = $op->first if is_unop($op, "null");
+		$op = $op->sibling if is_op($op, "pushmark");
+		$op = $op->first if is_unop($op, "rv2cv");
+		my $gv = get_gv($S, $op);
+		$tab = $gv->NAME if $gv;
+	}
+	bailout $S, "cannot get a table to update" unless $tab;
 }
 
 my %binop_map = (
@@ -479,15 +563,7 @@ sub parse_expr
 		my $right = parse_term($S, $op->last);
 		return "$left < $right";
 	} elsif ($op->name eq "sassign") {
-		bailout $S, "assignments are no understood in $S->{operation}'s query sub"
-			unless $S->{operation} eq "update";
-		my ($tab, $f) = get_tab_field($S, $op->last, "lvalue");
-		my $saved_values = $S->{values};
-		$S->{values} = [];
-		my $set = parse_term($S, $op->first);
-		push @{$S->{set_values}}, @{$S->{values}};
-		$S->{values} = $saved_values;
-		push @{$S->{sets}}, "$f = $set";
+		parse_assign($S, $op);
 		return ();
 	} else {
 		bailout $S, "unsupported binop " . $op->name;

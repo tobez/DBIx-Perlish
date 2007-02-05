@@ -22,7 +22,7 @@ db_insert 'tbl', {
 
 db_update {
 	tbl->id == 41;
-	tbl->id = tbl->id + 1;
+	tbl->id = tbl->id - 1;
 	tbl->name = "luff";
 };
 
@@ -36,6 +36,14 @@ db_update {
 	};
 };
 }
+
+db_update {
+	tbl->id == 40;
+	tbl() = {
+		id   => tbl->id + 2,
+		name => "LIFF",
+	};
+};
 
 my $x = 2;
 my $r = db_fetch { tbl->id / $x - 1 == 20 };
