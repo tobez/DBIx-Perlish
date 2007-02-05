@@ -103,7 +103,6 @@ sub update
 		dbh    => $dbh,
 	);
 	$SQL = $me->{sql}; @BIND_VALUES = @{$me->{bind_values}};
-	print "$SQL\n";
 	$dbh->do($me->{sql}, {}, @{$me->{bind_values}});
 }
 
@@ -133,8 +132,9 @@ sub insert
 		$sql .= ") values (";
 		$sql .= join ",", ('?') x keys %$row;
 		$sql .= ")";
-		$dbh->do($sql, {}, values %$row);
+		return undef unless defined $dbh->do($sql, {}, values %$row);
 	}
+	return scalar @rows;
 }
 
 sub sql { $_[0]->{sql} }
@@ -230,27 +230,45 @@ This document describes DBIx::Perlish version 0.09
         $x->name !~ /\@/;
     };
 
-    # sub-selects:
+    # sub-queries:
     my @rows = db_fetch {
         my $x : users;
         $x->id <- db_fetch {
-            table2->col == 2 || table2->col == 3;
-            return table2->user_id;
+            my $t2 : table;
+            $t2->col == 2 || $t2->col == 3;
+            return $t2->user_id;
         };
         $x->name !~ /\@/;
     };
 
+    # updates:
     db_update {
+        data->num < 100;
+        data->mutable;
+
         data->num = data->num + 1;
-        data->num < 100 and data->mutable;
+        data->name = "xyz";
     };
 
+    # more updates:
+    db_update {
+        my $d : data;
+        $d->num < 100, $d->mutable;
+
+        $d = {
+            num  => $d->num + 1,
+            name => "xyz"
+        };
+    };
+
+    # deletes:
     db_delete {
         my $t : table;
         !defined $t->age  or
         $t->age < 18;
     };
 
+    # inserts:
     my $id = 42;
     db_insert 'users', {
         id   => $id,
@@ -260,9 +278,31 @@ This document describes DBIx::Perlish version 0.09
 
 =head1 DESCRIPTION
 
+The C<DBIx::Perlish> module provides an ability to work with databases supported
+by the C<DBI> module using Perl's own syntax for four most common
+operations: SELECT, UPDATE, DELETE, and INSERT.
+
+By using C<DBIx::Perlish>, you can write most of your database
+queries using a domain-specific language with Perl syntax.
+Since a Perl programmer knows Perl by definition,
+and might not know SQL to the same degree, this approach
+generally leads to a more comprehensible and maintainable
+code.
+
+The module is not intended to replace 100% of SQL used in your program.
+There is a hope, however, that it can be used to replace
+80 to 95% of it.
+
+The C<DBIx::Perlish> module quite intentionally neither implements
+nor cares about database administration tasks like schema design
+and management.  The plain C<DBI> interface is quite sufficient for
+that.  Similarly, and for the same reason, it does not take care of
+establishing database connections or handling transactions.  All this
+is outside the scope of this module.
+
 =head2 Who this module is NOT for
 
-=over 4
+=over
 
 =item *
 
@@ -290,13 +330,13 @@ otherwise, read on!
 There are three sensible and semi-sensible ways of arranging code that
 works with SQL databases in Perl:
 
-=over 4
+=over
 
 =item SQL sprinkling approach
 
 One puts queries wherever one needs to do something with the database,
 so bits and pieces of SQL are intermixed with the program logic.
-This approach can easily become an incomprehensible mess difficult
+This approach can easily become an incomprehensible mess that is difficult
 to read and maintain.
 
 =item Clean and tidy approach
@@ -326,13 +366,6 @@ approach.
 The C<DBIx::Perlish> module is meant to eliminate the majority
 of the "SQL sprinkling" style of database interaction.
 It is also fully compatible with the "clean and tidy" method.
-
-By using C<DBIx::Perlish>, you can write most of your database
-queries using a domain-specific language with Perl syntax.
-Since a Perl programmer knows Perl by definition,
-and might not know SQL to the same degree, this approach
-generally leads to a more comprehensible and maintainable
-code.
 
 =head2 Procedural interface
 
@@ -384,6 +417,11 @@ for the first row of selected data.  Example:
 
     my $somename = db_fetch { return user->name };
 
+Borrowing DBI's terminology, this is analogous to
+
+    my $somename =
+        $dbh->selectrow_array("select name from user");
+
 If there is a return statement which specifies exactly one
 column, and C<db_fetch {}> is called in the list context,
 an array containing the specified column for all selected
@@ -391,22 +429,45 @@ rows is returned.  Example:
 
     my @allnames = db_fetch { return user->name };
 
+This is analogous to
+
+    my @allnames =
+        @{$dbh->selectcol_arrayref("select name from user")};
+
 When there is no return statement, or if 
 the return statement specifies multiple columns,
 then an individual row is represented by a hash
 reference with column names as the keys.
 
 In the scalar context, a single hashref is returned, which
-corresponds for the first row of selected data.  Example:
+corresponds to the first row of selected data.  Example:
 
     my $h = db_fetch { my $u : user };
     print "name: $h->{name}, id: $h->{id}\n";
 
-In the list context, and array of hasrefs is returned,
+In DBI parlance that would look like
+
+    my $h = $dbh->selectrow_hashref("select * from user");
+    print "name: $h->{name}, id: $h->{id}\n";
+
+In the list context, an array of hashrefs is returned,
 one element for one row of selected data:
 
     my @users = db_fetch { my $u : user };
     print "name: $_->{name}, id: $_->{id}\n" for @users;
+
+Again, borrowing from DBI, this is analogous to
+
+    my @users = @{$dbh->selectall_arrayref("select * from user",
+        {Slice=>{}})};
+    print "name: $_->{name}, id: $_->{id}\n" for @users;
+
+The C<db_fetch {}> function will throw an exception if it is unable to
+find a valid database handle to use, or if it is unable to convert its
+query sub to SQL.
+
+In addition, if the database handle is configured to throw exceptions,
+the function might throw any of the exceptions thrown by DBI.
 
 L</Subqueries> are permitted in db_fetch's query subs.
 
@@ -415,10 +476,62 @@ syntax allowed in query subs.
 
 =head3 db_update {}
 
+The C<db_update {}> function updates rows of a database table.
+
+The function parses the supplied query sub,
+converts it into the corresponding SQL UPDATE statement,
+and executes it.
+
+The function returns whatever DBI's C<do> method returns.
+
+The function will throw an exception if it is unable to find
+a valid database handle to use, or if it is unable to convert
+its query sub to SQL.
+
+In addition, if the database handle is configured to throw exceptions,
+the function might throw any of the exceptions thrown by DBI.
+
+A query sub of the C<db_update {}> function must refer
+to precisely one table (not counting tables referred to
+by subqueries).
+
+Neither C<return> statements nor C<last> statements are
+allowed in the C<db_update {}> function's query subs.
+
 L</Subqueries> are permitted in db_update's query subs.
 
 Please see L</Query sub syntax> below for details of the
 syntax allowed in query subs.
+
+Examples:
+
+    db_update {
+        tbl->id == 41;
+        tbl->id = tbl->id - 1;
+        tbl->name = "luff";
+    };
+
+    db_update {
+        my $t : tbl;
+        $t->id == 40;
+        $t = {
+            id   => $t->id + 2,
+            name => "LIFF",
+        };
+    };
+
+    db_update {
+        tbl->id == 40;
+        tbl() = {
+            id   => tbl->id + 2,
+            name => "LIFF",
+        };
+    };
+
+Please note a certain ugliness in C<tbl()> in the last example,
+so it is probably better to either use table vars, or stick to the
+single assignment syntax of the first example.
+
 
 =head3 db_delete {}
 
@@ -431,8 +544,15 @@ and executes it.
 
 The function returns whatever DBI's C<do> method returns.
 
+The function will throw an exception if it is unable to find
+a valid database handle to use, or if it is unable to convert
+its query sub to SQL.
+
+In addition, if the database handle is configured to throw exceptions,
+the function might throw any of the exceptions thrown by DBI.
+
 A query sub of the C<db_delete {}> function must refer
-to precisely one table (disregarding tables referred to
+to precisely one table (not counting tables referred to
 by subqueries).
 
 Neither C<return> statements nor C<last> statements are
@@ -474,7 +594,15 @@ values taken from hashref values.  Example:
 
     db_insert 'users', { id => 1, name => "the.user" };
 
-XXX returns what?  document.
+The function returns the number of insert operations performed.
+If any of the DBI insert operations fail, the function returns
+undef, and does not perform remaining inserts.
+
+The function will throw an exception if it is unable to find
+a valid database handle to use.
+
+In addition, if the database handle is configured to throw exceptions,
+the function might throw any of the exceptions thrown by DBI.
 
 =head3 $SQL and @BIND_VALUES
 
@@ -512,6 +640,24 @@ and you won't be unpleasantly surprized.
 The important thing to remember is that although the query subs have Perl
 syntax, they do B<not> represent Perl, but a specialized "domain specific"
 database query language with Perl syntax.
+
+A query sub can consist of the following types of statements:
+
+=over
+
+=item *
+
+table variables declarations;
+
+query filter statements;
+
+return statements (only valid for fetch operations);
+
+assignments (only valid for update operations);
+
+result limiting statements (only valid for fetch operations).
+
+=back
 
 ...
 
