@@ -342,6 +342,12 @@ sub parse_term
 		} else {
 			return "$t.$f";
 		}
+	} elsif (is_unop($op, "lc")) {
+		my $term = parse_term($S, $op->first);
+		return "lower($term)";
+	} elsif (is_unop($op, "uc")) {
+		my $term = parse_term($S, $op->first);
+		return "upper($term)";
 	} elsif (is_unop($op, "null")) {
 		return parse_term($S, $op->first, %p);
 	} elsif (is_unop($op, "not")) {

@@ -60,6 +60,11 @@ sub funcall3 {
 	longfunc($u->name eq "hehe", !$u->boolvar) == 42;
 }
 
+sub funcall4 {
+	my $u : users;
+	lc $u->name eq "hehe";
+}
+
 sub outer_ref {
 	my $g : groups;
 	$g->id <- db_fetch {
@@ -77,7 +82,7 @@ sub outer_ref_exists {
 	};
 }
 
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&outer_ref_exists, "select");
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&funcall4, "select");
 print "$sql\n";
 print "values: ", join ", ", @$v;
 print "\n";
