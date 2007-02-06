@@ -45,7 +45,22 @@ sub loneterm2 {
 	!$u->boolvar;
 }
 
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&loneterm2, "select");
+sub loneterm3 {
+	my $u : users;
+	is_digit($u->id);
+}
+
+sub funcall2 {
+	my $u : users;
+	longfunc($u->name eq "hehe", !$u->boolvar);
+}
+
+sub funcall3 {
+	my $u : users;
+	longfunc($u->name eq "hehe", !$u->boolvar) == 42;
+}
+
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&funcall3, "select");
 print "$sql\n";
 print "values: ", join ", ", @$v;
 print "\n";
