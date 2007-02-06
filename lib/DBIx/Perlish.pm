@@ -189,7 +189,7 @@ sub gen_sql
 		$sql .= join ", ", @{$S->{sets}};
 	}
 
-	if ($S->{where}) {
+	if ($S->{where} && @{$S->{where}}) {
 		$sql .= " where " . join " and ", @{$S->{where}};
 	}
 	if ($S->{limit}) {
