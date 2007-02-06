@@ -227,7 +227,8 @@ sub try_parse_attr_assignment
 	$op = want_unop($S, $op);
 	return unless is_op($op, "pushmark");
 	$op = $op->sibling;
-	return unless is_const($S, $op) eq "attributes";
+	my $c = is_const($S, $op);
+	return unless $c && $c eq "attributes";
 	$op = $op->sibling;
 	return unless is_const($S, $op);
 	$op = $op->sibling;
@@ -607,7 +608,8 @@ sub parse_entersub
 {
 	my ($S, $op) = @_;
 	my $tab = try_parse_attr_assignment($S, $op);
-	bailout $S, "cannot parse entersub" unless $tab;
+	return () if $tab;
+	return parse_term($S, $op);
 }
 
 sub parse_regex
@@ -763,7 +765,7 @@ sub parse_op
 		$S->{line} = $op->line;
 		# skip
 	} elsif (is_unop($op, "entersub")) {
-		parse_entersub($S, $op);
+		push @{$S->{where}}, parse_entersub($S, $op);
 	} elsif (ref($op) eq "B::PMOP" && $op->name eq "match") {
 		push @{$S->{where}}, parse_regex( $S, $op, 0);
 	} else {

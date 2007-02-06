@@ -1,7 +1,9 @@
 Revision history for DBIx-Perlish
 
-NEXT
+0.10  Tue Feb  6 09:46:58 2007
        Added support for simple funcalls.
+       PadWalker module is now optional.
+       Terms can stand by themselves.
 
 0.09  Mon Feb  5 14:27:52 2007
        Added db_update().

@@ -35,7 +35,17 @@ sub funcall {
 	return ($u->name, blah => $u->id);
 }
 
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&funcall, "select");
+sub loneterm1 {
+	my $u : users;
+	$u->boolvar;
+}
+
+sub loneterm2 {
+	my $u : users;
+	!$u->boolvar;
+}
+
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&loneterm2, "select");
 print "$sql\n";
 print "values: ", join ", ", @$v;
 print "\n";
