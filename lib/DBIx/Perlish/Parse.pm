@@ -461,15 +461,22 @@ sub try_parse_subselect
 	return unless $gv;
 	return unless $gv->NAME eq "db_fetch";
 
+	my $sql = handle_subselect($S, $codeop);
+
+	my $left = parse_term($S, $sop->first, not_after => 1);
+	return "$left in ($sql)";
+}
+
+sub handle_subselect
+{
+	my ($S, $codeop, %p) = @_;
+
 	my $cv = $codeop->sv;
 	if (!$$cv) {
 		$cv = $S->{padlist}->[1]->ARRAYelt($codeop->targ);
 	}
 	my $subref = $cv->object_2svref;
 
-	# XXX This should be able to handle situations
-	# when internal select refers to external things.
-	# This might be easy, or it might be not.
 	my %gen_args = %{$S->{gen_args}};
 	$gen_args{prev_S} = $S;
 	if ($gen_args{prefix}) {
@@ -479,13 +486,12 @@ sub try_parse_subselect
 	}
 	$S->{subselect}++;
 	my ($sql, $vals, $nret) = DBIx::Perlish::gen_sql($subref, "select", %gen_args);
-	if ($nret != 1) {
+	if ($nret != 1 && !$p{returns_dont_care}) {
 		bailout $S, "subselect query sub must return exactly one value\n";
 	}
 
-	my $left = parse_term($S, $sop->first, not_after => 1);
 	push @{$S->{values}}, @$vals;
-	return "$left in ($sql)";
+	return $sql;
 }
 
 sub parse_assign
@@ -540,6 +546,18 @@ sub try_funcall
 		my $gv = get_gv($S, $op);
 		return unless $gv;
 		my $func = $gv->NAME;
+		if ($func eq "db_fetch") {
+			return unless @args == 1;
+			my $rg = $args[0];
+			return unless is_unop($rg, "refgen");
+			$rg = $rg->first if is_unop($rg->first, "null");
+			return unless is_op($rg->first, "pushmark");
+			my $codeop = $rg->first->sibling;
+			return unless is_svop($codeop, "anoncode");
+			my $sql = handle_subselect($S, $codeop, returns_dont_care => 1);
+			return "exists ($sql)";
+		}
+
 		my @terms = map { parse_term($S, $_) } @args;
 		return "$func(" . join(", ", @terms) . ")";
 	}
