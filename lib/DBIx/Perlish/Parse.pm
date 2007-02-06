@@ -785,6 +785,37 @@ sub parse_or
 	}
 }
 
+my %labelmap = (
+	select => {
+		orderby  => 'order_by',
+		order_by => 'order_by',
+		order    => 'order_by',
+
+		groupby  => 'group_by',
+		group_by => 'group_by',
+		group    => 'group_by',
+	},
+);
+
+sub parse_labels
+{
+	my ($S, $op) = @_;
+	my $label = $labelmap{$S->{operation}}->{lc $op->label};
+	bailout $S, "label ", $op->label, " is not understood"
+		unless $label;
+	$op = $op->sibling;
+	my @op;
+	if (is_listop($op, "list")) {
+		@op = get_all_children($op);
+	} else {
+		push @op, $op;
+	}
+	for $op (@op) {
+		next if is_op($op, "pushmark");
+		push @{$S->{$label}}, parse_term($S, $op);
+	}
+}
+
 sub parse_op
 {
 	my ($S, $op) = @_;
@@ -815,7 +846,9 @@ sub parse_op
 	} elsif (is_cop($op, "nextstate")) {
 		$S->{file} = $op->file;
 		$S->{line} = $op->line;
-		# skip
+		if ($op->label) {
+			parse_labels($S, $op);
+		}
 	} elsif (is_cop($op)) {
 		# XXX any other things?
 		$S->{file} = $op->file;
@@ -859,15 +892,17 @@ sub init
 {
 	my %args = @_;
 	my $S = {
-		gen_args  => \%args,
-		file      => '??',
-		line      => '??',
-		subselect => 's01',
-		operation => $args{operation},
+		gen_args   => \%args,
+		file       => '??',
+		line       => '??',
+		subselect  => 's01',
+		operation  => $args{operation},
+		values     => [],
+		sets       => [],
+		set_values => [],
+		order_by   => [],
+		group_by   => [],
 	};
-	$S->{values} = [];
-	$S->{sets} = [];
-	$S->{set_values} = [];
 	$S->{alias} = $args{prefix} ? "$args{prefix}_t01" : "t01";
 	$S;
 }

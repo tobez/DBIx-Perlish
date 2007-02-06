@@ -193,6 +193,12 @@ sub gen_sql
 	if ($S->{where} && @{$S->{where}}) {
 		$sql .= " where " . join " and ", @{$S->{where}};
 	}
+	if (@{$S->{group_by}}) {
+		$sql .= " group by " . join ", ", @{$S->{group_by}};
+	}
+	if (@{$S->{order_by}}) {
+		$sql .= " order by " . join ", ", @{$S->{order_by}};
+	}
 	if ($S->{limit}) {
 		$sql .= " limit $S->{limit}";
 	}
