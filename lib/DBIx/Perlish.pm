@@ -532,10 +532,6 @@ Examples:
         };
     };
 
-Please note a certain ugliness in C<tbl()> in the last example,
-so it is probably better to either use table vars, or stick to the
-single assignment syntax of the first example.
-
 The C<db_update {}> function is exported by default.
 
 
@@ -679,7 +675,8 @@ result limiting statements.
 
 =back
 
-The order of the statements is generally not important.
+The order of the statements is generally not important,
+except that table variables have to be declared before use.
 
 =head3 Table variables declarations
 
@@ -718,20 +715,67 @@ syntax.  For example:
 
     lower($t1->name) eq lower($t2->lastname);
 
+The C<lc> and C<uc> builtin functions are translated to
+C<lower> and C<upper>, respectively.
+
 =head3 Return statements
 
 Return statements determine which columns are returned by
 a query under what names.
-Each element in the return statement blah blah XXX
+Each element in the return statement can be either
+a reference to a table column, or a string constant,
+in which case it is taken as an alias to the next
+element in the return statement:
+
+    return ($table->col1, anothername => $table->col2);
 
 Return statements are only valid in L</db_fetch {}>.
 
-=head3 Assignments
-(only valid for update operations);
-=head3 Result limiting statements
-(only valid for fetch operations).
+Query subs representing subqueries using the reverse
+arrow notation must have exactly one return statement
+returning exactly one column (see L</Subqueries> below).
 
-The C<last> command is special.
+
+=head3 Assignments
+
+Assignments can take two form: individual column assignments
+or bulk assignments.  The former must have a reference to
+a table column on the left-hand side, and an expression
+like those accepted in filter statements on the right-hand
+side:
+
+    table->id = 42;
+    $t->column = $t->column + 1;
+
+The bulk assignments must have a table specifier on the left-hand
+side, and a hash reference on the right-hand side.
+The keys of the hash represent column names, and the values
+are expressions like those in the individual column
+assignments:
+
+    $t = {
+        id     => 42,
+        column => $t->column + 1
+    };
+
+or
+
+    table() = {
+        id     => 42,
+        column => table->column + 1
+    };
+
+Please note a certain ugliness in C<table()> in the last example,
+so it is probably better to either use table vars, or stick to the
+single assignment syntax of the first example.
+
+Assignment statements are only valid in L</db_update {}>.
+
+=head3 Result limiting statements
+
+The C<last> command can be used to limit the number of
+results returned by a fetch operation.
+
 If it stands on its own anywhere in the query sub, it means "stop
 after finding the first row that matches other filters", so it
 is analogous to C<LIMIT 1> in many SQL dialects.
@@ -745,9 +789,15 @@ is equivalent to
 
     OFFSET 5 LIMIT 16
 
+Result limiting statements are only valid in L</db_fetch {}>.
+
+
 =head3 Subqueries
 
-Bebebebe
+It is possible to use subqueries in L</db_fetch {}>, L</db_update {}>,
+and L</db_delete {}>.
+
+Bebebe.
 
 =head2 Object-oriented interface
 
