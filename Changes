@@ -1,5 +1,8 @@
 Revision history for DBIx-Perlish
 
+NEXT
+       Sub-queries can refer to tables in the outer scope.
+
 0.10  Tue Feb  6 09:46:58 2007
        Added support for simple funcalls.
        PadWalker module is now optional.

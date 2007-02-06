@@ -59,7 +59,7 @@ sub is_const
 	return () unless is_svop($op, "const");
 	my $sv = $op->sv;
 	if (!$$sv) {
-		$sv = $S->{padlist}->ARRAYelt($op->targ);
+		$sv = $S->{padlist}->[1]->ARRAYelt($op->targ);
 	}
 	if (wantarray) {
 		return (${$sv->object_2svref}, $sv);
@@ -101,7 +101,7 @@ sub want_const
 	my ($S, $op) = @_;
 	my $sv = want_svop($S, $op, "const");
 	if (!$$sv) {
-		$sv = $S->{padlist}->ARRAYelt($op->targ);
+		$sv = $S->{padlist}->[1]->ARRAYelt($op->targ);
 	}
 	${$sv->object_2svref};
 }
@@ -111,7 +111,7 @@ sub want_method
 	my ($S, $op) = @_;
 	my $sv = want_svop($S, $op, "method_named");
 	if (!$$sv) {
-		$sv = $S->{padlist}->ARRAYelt($op->targ);
+		$sv = $S->{padlist}->[1]->ARRAYelt($op->targ);
 	}
 	${$sv->object_2svref};
 }
@@ -137,11 +137,23 @@ sub get_table
 	want_const($S, $op);
 }
 
+sub padname
+{
+	my ($S, $op) = @_;
+
+	my $padname = $S->{padlist}->[0]->ARRAYelt($op->targ);
+	if ($padname && ref($padname) ne "B::SPECIAL") {
+		return "my " . $padname->PVX;
+	} else {
+		return "my #" . $op->targ;
+	}
+}
+
 sub get_var
 {
 	my ($S, $op) = @_;
 	if (is_op($op, "padsv")) {
-		return "my #" . $op->targ;
+		return padname($S, $op);
 	} elsif (is_unop($op, "null")) {
 		$op = $op->first;
 		want_svop($S, $op, "gvsv");
@@ -157,6 +169,24 @@ sub get_var
 	}
 }
 
+sub find_aliased_tab
+{
+	my ($S, $op) = @_;
+	my $var = padname($S, $op);
+	my $ss = $S;
+	while ($ss) {
+		my $tab;
+		if ($ss->{operation} eq "select") {
+			$tab = $ss->{var_alias}{$var};
+		} else {
+			$tab = $ss->{vars}{$var};
+		}
+		return $tab if $tab;
+		$ss = $ss->{gen_args}->{prev_S};
+	}
+	return "";
+}
+
 sub get_tab_field
 {
 	my ($S, $unop, $expect_lvalue) = @_;
@@ -167,8 +197,7 @@ sub get_tab_field
 	if ($tab) {
 		$tab = new_tab($S, $tab);
 	} elsif (is_op($op, "padsv")) {
-		my $var = "my #" . $op->targ;
-		$tab = $S->{var_alias}{$var};
+		$tab = find_aliased_tab($S, $op);
 	}
 	unless ($tab) {
 		bailout $S, "cannot get a table";
@@ -236,7 +265,7 @@ sub try_parse_attr_assignment
 	my $op1 = want_unop($S, $op);
 	$op1 = want_unop($S, $op1) if is_unop($op1, "null");
 	return unless is_op($op1, "padsv");
-	my $varn = "my #" . $op1->targ;
+	my $varn = padname($S, $op1);
 	$op = $op->sibling;
 	my $attr = is_const($S, $op);
 	return unless $attr;
@@ -348,11 +377,10 @@ sub parse_term
 			return "?";
 		}
 	} elsif (is_op($op, "padsv")) {
-		my $var = "my #" . $op->targ;
-		if ($S->{var_alias}{$var}) {
+		if (find_aliased_tab($S, $op)) {
 			bailout $S, "cannot use table variable as a term";
 		}
-		my $vv = $S->{padlist}->ARRAYelt($op->targ)->object_2svref;
+		my $vv = $S->{padlist}->[1]->ARRAYelt($op->targ)->object_2svref;
 		push @{$S->{values}}, $$vv;
 		return "?";
 	} else {
@@ -367,11 +395,10 @@ sub parse_simple_term
 	if (my $const = is_const($S, $op)) {
 		return $const;
 	} elsif (is_op($op, "padsv")) {
-		my $var = "my #" . $op->targ;
-		if ($S->{var_alias}{$var}) {
+		if (find_aliased_tab($S, $op)) {
 			bailout $S, "cannot use table variable as a simple term";
 		}
-		my $vv = $S->{padlist}->ARRAYelt($op->targ)->object_2svref;
+		my $vv = $S->{padlist}->[1]->ARRAYelt($op->targ)->object_2svref;
 		return $$vv;
 	} else {
 		bailout $S, "cannot reconstruct simple term from operation \"",
@@ -396,7 +423,7 @@ sub get_gv
 
 	my $gv = $gv_on_pad ? "" : $op->sv;
 	if (!$gv || !$$gv) {
-		$gv = $S->{padlist}->ARRAYelt($gv_idx);
+		$gv = $S->{padlist}->[1]->ARRAYelt($gv_idx);
 	}
 	return unless ref $gv eq "B::GV";
 	$gv;
@@ -430,7 +457,7 @@ sub try_parse_subselect
 
 	my $cv = $codeop->sv;
 	if (!$$cv) {
-		$cv = $S->{padlist}->ARRAYelt($codeop->targ);
+		$cv = $S->{padlist}->[1]->ARRAYelt($codeop->targ);
 	}
 	my $subref = $cv->object_2svref;
 
@@ -438,6 +465,7 @@ sub try_parse_subselect
 	# when internal select refers to external things.
 	# This might be easy, or it might be not.
 	my %gen_args = %{$S->{gen_args}};
+	$gen_args{prev_S} = $S;
 	if ($gen_args{prefix}) {
 		$gen_args{prefix} = "$gen_args{prefix}_$S->{subselect}";
 	} else {
@@ -793,7 +821,7 @@ sub parse_sub
 		print "\n\n";
 	}
 	my $root = B::svref_2object($sub);
-	$S->{padlist} = $root->PADLIST->ARRAY;
+	$S->{padlist} = [$root->PADLIST->ARRAY];
 	$root = $root->ROOT;
 	parse_op($S, $root);
 }

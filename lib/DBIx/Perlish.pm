@@ -884,11 +884,6 @@ GROUP BY clause;
 
 EXISTS-style sub-queries;
 
-=item *
-
-the ability to refer to tables mentioned in the outer scope 
-of sub-queries from the inner scope.
-
 =back
 
 Although variables closed over the query sub can be used
