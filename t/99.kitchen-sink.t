@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 30;
+use Test::More tests => 32;
 use DBIx::Perlish;
 use t::test_utils;
 
@@ -91,3 +91,11 @@ test_select_sql {
 } "simple NOT EXISTS subselect",
 "select * from tbl t01 where not exists (select * from t2 s01_t01 where t01.id = s01_t01.some_id)",
 [];
+
+# distinct
+test_select_sql {
+	return distinct => tbl->id
+} "simple SELECT DISTINCT",
+"select distinct t01.id from tbl t01",
+[];
+

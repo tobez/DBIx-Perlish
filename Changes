@@ -4,6 +4,7 @@ NEXT
        Sub-queries can refer to tables in the outer scope.
        Translate "lc" and "uc" to "lower" and "upper", respectively.
        Added support to EXISTS-style sub-queries.
+       Added support for SELECT DISTINCT.
 
 0.10  Tue Feb  6 09:46:58 2007
        Added support for simple funcalls.

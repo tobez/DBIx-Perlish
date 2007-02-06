@@ -308,6 +308,11 @@ sub parse_return
 				unless $rv{alias} =~ /^\w+$/;
 			bailout "cannot alias an alias"
 				if defined $last_alias;
+			if (lc $rv{alias} eq "distinct") {
+				bailout "\"$rv{alias}\" is not a valid alias name" if @{$S->{returns}};
+				$S->{distinct}++;
+				next;
+			}
 			$last_alias = $rv{alias};
 		}
 	}

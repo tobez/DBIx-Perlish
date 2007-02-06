@@ -153,6 +153,7 @@ sub gen_sql
 	my $no_aliases;
 	if ($operation eq "select") {
 		$sql = "select ";
+		$sql .= "distinct " if $S->{distinct};
 		if ($S->{returns}) {
 			$sql .= join ", ", @{$S->{returns}};
 			$nret = @{$S->{returns}};
@@ -729,6 +730,11 @@ element in the return statement:
 
     return ($table->col1, anothername => $table->col2);
 
+One can also specify a "distinct" or "DISTINCT"
+string constant in the beginning of the return list,
+in which case duplicated rows will be eliminated
+from the result set.
+
 Return statements are only valid in L</db_fetch {}>.
 
 Query subs representing subqueries using the reverse
@@ -797,7 +803,36 @@ Result limiting statements are only valid in L</db_fetch {}>.
 It is possible to use subqueries in L</db_fetch {}>, L</db_update {}>,
 and L</db_delete {}>.
 
-Bebebe.
+There are two variants of allowed subqueries.  The first one is a
+call, as a complete statement,
+to L</db_fetch {}> anywhere in the body of the query sub.
+This variant corresponds to the C<EXISTS (SELECT ...)> SQL
+construct, for example:
+
+    db_delete {
+        my $t : table;
+        db_fetch {
+            $t->id == table2->table_id;
+        };
+    };
+
+Another variant corresponds to C<... IN (SELECT ...)> SQL
+construct.  It uses a special syntax with back-arrow C<E<lt>->,
+which signifies that the column specifier on the left gets
+its values from whatever is returned by a L</db_fetch {}> on
+the right:
+
+    db_delete {
+        my $t : table;
+        $t->id  <-  db_fetch {
+            return table2->table_id;
+        };
+    };
+
+This variant puts a limitation on the return statement in the sub-query
+query sub.  Namely, it must contain a return statement with exactly one
+return value.
+
 
 =head2 Object-oriented interface
 
@@ -915,8 +950,10 @@ Please report any bugs or feature requests to
 C<bug-dbix-perlish@rt.cpan.org>, or through the web interface at
 L<http://rt.cpan.org>.
 
-The module has a lot of limitations.
-Currently, the following SQL features are not supported
+The module cannot handle more than 100 tables in a single
+query sub.
+
+The following SQL features are not supported
 (only those features for which I would like to add support
 in the future are listed), in no particular order:
 
@@ -932,7 +969,7 @@ GROUP BY clause;
 
 =item *
 
-EXISTS-style sub-queries;
+returning expressions as opposed to just column specifiers.
 
 =back
 
@@ -945,7 +982,7 @@ You can write
         table->id == $n;
     };
 
-but the following currently does not work:
+but the following currently won't work:
 
     my $n = { a => 1, meaning => 42 };
     db_fetch {
@@ -953,7 +990,7 @@ but the following currently does not work:
     };
 
 Similarly, variable interpolation inside regular
-expression is also supported.
+expression is also not supported.
 
 If you would like to see something implemented,
 or find a nice Perlish syntax for some SQL feature,
@@ -965,12 +1002,12 @@ Anton Berezin  C<< <tobez@tobez.org> >>
 
 =head1 ACKNOWLEDGEMENTS
 
-A big thank you for discussions, suggestions and code contributions go
-to
+I would like to thank
 Dmitry Karasik,
 Henrik Andersen,
 Lars Thegler,
-and Phil Regnauld.
+and Phil Regnauld
+for discussions, suggestions and code contributions.
 
 This module would not have been written
 if not for the inspiration provided
