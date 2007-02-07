@@ -10,7 +10,7 @@ use vars qw($VERSION @EXPORT $SQL @BIND_VALUES);
 require Exporter;
 use base 'Exporter';
 
-$VERSION = '0.11';
+$VERSION = '0.12';
 @EXPORT = qw(db_fetch db_update db_delete db_insert);
 
 use DBIx::Perlish::Parse;
@@ -222,7 +222,7 @@ DBIx::Perlish - a perlish interface to SQL databases
 
 =head1 VERSION
 
-This document describes DBIx::Perlish version 0.11
+This document describes DBIx::Perlish version 0.12
 
 
 =head1 SYNOPSIS
@@ -288,9 +288,9 @@ This document describes DBIx::Perlish version 0.11
 
 =head1 DESCRIPTION
 
-The C<DBIx::Perlish> module provides an ability to work with databases supported
-by the C<DBI> module using Perl's own syntax for four most common
-operations: SELECT, UPDATE, DELETE, and INSERT.
+The C<DBIx::Perlish> module provides the ability to work with databases
+supported by the C<DBI> module using Perl's own syntax for four most
+common operations: SELECT, UPDATE, DELETE, and INSERT.
 
 By using C<DBIx::Perlish>, you can write most of your database
 queries using a domain-specific language with Perl syntax.
@@ -310,30 +310,6 @@ that.  Similarly, and for the same reason, it does not take care of
 establishing database connections or handling transactions.  All this
 is outside the scope of this module.
 
-=head2 Who this module is NOT for
-
-=over
-
-=item *
-
-if you don't need database access, this module is not for you;
-
-=item *
-
-if you think that modules that provide object-relational mappings are
-cool, and if you use Class::DBI or DBIx::Class a lot and they don't annoy
-you, this module is not for you;
-
-=item *
-
-if you are a hard-core DBA and dream your dreams in SQL, this module is
-not for you;
-
-=item *
-
-otherwise, read on!
-
-=back
 
 =head2 Ideology
 
@@ -365,7 +341,7 @@ object-relational mapper modules like C<Class::DBI>, C<DBIx::Class>
 or C<Tangram>, then uses objects which perform all necessary queries
 under the hood.  This approach is even cleaner than "clean and tidy"
 above, but it has other issues.  Some schemas do not map well into
-OO space.  Typically, the resulting performance is an issue
+the OO space.  Typically, the resulting performance is an issue
 as well.  The performance issues can in some cases be alleviated
 by adding hand-crafted SQL in strategic places, so in this regard
 the object-relational mapping approach can resemble the "clean and tidy"
@@ -385,7 +361,7 @@ The C<init()> sub initializes procedural interface
 to the module.
 
 It accepts named parameters.
-Currently C<init()> understands only one such parameter,
+The C<init()> function understands only one such parameter,
 C<dbh>, which must be a valid DBI database handler.
 This parameter is required.
 
@@ -651,6 +627,10 @@ The author cannot recommend relying on this feature in the
 production code;  if in doubt, call C<init()> first
 and you won't be unpleasantly surprized.
 
+In order for this feature to be operational, the C<PadWalker>
+module must be installed.
+
+
 =head2 Query sub syntax
 
 The important thing to remember is that although the query subs have Perl
@@ -826,8 +806,8 @@ Specifying label C<order:>, C<orderby:>, C<order_by:>,
 C<sort:>, C<sortby:>, or C<sort_by:>, followed by a list of
 expressions will sort the result set according to the expressions.
 For details about the sorting criteria see the documentation
-for C<ORDER BY> clause your SQL dialect reference manual.
-Before a sorting expression in a list one can specify one of the
+for C<ORDER BY> clause in your SQL dialect reference manual.
+Before a sorting expression in a list one may specify one of the
 string constants "asc", "ascending", "desc", "descending" to
 alter the sorting order, for example:
 
@@ -850,7 +830,7 @@ Special labels are only valid in L</db_fetch {}>.
 It is possible to use subqueries in L</db_fetch {}>, L</db_update {}>,
 and L</db_delete {}>.
 
-There are two variants of allowed subqueries.  The first one is a
+There are two variants of subqueries.  The first one is a
 call, as a complete statement,
 to L</db_fetch {}> anywhere in the body of the query sub.
 This variant corresponds to the C<EXISTS (SELECT ...)> SQL
@@ -863,7 +843,7 @@ construct, for example:
         };
     };
 
-Another variant corresponds to C<... IN (SELECT ...)> SQL
+Another variant corresponds to the C<column IN (SELECT ...)> SQL
 construct.  It uses a special syntax with back-arrow C<E<lt>->,
 which signifies that the column specifier on the left gets
 its values from whatever is returned by a L</db_fetch {}> on
@@ -941,7 +921,7 @@ overloading nor source filters.
 
 The operator overloading would only work if individual tables were
 represented by Perl objects.  This means that an object-relational
-mapper like Tangram can do it, but C<DBIx::Perlish> cannot.
+mapper like C<Tangram> can do it, but C<DBIx::Perlish> cannot.
 
 The source filters are limited in other ways: the modules using them
 are often incompatible with other modules that also use source filtering,
@@ -972,7 +952,7 @@ DBIx::Perlish requires no configuration files or environment variables.
 
 =head1 DEPENDENCIES
 
-The C<DBIx::Perlish> module needs at least perl 5.8.0, quite possibly
+The C<DBIx::Perlish> module needs at least perl 5.8.2, quite possibly
 a somewhat higher version.  I have only tested it on
 5.8.8 and 5.8.4.
 
@@ -981,7 +961,8 @@ This module requires C<DBI> to do anything useful.
 In order to support the special handling of the C<$dbh> variable,
 C<PadWalker> needs to be installed.
 
-Other modules used are parts of the standard Perl distribution.
+Other modules used used by C<DBIx::Perlish> are included
+into the standard Perl distribution.
 
 
 =head1 INCOMPATIBILITIES
@@ -1005,7 +986,7 @@ query sub.
 Although variables closed over the query sub can be used
 in it, only simple scalars are understood at the moment.
 Similarly, variable interpolation inside regular
-expression is also not supported.
+expressions is also not supported.
 
 If you would like to see something implemented,
 or find a nice Perlish syntax for some SQL feature,
@@ -1023,12 +1004,6 @@ Henrik Andersen,
 Lars Thegler,
 and Phil Regnauld
 for discussions, suggestions and code contributions.
-
-This module would not have been written
-if not for the inspiration provided
-by Erlang's approach to Mnesia database queries syntax;
-I'd like to thank the person who came up with that idea -
-according to some, it was Hans Nilsson, but I am not sure.
 
 This work is in part sponsored by Telia Denmark.
 

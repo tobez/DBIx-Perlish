@@ -7,7 +7,6 @@ use strict;
 our $DEVEL;
 
 use B;
-use Data::Dumper;
 use Carp;
 
 sub bailout

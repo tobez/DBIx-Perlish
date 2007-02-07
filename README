@@ -1,18 +1,30 @@
-DBIx-Perlish version 0.0.1
+DBIx-Perlish version 0.12
 
-[ REPLACE THIS...
+DBIx::Perlish - a perlish interface to SQL databases.
 
-  The README is used to introduce the module and provide instructions on
-  how to install the module, any machine dependencies it may have (for
-  example C compilers and installed libraries) and any other information
-  that should be understood before the module is installed.
 
-  A README file is required for CPAN modules since CPAN extracts the
-  README file from a module distribution so that people browsing the
-  archive can use it get an idea of the modules uses. It is usually a
-  good idea to provide version information here so that people can
-  decide whether fixes for the module are worth downloading.
-]
+DESCRIPTION
+
+The DBIx::Perlish module provides the ability to work with databases
+supported by the DBI module using Perl's own syntax for four most common
+operations: SELECT, UPDATE, DELETE, and INSERT.
+
+By using DBIx::Perlish, you can write most of your database queries
+using a domain-specific language with Perl syntax.  Since a Perl
+programmer knows Perl by definition, and might not know SQL to the same
+degree, this approach generally leads to a more comprehensible and
+maintainable code.
+
+The module is not intended to replace 100% of SQL used in your program.
+There is a hope, however, that it can be used to replace a substantial
+portion of it.
+
+The DBIx::Perlish module quite intentionally neither implements nor
+cares about database administration tasks like schema design and
+management.  The plain DBI interface is quite sufficient for that.
+Similarly, and for the same reason, it does not take care of
+establishing database connections or handling transactions.  All this is
+outside the scope of this module.
 
 
 INSTALLATION
@@ -25,18 +37,9 @@ To install this module, run the following commands:
     make install
 
 
-Alternatively, to install with Module::Build, you can use the following commands:
-
-    perl Build.PL
-    ./Build
-    ./Build test
-    ./Build install
-
-
-
 DEPENDENCIES
 
-None.
+Perl 5.8.2, DBI, PadWalker (optional).
 
 
 COPYRIGHT AND LICENCE
