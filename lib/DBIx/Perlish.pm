@@ -183,6 +183,7 @@ sub gen_sql
 				"$tab" :
 				"$tab $S->{tab_alias}->{$tab}";
 	}
+	die "no tables specified in $operation\n" unless keys %tabs;
 	$sql .= join ", ", map { $tabs{$_} } sort keys %tabs;
 
 	if ($S->{sets} && @{$S->{sets}}) {

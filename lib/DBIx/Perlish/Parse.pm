@@ -785,34 +785,120 @@ sub parse_or
 	}
 }
 
+my $action_orderby = {
+	kind => 'termlist',
+	key  => 'order_by',
+};
+my $action_groupby = {
+	kind => 'fieldlist',
+	key  => 'group_by',
+};
+my $action_limit = {
+	kind => 'numassign',
+	key  => 'limit',
+};
+my $action_offset = {
+	kind => 'numassign',
+	key  => 'offset',
+};
+my $action_distinct = {
+	kind => 'notice',
+	key  => 'distinct',
+};
 my %labelmap = (
 	select => {
-		orderby  => 'order_by',
-		order_by => 'order_by',
-		order    => 'order_by',
+		orderby  => $action_orderby,
+		order_by => $action_orderby,
+		order    => $action_orderby,
+		sortby   => $action_orderby,
+		sort_by  => $action_orderby,
+		sort     => $action_orderby,
 
-		groupby  => 'group_by',
-		group_by => 'group_by',
-		group    => 'group_by',
+		groupby  => $action_groupby,
+		group_by => $action_groupby,
+		group    => $action_groupby,
+
+		limit    => $action_limit,
+
+		offset   => $action_offset,
+
+		distinct => $action_distinct,
 	},
 );
 
 sub parse_labels
 {
-	my ($S, $op) = @_;
-	my $label = $labelmap{$S->{operation}}->{lc $op->label};
-	bailout $S, "label ", $op->label, " is not understood"
+	my ($S, $lop) = @_;
+	my $label = $labelmap{$S->{operation}}->{lc $lop->label};
+	bailout $S, "label ", $lop->label, " is not understood"
 		unless $label;
-	$op = $op->sibling;
-	my @op;
-	if (is_listop($op, "list")) {
-		@op = get_all_children($op);
+	my $op = $lop->sibling;
+	# TODO add kind fieldlist
+	if ($label->{kind} eq "termlist") {
+		my @op;
+		if (is_listop($op, "list")) {
+			@op = get_all_children($op);
+		} else {
+			push @op, $op;
+		}
+		my $order = "";
+		for $op (@op) {
+			next if is_op($op, "pushmark");
+			my $term;
+			$term = parse_term($S, $op)
+				unless $term = is_const($S, $op);
+			if ($label->{key} eq "order_by") {
+				# special case for sort order
+				if ($term =~ /^asc/i) {
+					next;  # skip "ascending"
+				} elsif ($term =~ /^desc/i) {
+					$order = "desc";
+					next;
+				} else {
+					if ($order) {
+						push @{$S->{$label->{key}}}, "$term $order";
+						$order = "";
+					} else {
+						push @{$S->{$label->{key}}}, $term;
+					}
+				}
+			} else {
+				push @{$S->{$label->{key}}}, $term;
+			}
+		}
+		$S->{skipnext} = 1;
+	} elsif ($label->{kind} eq "fieldlist") {
+		my @op;
+		if (is_listop($op, "list")) {
+			@op = get_all_children($op);
+		} else {
+			push @op, $op;
+		}
+		for $op (@op) {
+			next if is_op($op, "pushmark");
+			my ($t, $f) = get_tab_field($S, $op);
+			push @{$S->{$label->{key}}},
+				($S->{operation} eq "delete" || $S->{operation} eq "update") ?
+				$f : "$t.$f";
+		}
+		$S->{skipnext} = 1;
+	} elsif ($label->{kind} eq "numassign") {
+		my ($const,$sv) = is_const($S, $op);
+		if (!$sv && is_op($op, "padsv")) {
+			if (find_aliased_tab($S, $op)) {
+				bailout $S, "cannot use table variable after ", $lop->label;
+			}
+			$sv = $S->{padlist}->[1]->ARRAYelt($op->targ);
+			$const = ${$sv->object_2svref};
+		}
+		bailout $S, "label ", $lop->label, " must be followed by an integer or integer variable"
+			unless $sv && ref $sv eq "B::IV";
+		$S->{$label->{key}} = $const;
+		$S->{skipnext} = 1;
+	} elsif ($label->{kind} eq "notice") {
+		$S->{$label->{key}}++;
 	} else {
-		push @op, $op;
-	}
-	for $op (@op) {
-		next if is_op($op, "pushmark");
-		push @{$S->{$label}}, parse_term($S, $op);
+		bailout $S, "internal error parsing label ", $op->label;
 	}
 }
 
@@ -820,6 +906,10 @@ sub parse_op
 {
 	my ($S, $op) = @_;
 
+	if ($S->{skipnext}) {
+		delete $S->{skipnext};
+		return;
+	}
 	if (is_listop($op, "list")) {
 		parse_list($S, $op);
 	} elsif (is_listop($op, "lineseq")) {

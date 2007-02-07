@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 32;
+use Test::More tests => 48;
 use DBIx::Perlish;
 use t::test_utils;
 
@@ -99,3 +99,67 @@ test_select_sql {
 "select distinct t01.id from tbl t01",
 [];
 
+# distinct via a label
+test_select_sql {
+	DISTINCT: return tbl->id
+} "simple SELECT DISTINCT via a label",
+"select distinct t01.id from tbl t01",
+[];
+
+# limit via a label
+test_select_sql {
+	my $t : tbl;
+	limit: 5;
+} "simple limit label",
+"select * from tbl t01 limit 5",
+[];
+
+# offset via a label
+test_select_sql {
+	my $t : tbl;
+	offset: 42;
+} "simple offset label",
+"select * from tbl t01 offset 42",
+[];
+
+# limit & offset via a label
+my $lim = 10;  my $ofs = 20;
+test_select_sql {
+	my $t : tbl;
+	limit: $lim;
+	offset: $ofs;
+} "simple limit/offset label with closure",
+"select * from tbl t01 limit 10 offset 20",
+[];
+
+# order by
+test_select_sql {
+	my $t : tbl;
+	order_by: $t->name;
+} "simple order by",
+"select * from tbl t01 order by t01.name",
+[];
+
+# order by desc
+test_select_sql {
+	my $t : tbl;
+	order_by: descending => $t->name;
+} "simple order by",
+"select * from tbl t01 order by t01.name desc",
+[];
+
+# order by several
+test_select_sql {
+	my $t : tbl;
+	order_by: asc => $t->name, desc => $t->age;
+} "simple order by",
+"select * from tbl t01 order by t01.name, t01.age desc",
+[];
+
+# group by
+test_select_sql {
+	my $t : tbl;
+	group_by: $t->type;
+} "simple order by",
+"select * from tbl t01 group by t01.type",
+[];
