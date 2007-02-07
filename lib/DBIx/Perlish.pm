@@ -10,7 +10,7 @@ use vars qw($VERSION @EXPORT $SQL @BIND_VALUES);
 require Exporter;
 use base 'Exporter';
 
-$VERSION = '0.10';
+$VERSION = '0.11';
 @EXPORT = qw(db_fetch db_update db_delete db_insert);
 
 use DBIx::Perlish::Parse;
@@ -222,7 +222,7 @@ DBIx::Perlish - a perlish interface to SQL databases
 
 =head1 VERSION
 
-This document describes DBIx::Perlish version 0.10
+This document describes DBIx::Perlish version 0.11
 
 
 =head1 SYNOPSIS
@@ -679,7 +679,11 @@ assignments;
 
 =item *
 
-result limiting statements.
+result limiting statements;
+
+=item *
+
+statements with label syntax.
 
 =back
 
@@ -803,6 +807,42 @@ is equivalent to
     OFFSET 5 LIMIT 16
 
 Result limiting statements are only valid in L</db_fetch {}>.
+
+=head3 Statements with label syntax
+
+There is a number of special labels which query sub syntax allows.
+
+Specifying label C<distinct:> anywhere in the query sub leads to duplicated
+rows being eliminated from the result set.
+
+Specifying label C<limit:> followed by a number (or a scalar variable
+representing a number) limits the number of rows returned by the query.
+
+Specifying label C<offset:> followed by a number N (or a scalar variable
+representing a number N) skips first N rows from the returned result
+set.
+
+Specifying label C<order:>, C<orderby:>, C<order_by:>,
+C<sort:>, C<sortby:>, or C<sort_by:>, followed by a list of
+expressions will sort the result set according to the expressions.
+For details about the sorting criteria see the documentation
+for C<ORDER BY> clause your SQL dialect reference manual.
+Before a sorting expression in a list one can specify one of the
+string constants "asc", "ascending", "desc", "descending" to
+alter the sorting order, for example:
+
+    db_fetch {
+        my $t : tbl;
+        order_by: asc => $t->name, desc => $t->age;
+    };
+
+Specifying label C<group:>, C<groupby:>, or C<group_by:>,
+followed by a list of column specifiers is equivalent to
+the SQL clause C<GROUP BY col1, col2, ...>.
+
+All special labels are case insensitive.
+
+Special labels are only valid in L</db_fetch {}>.
 
 
 =head3 Subqueries
@@ -957,45 +997,13 @@ Please report any bugs or feature requests to
 C<bug-dbix-perlish@rt.cpan.org>, or through the web interface at
 L<http://rt.cpan.org>.
 
+A number of features found in many SQL dialects is not supported.
+
 The module cannot handle more than 100 tables in a single
 query sub.
 
-The following SQL features are not supported
-(only those features for which I would like to add support
-in the future are listed), in no particular order:
-
-=over
-
-=item *
-
-ORDER BY clause;
-
-=item *
-
-GROUP BY clause;
-
-=item *
-
-returning expressions as opposed to just column specifiers.
-
-=back
-
 Although variables closed over the query sub can be used
 in it, only simple scalars are understood at the moment.
-You can write
-
-    my $n = 42;
-    db_fetch {
-        table->id == $n;
-    };
-
-but the following currently won't work:
-
-    my $n = { a => 1, meaning => 42 };
-    db_fetch {
-        table->id == $n->{meaning};
-    };
-
 Similarly, variable interpolation inside regular
 expression is also not supported.
 
