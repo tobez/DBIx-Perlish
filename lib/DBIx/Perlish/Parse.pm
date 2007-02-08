@@ -295,7 +295,11 @@ sub parse_return
 	my $last_alias;
 	for $op (@op) {
 		my %rv = parse_return_value($S, $op);
-		if (exists $rv{field}) {
+		if (exists $rv{table}) {
+			bailout "cannot alias the whole table"
+				if defined $last_alias;
+			push @{$S->{returns}}, "$rv{table}.*";
+		} if (exists $rv{field}) {
 			if (defined $last_alias) {
 				push @{$S->{returns}}, "$rv{field} as $last_alias";
 				undef $last_alias;
@@ -324,6 +328,8 @@ sub parse_return_value
 	if (is_unop($op, "entersub")) {
 		my ($t, $f) = get_tab_field($S, $op);
 		return field => "$t.$f";
+	} elsif (is_op($op, "padsv")) {
+		return table => find_aliased_tab($S, $op);
 	} elsif (my $const = is_const($S, $op)) {
 		return alias => $const;
 	} elsif (is_op($op, "pushmark")) {

@@ -103,7 +103,14 @@ sub labels4 {
 	OFFSET: $off;
 };
 
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&labels4, "select");
+sub retall {
+	my $t1 : table1;
+	my $t2 : table2;
+	$t1->id == $t2->table1_id;
+	return $t1, $t2->name;
+};
+
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&retall, "select");
 print "$sql\n";
 print "values: ", join ", ", @$v;
 print "\n";
