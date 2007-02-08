@@ -2,6 +2,7 @@ Revision history for DBIx-Perlish
 
 NEXT
        Add an ability to return complete table (tab.*).
+       Add table: label syntax for variable tables.
 
 0.12  Wed Feb  7 13:24:19 2007
        Documentation and makefile cleanup.

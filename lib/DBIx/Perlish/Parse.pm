@@ -835,10 +835,12 @@ sub parse_labels
 {
 	my ($S, $lop) = @_;
 	my $label = $labelmap{$S->{operation}}->{lc $lop->label};
+	if (!$label || lc $lop->label eq "table") {
+		$label = { kind => 'table' };
+	}
 	bailout $S, "label ", $lop->label, " is not understood"
 		unless $label;
 	my $op = $lop->sibling;
-	# TODO add kind fieldlist
 	if ($label->{kind} eq "termlist") {
 		my @op;
 		if (is_listop($op, "list")) {
@@ -902,6 +904,15 @@ sub parse_labels
 		$S->{skipnext} = 1;
 	} elsif ($label->{kind} eq "notice") {
 		$S->{$label->{key}}++;
+	} elsif ($label->{kind} eq "table") {
+		bailout $S, "label ", $lop->label, " must be followed by an assignment"
+			unless $op->name eq "sassign";
+		my $attr = parse_simple_term($S, $op->first);
+		bailout $S, "lavel ", $lop->label, " must be followed by a lexical variable declaration"
+			unless is_op($op->last, "padsv");
+		my $varn = padname($S, $op->last);
+		new_var($S, $varn, $attr);
+		$S->{skipnext} = 1;
 	} else {
 		bailout $S, "internal error parsing label ", $op->label;
 	}

@@ -110,7 +110,15 @@ sub retall {
 	return $t1, $t2->name;
 };
 
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&retall, "select");
+my $vart = 'table1';
+sub vartable {
+	table: my $t1 = $vart;
+	my $t2 : table2;
+	$t1->id == $t2->table1_id;
+	return $t1, $t2->name;
+};
+
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&vartable, "select");
 print "$sql\n";
 print "values: ", join ", ", @$v;
 print "\n";
