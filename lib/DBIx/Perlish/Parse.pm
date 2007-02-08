@@ -148,6 +148,43 @@ sub padname
 	}
 }
 
+sub get_value
+{
+	my ($S, $op, %p) = @_;
+
+	my $val;
+	if (is_op($op, "padsv")) {
+		if (find_aliased_tab($S, $op)) {
+			bailout $S, "cannot use a table variable as a value";
+		}
+		my $vv = $S->{padlist}->[1]->ARRAYelt($op->targ)->object_2svref;
+		$val = $$vv;
+	} elsif (is_binop($op, "helem")) {
+		my $key = is_const($S, $op->last);
+		bailout $S, "only constant hash keys are understood" unless $key;
+		$op = $op->first;
+		my $vv;
+		if (is_op($op, "padhv")) {
+			$vv = $S->{padlist}->[1]->ARRAYelt($op->targ)->object_2svref;
+		} elsif (is_unop($op, "rv2hv")) {
+			$op = $op->first;
+			if (is_op($op, "padsv")) {
+				if (find_aliased_tab($S, $op)) {
+					bailout $S, "cannot use a table variable as a value";
+				}
+				$vv = $S->{padlist}->[1]->ARRAYelt($op->targ)->object_2svref;
+				$vv = $$vv;
+			}
+		}
+		bailout $S, "unable to extract a value from a hash(ref)" unless $vv;
+		$val = $vv->{$key};
+	} else {
+		return () if $p{soft};
+		bailout $S, "cannot parse as a value or value reference";
+	}
+	return ($val, 1);
+}
+
 sub get_var
 {
 	my ($S, $op) = @_;
@@ -372,6 +409,9 @@ sub parse_term
 				return "not $term";
 			}
 		}
+	} elsif (my ($val, $ok) = get_value($S, $op, soft => 1)) {
+		push @{$S->{values}}, $val;
+		return "?";
 	} elsif (is_binop($op)) {
 		my $expr = parse_expr($S, $op);
 		return "($expr)";
@@ -392,13 +432,6 @@ sub parse_term
 			push @{$S->{values}}, $const;
 			return "?";
 		}
-	} elsif (is_op($op, "padsv")) {
-		if (find_aliased_tab($S, $op)) {
-			bailout $S, "cannot use table variable as a term";
-		}
-		my $vv = $S->{padlist}->[1]->ARRAYelt($op->targ)->object_2svref;
-		push @{$S->{values}}, $$vv;
-		return "?";
 	} else {
 		bailout $S, "cannot reconstruct term from operation \"",
 				$op->name, '"';
@@ -410,12 +443,8 @@ sub parse_simple_term
 	my ($S, $op) = @_;
 	if (my $const = is_const($S, $op)) {
 		return $const;
-	} elsif (is_op($op, "padsv")) {
-		if (find_aliased_tab($S, $op)) {
-			bailout $S, "cannot use table variable as a simple term";
-		}
-		my $vv = $S->{padlist}->[1]->ARRAYelt($op->targ)->object_2svref;
-		return $$vv;
+	} elsif (my ($val, $ok) = get_value($S, $op, soft => 1)) {
+		return $val;
 	} else {
 		bailout $S, "cannot reconstruct simple term from operation \"",
 				$op->name, '"';
@@ -890,6 +919,7 @@ sub parse_labels
 		}
 		$S->{skipnext} = 1;
 	} elsif ($label->{kind} eq "numassign") {
+		# TODO more generic values
 		my ($const,$sv) = is_const($S, $op);
 		if (!$sv && is_op($op, "padsv")) {
 			if (find_aliased_tab($S, $op)) {
@@ -908,7 +938,7 @@ sub parse_labels
 		bailout $S, "label ", $lop->label, " must be followed by an assignment"
 			unless $op->name eq "sassign";
 		my $attr = parse_simple_term($S, $op->first);
-		bailout $S, "lavel ", $lop->label, " must be followed by a lexical variable declaration"
+		bailout $S, "label ", $lop->label, " must be followed by a lexical variable declaration"
 			unless is_op($op->last, "padsv");
 		my $varn = padname($S, $op->last);
 		new_var($S, $varn, $attr);
