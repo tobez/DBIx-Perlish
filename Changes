@@ -1,5 +1,8 @@
 Revision history for DBIx-Perlish
 
+NEXT
+       Added post-if parse-time simple conditionals.
+
 0.13  Fri Feb  9 12:28:20 2007
        Added an ability to return complete table (tab.*).
        Added two ways to specify table names at run-time.

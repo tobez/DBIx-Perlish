@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 64;
+use Test::More tests => 69;
 use DBIx::Perlish;
 use t::test_utils;
 
@@ -224,3 +224,18 @@ test_select_sql {
 "select * from table1 t01",
 [];
 
+# conditional post-if
+my $type = "ICBM";
+test_select_sql {
+	my $t : products;
+	$t->type eq $type if $type;
+} "conditional post-if, true",
+"select * from products t01 where t01.type = ?",
+["ICBM"];
+$type = "";
+test_select_sql {
+	my $t : products;
+	$t->type eq $type if $type;
+} "conditional post-if, false",
+"select * from products t01",
+[];

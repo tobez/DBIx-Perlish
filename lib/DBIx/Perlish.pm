@@ -666,6 +666,10 @@ result limiting statements;
 
 =item *
 
+conditional statements;
+
+=item *
+
 statements with label syntax.
 
 =back
@@ -812,6 +816,28 @@ is equivalent to
     OFFSET 5 LIMIT 16
 
 Result limiting statements are only valid in L</db_fetch {}>.
+
+=head3 Conditional statements
+
+There is a limited support for parse-time conditional expressions.
+
+At the query sub parsing stage, if the conditional does not mention
+any tables or columns, and refers exclusively to the values from the
+outer scope, it is evaluated, and the corresponding filter (or any other
+kind of statement) is only considered if the condition is true.
+
+For example,
+
+    my $type = "ICBM";
+    db_fetch {
+        my $p : products;
+        $p->type eq $type if $type;
+    };
+
+will generate the equivalent to C<select * from products where type = 'type'>,
+while the same code would generate just C<select * from products> if C<$type>
+were false.
+
 
 =head3 Statements with label syntax
 

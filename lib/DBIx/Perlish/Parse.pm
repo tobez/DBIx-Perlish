@@ -835,6 +835,27 @@ sub parse_or
 	}
 }
 
+sub parse_and
+{
+	my ($S, $op) = @_;
+	if (my ($val, $ok) = get_value($S, $op->first, soft => 1)) {
+		if ($val) {
+			$op = $op->first->sibling;
+			# This strangeness is for suppressing () when parsing
+			# expr via parse_term.  There must be a better way.
+			if (is_binop($op) || $op->name eq "sassign") {
+				return parse_expr($S, $op);
+			} else {
+				return parse_term($S, $op);
+			}
+		} else {
+			return ();
+		}
+	} else {
+		bailout $S, "logical AND is not supported yet";
+	}
+}
+
 my $action_orderby = {
 	kind => 'termlist',
 	key  => 'order_by',
@@ -985,6 +1006,9 @@ sub parse_op
 	} elsif (is_logop($op, "or")) {
 		my $or = parse_or($S, $op);
 		push @{$S->{where}}, $or if $or;
+	} elsif (is_logop($op, "and")) {
+		my $and = parse_and($S, $op);
+		push @{$S->{where}}, $and if $and;
 	} elsif (is_unop($op, "leavesub")) {
 		parse_op($S, $op->first);
 	} elsif (is_unop($op, "null")) {
