@@ -10,7 +10,7 @@ use vars qw($VERSION @EXPORT $SQL @BIND_VALUES);
 require Exporter;
 use base 'Exporter';
 
-$VERSION = '0.12';
+$VERSION = '0.13';
 @EXPORT = qw(db_fetch db_update db_delete db_insert);
 
 use DBIx::Perlish::Parse;
@@ -157,6 +157,9 @@ sub gen_sql
 		if ($S->{returns}) {
 			$sql .= join ", ", @{$S->{returns}};
 			$nret = @{$S->{returns}};
+			for my $ret (@{$S->{returns}}) {
+				$nret = 9999 if $ret =~ /\*/;
+			}
 		} else {
 			$sql .= "*";
 		}
@@ -222,7 +225,7 @@ DBIx::Perlish - a perlish interface to SQL databases
 
 =head1 VERSION
 
-This document describes DBIx::Perlish version 0.12
+This document describes DBIx::Perlish version 0.13
 
 
 =head1 SYNOPSIS
@@ -682,6 +685,18 @@ It is possible to associate several variables with the
 same table;  this is the preferable mechanism if self-joins
 are desired.
 
+In case the table name is not known until runtime, it is also
+possible to write for example
+
+    my $var : table = $data->{tablename};
+
+In this case the attribute "table" must be specified verbatim,
+and the name of the table is taken from the right-hand side of the
+assignment.
+
+Another possibility for declaring table variables is
+described in L</Statements with label syntax>.
+
 Please note that L</db_update {}> and L</db_delete {}> must
 only refer to a single table.
 
@@ -694,8 +709,9 @@ operators, and unary ! are all valid in the filters.
 
 Individual terms can refer to a table column using dereferencing
 syntax (either C<table-E<gt>column> or C<$tablevar-E<gt>column>),
-to an integer, floating point, or string constant, to a scalar
-lexical variable from an outer scope, or to a function call.
+to an integer, floating point, or string constant, to a function
+call, or to a scalar value an outer scope (simple scalars,
+hash elements, or dereferenced hashref elements are supported).
 
 Function calls can take an arbitrary number of arguments.
 Each argument to a function must currently be a term,
@@ -715,11 +731,20 @@ C<lower> and C<upper>, respectively.
 Return statements determine which columns are returned by
 a query under what names.
 Each element in the return statement can be either
-a reference to a table column, or a string constant,
-in which case it is taken as an alias to the next
-element in the return statement:
+a reference to a table column, a reference to the whole
+table, or a string constant,
+in which case it is taken as an alias to
+the next element in the return statement:
 
     return ($table->col1, anothername => $table->col2);
+
+If an element is a reference to the whole table,
+it is understood that all columns from this table
+are returned:
+
+    return ($t1->col1, $t1->col2, $t2);
+
+Table references cannot be aliased by a name.
 
 One can also specify a "distinct" or "DISTINCT"
 string constant in the beginning of the return list,
@@ -819,6 +844,19 @@ alter the sorting order, for example:
 Specifying label C<group:>, C<groupby:>, or C<group_by:>,
 followed by a list of column specifiers is equivalent to
 the SQL clause C<GROUP BY col1, col2, ...>.
+
+Specifying label C<table:> followed by a lexical variable
+declaration, followed by an assignment introduces an alternative
+table declaration syntax.  The value of the expression on the right
+hand side of the assignment is taken to be the name of the table:
+
+    my $data = { table => "mytable" };
+    db_fetch {
+        table: my $t = $data->{mytable};
+    };
+
+This is useful if you don't know the names of your table until
+runtime.
 
 All special labels are case insensitive.
 
@@ -984,7 +1022,8 @@ The module cannot handle more than 100 tables in a single
 query sub.
 
 Although variables closed over the query sub can be used
-in it, only simple scalars are understood at the moment.
+in it, only simple scalars, hash elements, and dereferenced
+hasref elements are understood at the moment.
 Similarly, variable interpolation inside regular
 expressions is also not supported.
 

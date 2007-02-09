@@ -15,8 +15,18 @@ sub test_sql
 	}
 }
 
-sub test_select_sql (&$$$) {
-	test_sql(@_,"select");
+sub test_bad_sql
+{
+	my ($sub, $tname, $rx, $dbop) = @_;
+	eval { DBIx::Perlish::gen_sql($sub, $dbop, flavor => 'postgresql'); };
+	my $err = $@||"";
+	like($err, $rx, $tname);
 }
+
+sub test_select_sql (&$$$) { test_sql(@_,"select") }
+
+sub test_bad_select (&$$) { test_bad_sql(@_,"select") }
+sub test_bad_update (&$$) { test_bad_sql(@_,"update") }
+sub test_bad_delete (&$$) { test_bad_sql(@_,"delete") }
 
 1;

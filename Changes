@@ -1,9 +1,11 @@
 Revision history for DBIx-Perlish
 
-NEXT
-       Add an ability to return complete table (tab.*).
-       Add table: label syntax for variable tables.
-       Add an ability to use $hash{const} and $hash->{const} as values.
+0.13  Fri Feb  9 12:28:20 2007
+       Added an ability to return complete table (tab.*).
+       Added two ways to specify table names at run-time.
+       Added an ability to use $hash{const} and $hash->{const} as values.
+       More tests.
+       More docs.
 
 0.12  Wed Feb  7 13:24:19 2007
        Documentation and makefile cleanup.

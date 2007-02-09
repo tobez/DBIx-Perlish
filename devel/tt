@@ -19,8 +19,8 @@ sub s2 {
 
 my $from = 0;  my $to = 30;
 sub s3 {
-	my $x : users;
-	last unless $from..$to;
+	my $t : ttt;
+	last unless 3..($from*$to);
 };
 
 sub s4 {
@@ -141,7 +141,15 @@ sub hashref2 {
 	$t->id == $self{id};
 };
 
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&vartable2, "select");
+sub funnytable {
+	my $t : table = $self->{table};
+};
+
+sub shouldfail {
+	table: $vart = 52;
+};
+
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&s3, "select");
 print "$sql\n";
 print "values: ", join ", ", @$v;
 print "\n";

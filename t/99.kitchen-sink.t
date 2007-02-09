@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 48;
+use Test::More tests => 64;
 use DBIx::Perlish;
 use t::test_utils;
 
@@ -163,3 +163,64 @@ test_select_sql {
 } "simple order by",
 "select * from tbl t01 group by t01.type",
 [];
+
+#  return t.*
+test_select_sql {
+	my $t1 : table1;
+	my $t2 : table2;
+	$t1->id == $t2->table1_id;
+	return $t1, $t2->name;
+} "select t.*",
+"select t01.*, t02.name from table1 t01, table2 t02 where t01.id = t02.table1_id",
+[];
+
+my $vart = 'table1';
+my $self = { table => 'table1', id => 42 };
+my %self = ( table => 'table1', id => 42 );
+test_select_sql {
+	table: my $t1 = $vart;
+	my $t2 : table2;
+	$t1->id == $t2->table1_id;
+	return $t1, $t2->name;
+} "vartable label 1",
+"select t01.*, t02.name from table1 t01, table2 t02 where t01.id = t02.table1_id",
+[];
+
+test_select_sql {
+	table: my $t1 = $self{table};
+	my $t2 : table2;
+	$t1->id == $t2->table1_id;
+	return $t1, $t2->name;
+} "vartable label 2",
+"select t01.*, t02.name from table1 t01, table2 t02 where t01.id = t02.table1_id",
+[];
+
+test_select_sql {
+	table: my $t1 = $self->{table};
+	my $t2 : table2;
+	$t1->id == $t2->table1_id;
+	return $t1, $t2->name;
+} "vartable label 3",
+"select t01.*, t02.name from table1 t01, table2 t02 where t01.id = t02.table1_id",
+[];
+
+test_select_sql {
+	my $t : table1;
+	$t->id == $self->{id};
+} "hashref",
+"select * from table1 t01 where t01.id = ?",
+[42];
+
+test_select_sql {
+	my $t : table1;
+	$t->id == $self{id};
+} "hashelement",
+"select * from table1 t01 where t01.id = ?",
+[42];
+
+test_select_sql {
+	my $t : table = $self->{table};
+} "vartable attribute",
+"select * from table1 t01",
+[];
+
