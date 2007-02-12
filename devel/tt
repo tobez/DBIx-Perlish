@@ -155,7 +155,22 @@ sub parsetime_if {
 	$t->name eq $type if $type;
 };
 
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&parsetime_if, "select");
+my $id = 42;
+sub return_expr {
+	my $p : product_tree;
+	my $e : product_eda_adsl;
+	$p->id == $id;
+	$p->id == $e->id;
+
+	return (
+		$p->id,
+		$p->circuit_number,
+		$e,
+		TNIDInstallDate => to_char($e->selt_date, 'YYYY-MM-DD'),
+	);
+};
+
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&return_expr, "select");
 print "$sql\n";
 print "values: ", join ", ", @$v;
 print "\n";
