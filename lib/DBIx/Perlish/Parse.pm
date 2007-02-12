@@ -733,13 +733,22 @@ sub parse_complex_regex
 		;
 	} elsif ( is_svop( $op, 'const')) {
 		return want_const( $S, $op);
-	} elsif ( is_op( $op, 'padsv')) {
-		my $rx = ${ $S->{padlist}->[1]->ARRAYelt($op->targ)->object_2svref };
+	} elsif ( is_op( $op, 'padsv') or is_padop( $op, 'gvsv')) {
+		if (find_aliased_tab($S, $op)) {
+			bailout $S, "cannot use a table variable as a value";
+		}
+		my $gv = ref($op) eq 'B::PADOP';
+		my $ix = $gv ? $op-> padix : $op-> targ;
+		my $rx = ${ $S->{padlist}->[1]->ARRAYelt( $ix)->object_2svref };
+		bailout $S, "something bad happened: embedded regex scalar cannot be accessed" 
+			unless defined $rx;
+		if ( $gv) {
+			$rx = $$rx;
+			bailout $S, "something bad happened: embedded regex scalar cannot be accessed" 
+				unless defined $rx;
+		}
 		$rx =~ s/^\(\?\-\w*\:(.*)\)$/$1/; # (?-xism:moo) -> moo
 		return $rx;
-	} elsif ( is_padop( $op, 'gvsv')) {
-		# XXX
-		bailout $S, "embedded lexicals unsupported in regexps";
 	} else {
 		bailout $S, "unsupported op " . ref($op) . '/' . $op->name; 
 	}
