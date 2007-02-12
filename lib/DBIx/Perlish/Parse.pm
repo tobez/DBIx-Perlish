@@ -719,16 +719,49 @@ sub parse_entersub
 	return parse_term($S, $op);
 }
 
+sub parse_complex_regex
+{
+	my ( $S, $op) = @_;
+
+	if ( is_unop( $op)) {
+		return parse_complex_regex( $S, $op-> first);
+	} elsif ( is_binop( $op, 'concat')) {
+		$op = $op-> first;
+		return 
+			parse_complex_regex( $S, $op) . 
+			parse_complex_regex( $S, $op-> sibling)
+		;
+	} elsif ( is_svop( $op, 'const')) {
+		return want_const( $S, $op);
+	} elsif ( is_op( $op, 'padsv')) {
+		my $rx = ${ $S->{padlist}->[1]->ARRAYelt($op->targ)->object_2svref };
+		$rx =~ s/^\(\?\-\w*\:(.*)\)$/$1/; # (?-xism:moo) -> moo
+		return $rx;
+	} elsif ( is_padop( $op, 'gvsv')) {
+		# XXX
+		bailout $S, "embedded lexicals unsupported in regexps";
+	} else {
+		bailout $S, "unsupported op " . ref($op) . '/' . $op->name; 
+	}
+}
+
 sub parse_regex
 {
 	my ( $S, $op, $neg) = @_;
 	my ( $like, $case) = ( $op->precomp, $op-> pmflags & B::PMf_FOLD);
 
+	unless ( defined $like) {
+		my $logop = $op-> first-> sibling;
+		bailout $S, "strange regex " . $op->name
+			unless $logop and is_logop( $logop, 'regcomp');
+		$like = parse_complex_regex( $S, $logop-> first);
+	}
+
 	my ($tab, $field) = get_tab_field($S, $op->first);
 
 	my $flavor = lc($S-> {gen_args}-> {flavor} || '');
 	my $what = 'like';
-	
+
 	my $can_like = $like =~ /^\^?[-\s\w]*\$?$/; # like that begins with non-% can use indexes
 	
 	if ( $flavor eq 'mysql') {
@@ -786,9 +819,9 @@ sub parse_regex
 		return ($neg ? "not " : "") . "$what(?, $tab.$field)";
 	} else {
 		# XXX is SQL-standard LIKE case-sensitive or not?
-		die "Don't know how to set case-insensitive flag for this DBI flavor"
+		bailout $S, "Don't know how to set case-insensitive flag for this DBI flavor"
 			if $case;
-		die "Regex too complex for implementation using LIKE keyword: $like"
+		bailout $S, "Regex too complex for implementation using LIKE keyword: $like"
 			if $like =~ /(?<!\\)[\[\]\(\)\{\}\?\|]/;
 LIKE:
 		$like =~ s/%/\\%/g;

@@ -4,6 +4,8 @@ use warnings;
 use lib qw(lib);
 use DBIx::Perlish;
 
+my $emb = qr/O_o/;
+
 sub s1 {
 	my $x : x;
 	$x-> y !~ /^insensitive/i;
@@ -21,7 +23,7 @@ sub s3 {
 
 sub s4 {
 	my $x : x;
-	$x-> y !~ /[SeNS](Iti|Ve)/;
+	$x-> y !~ /[SeNS](Iti|Ve)$emb/;
 };
 
 sub rx
