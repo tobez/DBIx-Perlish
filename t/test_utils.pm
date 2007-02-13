@@ -1,3 +1,4 @@
+# $Id$
 package t::test_utils;
 package main;
 
@@ -24,6 +25,8 @@ sub test_bad_sql
 }
 
 sub test_select_sql (&$$$) { test_sql(@_,"select") }
+sub test_update_sql (&$$$) { test_sql(@_,"update") }
+sub test_delete_sql (&$$$) { test_sql(@_,"delete") }
 
 sub test_bad_select (&$$) { test_bad_sql(@_,"select") }
 sub test_bad_update (&$$) { test_bad_sql(@_,"update") }

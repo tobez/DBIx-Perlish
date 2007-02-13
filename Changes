@@ -1,7 +1,12 @@
 Revision history for DBIx-Perlish
 
-NEXT
+0.14  Tue Feb 13 16:32:50 2007
        Added post-if parse-time simple conditionals.
+       Added interpolation of scalars in regular expresions.
+       Added special handling of sysdate() in Oracle.
+       Verbatim sql() in inserts.
+       Verbatim sql() in query subs.
+       Support expressions in return statements.
 
 0.13  Fri Feb  9 12:28:20 2007
        Added an ability to return complete table (tab.*).

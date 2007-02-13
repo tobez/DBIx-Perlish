@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 79;
+use Test::More tests => 82;
 use DBIx::Perlish;
 use t::test_utils;
 
@@ -260,6 +260,13 @@ test_select_sql {
 } "verbatim in select",
 "select * from tab t01 where t01.id = some_seq.nextval",
 [];
+test_update_sql {
+	tab->state eq "new";
+
+	tab->id = sql "some_seq.nextval";
+} "verbatim in update",
+"update tab set id = some_seq.nextval where state = ?",
+['new'];
 
 # expression return
 test_select_sql {
