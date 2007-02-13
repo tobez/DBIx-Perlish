@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 69;
+use Test::More tests => 73;
 use DBIx::Perlish;
 use t::test_utils;
 
@@ -239,3 +239,17 @@ test_select_sql {
 } "conditional post-if, false",
 "select * from products t01",
 [];
+
+# special handling of sysdate
+test_select_sql {
+	tab->foo == sysdate();
+} "sysdate() is not special",
+"select * from tab t01 where t01.foo = sysdate()",
+[];
+$main::flavor = "Oracle";
+test_select_sql {
+	tab->foo == sysdate();
+} "sysdate() is special",
+"select * from tab t01 where t01.foo = sysdate",
+[];
+$main::flavor = "";

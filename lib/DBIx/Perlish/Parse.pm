@@ -614,6 +614,9 @@ sub try_funcall
 		}
 
 		my @terms = map { parse_term($S, $_) } @args;
+		return "sysdate"
+			if $S->{gen_args}->{flavor} eq "Oracle" &&
+				lc $func eq "sysdate" && !@terms;
 		return "$func(" . join(", ", @terms) . ")";
 	}
 }

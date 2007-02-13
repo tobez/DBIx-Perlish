@@ -170,7 +170,9 @@ sub return_expr {
 	);
 };
 
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&return_expr, "select");
+sub funcall_no_args { tab->id == sysdate() };
+
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&funcall_no_args, "select", flavor => "Oracle");
 print "$sql\n";
 print "values: ", join ", ", @$v;
 print "\n";

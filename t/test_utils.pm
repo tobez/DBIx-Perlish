@@ -6,7 +6,7 @@ sub format_value { $_[0] }
 sub test_sql
 {
 	my ($sub, $tname, $exp_sql, $exp_v, $dbop) = @_;
-	my ($sql, $v) = DBIx::Perlish::gen_sql($sub, $dbop, flavor => 'postgresql');
+	my ($sql, $v) = DBIx::Perlish::gen_sql($sub, $dbop, flavor => $main::flavor || 'postgresql');
 	is($sql, $exp_sql, "$tname: SQL");
 	is(+@$v, @$exp_v, "$tname: number of bound values");
 	for (my $i = 0; $i < @$v; $i++) {
@@ -18,7 +18,7 @@ sub test_sql
 sub test_bad_sql
 {
 	my ($sub, $tname, $rx, $dbop) = @_;
-	eval { DBIx::Perlish::gen_sql($sub, $dbop, flavor => 'postgresql'); };
+	eval { DBIx::Perlish::gen_sql($sub, $dbop, flavor => $main::flavor || 'postgresql'); };
 	my $err = $@||"";
 	like($err, $rx, $tname);
 }
