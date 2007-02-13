@@ -11,7 +11,7 @@ require Exporter;
 use base 'Exporter';
 
 $VERSION = '0.13';
-@EXPORT = qw(db_fetch db_update db_delete db_insert);
+@EXPORT = qw(db_fetch db_update db_delete db_insert sql);
 
 use DBIx::Perlish::Parse;
 use DBI::Const::GetInfoType;
@@ -132,14 +132,30 @@ sub insert
 		my $sql = "insert into $table (";
 		$sql .= join ",", keys %$row;
 		$sql .= ") values (";
-		$sql .= join ",", ('?') x keys %$row;
+		my (@v, @b);
+		for my $v (values %$row) {
+			if (ref $v eq 'CODE') {
+				push @v, scalar $v->();
+			} else {
+				push @v, "?";
+				push @b, $v;
+			}
+		}
+		$sql .= join ",", @v;
 		$sql .= ")";
-		return undef unless defined $dbh->do($sql, {}, values %$row);
+		return undef unless defined $dbh->do($sql, {}, @b);
 	}
 	return scalar @rows;
 }
 
-sub sql { $_[0]->{sql} }
+sub sql {
+	my $self = shift;
+	if (ref $self && $self->isa("DBIx::Perlish")) {
+		$self->{sql};
+	} else {
+		sub { $self }
+	}
+}
 sub bind_values { $_[0]->{bind_values} ? @{$_[0]->{bind_values}} : () }
 
 sub gen_sql
