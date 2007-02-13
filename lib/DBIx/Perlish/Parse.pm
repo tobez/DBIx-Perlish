@@ -611,11 +611,17 @@ sub try_funcall
 			return unless is_svop($codeop, "anoncode");
 			my $sql = handle_subselect($S, $codeop, returns_dont_care => 1);
 			return "exists ($sql)";
+		} elsif ($func eq "sql") {
+			return unless @args == 1;
+			# XXX understand more complex expressions here
+			my $sql;
+			return unless $sql = is_const($S, $args[0]);
+			return $sql;
 		}
 
 		my @terms = map { parse_term($S, $_) } @args;
 		return "sysdate"
-			if $S->{gen_args}->{flavor} eq "Oracle" &&
+			if ($S->{gen_args}->{flavor}||"") eq "Oracle" &&
 				lc $func eq "sysdate" && !@terms;
 		return "$func(" . join(", ", @terms) . ")";
 	}
