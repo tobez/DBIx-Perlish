@@ -364,17 +364,19 @@ sub parse_return_value
 {
 	my ($S, $op) = @_;
 
-	if (is_unop($op, "entersub")) {
-		my ($t, $f) = get_tab_field($S, $op);
-		return field => "$t.$f";
-	} elsif (is_op($op, "padsv")) {
+	if (is_op($op, "padsv")) {
 		return table => find_aliased_tab($S, $op);
 	} elsif (my $const = is_const($S, $op)) {
 		return alias => $const;
 	} elsif (is_op($op, "pushmark")) {
 		return ();
 	} else {
-		bailout $S, "error parsing return values";
+		my $saved_values = $S->{values};
+		$S->{values} = [];
+		my $ret = parse_term($S, $op);
+		push @{$S->{ret_values}}, @{$S->{values}};
+		$S->{values} = $saved_values;
+		return field => $ret;
 	}
 }
 
@@ -397,6 +399,9 @@ sub parse_term
 	} elsif (is_unop($op, "uc")) {
 		my $term = parse_term($S, $op->first);
 		return "upper($term)";
+	} elsif (is_unop($op, "abs")) {
+		my $term = parse_term($S, $op->first);
+		return "abs($term)";
 	} elsif (is_unop($op, "null")) {
 		return parse_term($S, $op->first, %p);
 	} elsif (is_unop($op, "not")) {
@@ -1131,6 +1136,7 @@ sub init
 		values     => [],
 		sets       => [],
 		set_values => [],
+		ret_values => [],
 		order_by   => [],
 		group_by   => [],
 	};

@@ -226,6 +226,7 @@ sub gen_sql
 		$sql .= " offset $S->{offset}";
 	}
 	my $v = $S->{set_values} || [];
+	push @$v, @{$S->{ret_values} || []};
 	push @$v, @{$S->{values} || []};
 	return ($sql, $v, $nret);
 }

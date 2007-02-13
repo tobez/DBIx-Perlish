@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 75;
+use Test::More tests => 79;
 use DBIx::Perlish;
 use t::test_utils;
 
@@ -260,3 +260,16 @@ test_select_sql {
 } "verbatim in select",
 "select * from tab t01 where t01.id = some_seq.nextval",
 [];
+
+# expression return
+test_select_sql {
+	return tab->n1 - tab->n2
+} "expression return 1",
+"select (t01.n1 - t01.n2) from tab t01",
+[];
+test_select_sql {
+	return diff => abs(tab->n1 - tab->n2)
+} "expression return 2",
+"select abs((t01.n1 - t01.n2)) as diff from tab t01",
+[];
+

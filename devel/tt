@@ -166,7 +166,8 @@ sub return_expr {
 		$p->id,
 		$p->circuit_number,
 		$e,
-		TNIDInstallDate => to_char($e->selt_date, 'YYYY-MM-DD'),
+		DAYS_TO_ACTIVATION => $e->ACTIVATION_DATE_START-sysdate(),
+		TNIDInstallDate => abs($e->selt_date),
 	);
 };
 
@@ -176,7 +177,7 @@ sub verbatim {
 	tab->id == sql "some_seq.nextval";
 };
 
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&verbatim, "select");
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&return_expr, "select");
 print "$sql\n";
 print "values: ", join ", ", @$v;
 print "\n";
