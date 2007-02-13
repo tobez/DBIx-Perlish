@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 73;
+use Test::More tests => 75;
 use DBIx::Perlish;
 use t::test_utils;
 
@@ -253,3 +253,10 @@ test_select_sql {
 "select * from tab t01 where t01.foo = sysdate",
 [];
 $main::flavor = "";
+
+# verbatim
+test_select_sql {
+	tab->id == sql "some_seq.nextval";
+} "verbatim in select",
+"select * from tab t01 where t01.id = some_seq.nextval",
+[];
