@@ -39,7 +39,7 @@ sub gen_is
 {
 	my ($optype) = @_;
 	my $pkg = "B::" . uc($optype);
-	eval qq[ sub is_$optype { is("$pkg", \@_) } ];
+	eval qq[ sub is_$optype { is("$pkg", \@_) } ] unless __PACKAGE__->can("is_$optype");
 }
 
 gen_is("binop");
@@ -78,7 +78,7 @@ sub gen_want
 	} elsif ($return =~ /^\w+$/) {
 		$return = '$op->' . $return;
 	}
-	eval <<EOF;
+	eval <<EOF unless __PACKAGE__->can("want_$optype");
 	sub want_$optype {
 		my (\$S, \$op, \$n) = \@_;
 		unless (is_$optype(\$op, \$n)) {
