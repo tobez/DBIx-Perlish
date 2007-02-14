@@ -1,0 +1,27 @@
+#! /usr/bin/perl
+use warnings;
+use strict;
+use lib qw(lib);
+use DBI;
+use DBIx::Perlish;
+$DBIx::Perlish::Parse::DEVEL = 1;
+
+my $dbh = DBI->connect("dbi:SQLite:");
+$dbh->do("create table tbl (id int, name text)");
+
+my $dbp = new DBIx::Perlish(dbh => $dbh);
+$dbp->insert('tbl', {
+	id   => 1,
+	name => 'hello',
+}, {
+	id   => 2,
+	name => 'fefe',
+}, {
+	id   => 42,
+	name => sql "abs(-5)",
+});
+
+my $x = 2;
+my $r = $dbp->fetch(sub { tbl->id / $x - 1 == 20 });
+print $dbp->sql, "\n";
+print "$r->{name}\n";

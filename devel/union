@@ -1,0 +1,36 @@
+#! /usr/bin/perl
+use warnings;
+use strict;
+use lib qw(lib);
+use DBI;
+use DBIx::Perlish;
+$DBIx::Perlish::Parse::DEVEL = 1;
+
+my $dbh = DBI->connect("dbi:SQLite:");
+$dbh->do("create table t1 (id int, name text)");
+$dbh->do("create table t2 (id int, name text)");
+
+db_insert 't1', {
+	id   => 1,
+	name => 't1 - hello',
+}, {
+	id   => 2,
+	name => 't1 - fefe',
+};
+db_insert 't2', {
+	id   => 1,
+	name => 't2 - hello',
+}, {
+	id   => 2,
+	name => 't2 - fefe',
+};
+
+my @r = db_fetch {
+	return t1->name;
+	UNION:
+	return t2->name;
+};
+print "$DBIx::Perlish::SQL\n";
+for (@r) {
+	print "$_->{name}\n";
+}
