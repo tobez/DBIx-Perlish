@@ -3,7 +3,7 @@ use warnings;
 use strict;
 use lib qw(lib);
 use DBI;
-use DBIx::Perlish;
+use DBIx::Perlish qw(:all);
 $DBIx::Perlish::Parse::DEVEL = 1;
 
 my $dbh = DBI->connect("dbi:SQLite:");
@@ -26,11 +26,13 @@ db_insert 't2', {
 };
 
 my @r = db_fetch {
-	return t1->name;
-	UNION:
-	return t2->name;
+	{
+		return t1->name;
+	}
+	union
+	{
+		return t2->name;
+	}
 };
 print "$DBIx::Perlish::SQL\n";
-for (@r) {
-	print "$_->{name}\n";
-}
+print "$_\n" for @r;

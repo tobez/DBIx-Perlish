@@ -42,15 +42,16 @@ sub gen_is
 	eval qq[ sub is_$optype { is("$pkg", \@_) } ];
 }
 
-gen_is("op");
-gen_is("cop");
-gen_is("unop");
-gen_is("listop");
-gen_is("svop");
-gen_is("null");
 gen_is("binop");
+gen_is("cop");
+gen_is("listop");
 gen_is("logop");
+gen_is("loop");
+gen_is("null");
+gen_is("op");
 gen_is("padop");
+gen_is("svop");
+gen_is("unop");
 
 sub is_const
 {
@@ -386,7 +387,7 @@ sub parse_term
 
 	if (is_unop($op, "entersub")) {
 		my $funcall = try_funcall($S, $op);
-		return $funcall if $funcall;
+		return $funcall if defined $funcall;
 		my ($t, $f) = get_tab_field($S, $op);
 		if ($S->{operation} eq "delete" || $S->{operation} eq "update") {
 			return $f;
@@ -606,7 +607,7 @@ sub try_funcall
 		my $gv = get_gv($S, $op);
 		return unless $gv;
 		my $func = $gv->NAME;
-		if ($func eq "db_fetch") {
+		if ($func =~ /^(db_fetch|union|intersect)$/) {
 			return unless @args == 1;
 			my $rg = $args[0];
 			return unless is_unop($rg, "refgen");
@@ -614,8 +615,27 @@ sub try_funcall
 			return unless is_op($rg->first, "pushmark");
 			my $codeop = $rg->first->sibling;
 			return unless is_svop($codeop, "anoncode");
-			my $sql = handle_subselect($S, $codeop, returns_dont_care => 1);
-			return "exists ($sql)";
+			if ($func eq "db_fetch") {
+				my $sql = handle_subselect($S, $codeop, returns_dont_care => 1);
+				return "exists ($sql)";
+			} else {
+				return unless $S->{operation} eq "select";
+				my $cv = $codeop->sv;
+				if (!$$cv) {
+					$cv = $S->{padlist}->[1]->ARRAYelt($codeop->targ);
+				}
+				my $subref = $cv->object_2svref;
+				my %gen_args = %{$S->{gen_args}};
+				my ($sql, $vals, $nret) = DBIx::Perlish::gen_sql($subref, "select",
+					%gen_args);
+				# XXX maybe check for nret validity
+				push @{$S->{additions}}, {
+					type => $func,
+					sql  => $sql,
+					vals => $vals,
+				};
+				return "";
+			}
 		} elsif ($func eq "sql") {
 			return unless @args == 1;
 			# XXX understand more complex expressions here
@@ -934,22 +954,22 @@ my $action_distinct = {
 };
 my %labelmap = (
 	select => {
-		orderby  => $action_orderby,
-		order_by => $action_orderby,
-		order    => $action_orderby,
-		sortby   => $action_orderby,
-		sort_by  => $action_orderby,
-		sort     => $action_orderby,
+		orderby   => $action_orderby,
+		order_by  => $action_orderby,
+		order     => $action_orderby,
+		sortby    => $action_orderby,
+		sort_by   => $action_orderby,
+		sort      => $action_orderby,
 
-		groupby  => $action_groupby,
-		group_by => $action_groupby,
-		group    => $action_groupby,
+		groupby   => $action_groupby,
+		group_by  => $action_groupby,
+		group     => $action_groupby,
 
-		limit    => $action_limit,
+		limit     => $action_limit,
 
-		offset   => $action_offset,
+		offset    => $action_offset,
 
-		distinct => $action_distinct,
+		distinct  => $action_distinct,
 	},
 );
 
@@ -1053,6 +1073,11 @@ sub parse_op
 		parse_list($S, $op);
 	} elsif (is_listop($op, "lineseq")) {
 		parse_list($S, $op);
+	} elsif (is_binop($op, "leaveloop") &&
+			 is_loop($op->first, "enterloop") &&
+			 is_listop($op->last, "lineseq"))
+	{
+		parse_list($S, $op->last);
 	} elsif (is_listop($op, "return")) {
 		parse_return($S, $op);
 	} elsif (is_binop($op)) {
@@ -1139,6 +1164,7 @@ sub init
 		ret_values => [],
 		order_by   => [],
 		group_by   => [],
+		additions  => [],
 	};
 	$S->{alias} = $args{prefix} ? "$args{prefix}_t01" : "t01";
 	$S;

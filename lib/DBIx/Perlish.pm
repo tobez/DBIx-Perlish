@@ -6,12 +6,14 @@ use warnings;
 use strict;
 use Carp;
 
-use vars qw($VERSION @EXPORT $SQL @BIND_VALUES);
+use vars qw($VERSION @EXPORT @EXPORT_OK %EXPORT_TAGS $SQL @BIND_VALUES);
 require Exporter;
 use base 'Exporter';
 
 $VERSION = '0.14';
 @EXPORT = qw(db_fetch db_update db_delete db_insert sql);
+@EXPORT_OK = qw(union intersect);
+%EXPORT_TAGS = (all => [@EXPORT, @EXPORT_OK]);
 
 use DBIx::Perlish::Parse;
 use DBI::Const::GetInfoType;
@@ -20,6 +22,9 @@ sub db_fetch  (&) { DBIx::Perlish->fetch ($_[0]) }
 sub db_update (&) { DBIx::Perlish->update($_[0]) }
 sub db_delete (&) { DBIx::Perlish->delete($_[0]) }
 sub db_insert { DBIx::Perlish->insert(@_) }
+
+sub union (&) {}
+sub intersect (&) {}
 
 my $default_object;
 
@@ -205,20 +210,20 @@ sub gen_sql
 	die "no tables specified in $operation\n" unless keys %tabs;
 	$sql .= join ", ", map { $tabs{$_} } sort keys %tabs;
 
-	if ($S->{sets} && @{$S->{sets}}) {
-		$sql .= " set ";
-		$sql .= join ", ", @{$S->{sets}};
-	}
+	$S->{sets}     ||= [];
+	$S->{where}    ||= [];
+	$S->{group_by} ||= [];
+	$S->{order_by} ||= [];
+	my @sets     = grep { $_ ne "" } @{$S->{sets}};
+	my @where    = grep { $_ ne "" } @{$S->{where}};
+	my @group_by = grep { $_ ne "" } @{$S->{group_by}};
+	my @order_by = grep { $_ ne "" } @{$S->{order_by}};
 
-	if ($S->{where} && @{$S->{where}}) {
-		$sql .= " where " . join " and ", @{$S->{where}};
-	}
-	if (@{$S->{group_by}}) {
-		$sql .= " group by " . join ", ", @{$S->{group_by}};
-	}
-	if (@{$S->{order_by}}) {
-		$sql .= " order by " . join ", ", @{$S->{order_by}};
-	}
+	$sql .= " set "      . join ", ",    @sets     if @sets;
+	$sql .= " where "    . join " and ", @where    if @where;
+	$sql .= " group by " . join ", ",    @group_by if @group_by;
+	$sql .= " order by " . join ", ",    @order_by if @order_by;
+
 	if ($S->{limit}) {
 		$sql .= " limit $S->{limit}";
 	}
@@ -228,6 +233,12 @@ sub gen_sql
 	my $v = $S->{set_values} || [];
 	push @$v, @{$S->{ret_values} || []};
 	push @$v, @{$S->{values} || []};
+
+	for my $add (@{$S->{additions}}) {
+		$sql .= " $add->{type} $add->{sql}";
+		push @$v, @{$add->{vals}};
+	}
+
 	return ($sql, $v, $nret);
 }
 

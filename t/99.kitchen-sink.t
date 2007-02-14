@@ -1,7 +1,7 @@
 use warnings;
 use strict;
-use Test::More tests => 82;
-use DBIx::Perlish;
+use Test::More tests => 86;
+use DBIx::Perlish qw/:all/;
 use t::test_utils;
 
 # lone [boolean] tests
@@ -280,3 +280,14 @@ test_select_sql {
 "select abs((t01.n1 - t01.n2)) as diff from tab t01",
 [];
 
+test_select_sql {
+	{ return t1->name } union { return t2->name }
+} "simple union",
+"select t01.name from t1 t01 union select t01.name from t2 t01",
+[];
+
+test_select_sql {
+	{ return t1->name } intersect { return t2->name }
+} "simple intersect",
+"select t01.name from t1 t01 intersect select t01.name from t2 t01",
+[];
