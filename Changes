@@ -1,5 +1,8 @@
 Revision history for DBIx-Perlish
 
+NEXT
+       sql() is now prototyped.
+
 0.14  Tue Feb 13 16:32:50 2007
        Added post-if parse-time simple conditionals.
        Added interpolation of scalars in regular expresions.

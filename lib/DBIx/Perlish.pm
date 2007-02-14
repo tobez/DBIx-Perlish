@@ -148,7 +148,7 @@ sub insert
 	return scalar @rows;
 }
 
-sub sql {
+sub sql ($) {
 	my $self = shift;
 	if (ref $self && $self->isa("DBIx::Perlish")) {
 		$self->{sql};
