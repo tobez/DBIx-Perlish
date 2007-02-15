@@ -275,7 +275,7 @@ This document describes DBIx::Perlish version 0.14
     my @rows = db_fetch {
         my $x : users;
         $x->id <- db_fetch {
-            my $t2 : table;
+            my $t2 : table1;
             $t2->col == 2 || $t2->col == 3;
             return $t2->user_id;
         };
@@ -304,7 +304,7 @@ This document describes DBIx::Perlish version 0.14
 
     # deletes:
     db_delete {
-        my $t : table;
+        my $t : table1;
         !defined $t->age  or
         $t->age < 18;
     };
@@ -749,7 +749,7 @@ precedence form), matching operators =~ and !~, binary arithmetic
 operators, and unary ! are all valid in the filters.
 
 Individual terms can refer to a table column using dereferencing
-syntax (either C<table-E<gt>column> or C<$tablevar-E<gt>column>),
+syntax (either C<tablename-E<gt>column> or C<$tablevar-E<gt>column>),
 to an integer, floating point, or string constant, to a function
 call, or to a scalar value in the outer scope (simple scalars,
 hash elements, or dereferenced hashref elements are supported).
@@ -818,7 +818,7 @@ a table column on the left-hand side, and an expression
 like those accepted in filter statements on the right-hand
 side:
 
-    table->id = 42;
+    table1->id = 42;
     $t->column = $t->column + 1;
 
 The bulk assignments must have a table specifier on the left-hand
@@ -834,12 +834,12 @@ assignments:
 
 or
 
-    table() = {
+    tablename() = {
         id     => 42,
-        column => table->column + 1
+        column => tablename->column + 1
     };
 
-Please note a certain ugliness in C<table()> in the last example,
+Please note a certain ugliness in C<tablename()> in the last example,
 so it is probably better to either use table vars, or stick to the
 single assignment syntax of the first example.
 
@@ -927,7 +927,7 @@ hand side of the assignment is taken to be the name of the table:
 
     my $data = { table => "mytable" };
     db_fetch {
-        table: my $t = $data->{mytable};
+        table: my $t = $data->{table};
     };
 
 This is useful if you don't know the names of your table until
@@ -950,7 +950,7 @@ This variant corresponds to the C<EXISTS (SELECT ...)> SQL
 construct, for example:
 
     db_delete {
-        my $t : table;
+        my $t : table1;
         db_fetch {
             $t->id == table2->table_id;
         };
@@ -963,7 +963,7 @@ its values from whatever is returned by a L</db_fetch {}> on
 the right:
 
     db_delete {
-        my $t : table;
+        my $t : table1;
         $t->id  <-  db_fetch {
             return table2->table_id;
         };
