@@ -1198,10 +1198,6 @@ There is a project Wiki at
 There is also the project website at
   http://dbix-perlish.tobez.org/
 
-There is currently no mailing lists nor IRC channels dedicated to
-C<DBIx::Perlish>.  That might change in the future if there's a
-need.
-
 
 =head1 LICENSE AND COPYRIGHT
 
