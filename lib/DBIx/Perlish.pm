@@ -10,7 +10,7 @@ use vars qw($VERSION @EXPORT @EXPORT_OK %EXPORT_TAGS $SQL @BIND_VALUES);
 require Exporter;
 use base 'Exporter';
 
-$VERSION = '0.14';
+$VERSION = '0.15';
 @EXPORT = qw(db_fetch db_update db_delete db_insert sql);
 @EXPORT_OK = qw(union intersect);
 %EXPORT_TAGS = (all => [@EXPORT, @EXPORT_OK]);
@@ -253,7 +253,7 @@ DBIx::Perlish - a perlish interface to SQL databases
 
 =head1 VERSION
 
-This document describes DBIx::Perlish version 0.14
+This document describes DBIx::Perlish version 0.15
 
 
 =head1 SYNOPSIS
@@ -707,7 +707,11 @@ conditional statements;
 
 =item *
 
-statements with label syntax.
+statements with label syntax;
+
+=item *
+
+compound queries' statements.
 
 =back
 
@@ -746,7 +750,8 @@ only refer to a single table.
 Query filter statements have a general form of Perl expressions.
 Binary comparison operators, logical "or" (both high and lower
 precedence form), matching operators =~ and !~, binary arithmetic
-operators, and unary ! are all valid in the filters.
+operators, string concatenation,
+and unary ! are all valid in the filters.
 
 Individual terms can refer to a table column using dereferencing
 syntax (either C<tablename-E<gt>column> or C<$tablevar-E<gt>column>),
@@ -936,6 +941,34 @@ runtime.
 All special labels are case insensitive.
 
 Special labels are only valid in L</db_fetch {}>.
+
+
+=head3 Compound queries' statements
+
+The SQL compound queries UNION and INTERSECT are supported
+using the following syntax:
+
+    db_fetch {
+        {
+            ... normal query statements ...
+        }
+        compound-query-keyword
+        {
+            ... normal query statements ...
+        }
+    };
+
+Here I<compound-query-keyword> is one of C<union> and
+C<intersect>.
+
+This feature will only work if the C<use> statement for
+the C<DBIx::Perlish> module was written with C<:all>
+export declaration, since C<union> and C<intersect>
+are subs not exported by default by the module.
+
+It is the responsibility of the programmer to make sure
+that results of the individual queries used in a compound
+query are compatible with each other.
 
 
 =head3 Subqueries

@@ -717,6 +717,7 @@ my %binop_map = (
 	subtract => "-",
 	multiply => "*",
 	divide   => "/",
+	concat   => "||",
 );
 
 sub parse_expr

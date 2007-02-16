@@ -177,7 +177,11 @@ sub verbatim {
 	tab->id == sql "some_seq.nextval";
 };
 
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&return_expr, "select");
+sub ret_concat {
+	return "foo-" . tab->name . "-moo";
+};
+
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&ret_concat, "select");
 print "$sql\n";
 print "values: ", join ", ", @$v;
 print "\n";

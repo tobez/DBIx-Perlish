@@ -1,8 +1,9 @@
 Revision history for DBIx-Perlish
 
-NEXT
+0.15  Fri Feb 16 10:26:44 2007
        sql() is now prototyped.
        Implemented union {} and intersect {}.
+       String concatenation is now supported.
 
 0.14  Tue Feb 13 16:32:50 2007
        Added post-if parse-time simple conditionals.

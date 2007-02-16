@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 86;
+use Test::More tests => 94;
 use DBIx::Perlish qw/:all/;
 use t::test_utils;
 
@@ -291,3 +291,17 @@ test_select_sql {
 } "simple intersect",
 "select t01.name from t1 t01 intersect select t01.name from t2 t01",
 [];
+
+# string concatenation
+test_select_sql {
+	return "foo-" . tab->name . "-moo";
+} "concatenation in return",
+"select ((? || t01.name) || ?) from tab t01",
+["foo-","-moo"];
+
+test_select_sql {
+	tab->name . "x" eq "abcx";
+	return tab->name;
+} "concatenation in filter",
+"select t01.name from tab t01 where (t01.name || ?) = ?",
+["x","abcx"];
