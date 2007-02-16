@@ -221,7 +221,7 @@ sub find_aliased_tab
 
 sub get_tab_field
 {
-	my ($S, $unop, $expect_lvalue) = @_;
+	my ($S, $unop, %p) = @_;
 	my $op = want_unop($S, $unop, "entersub");
 	want_op($S, $op, "pushmark");
 	$op = $op->sibling;
@@ -237,7 +237,7 @@ sub get_tab_field
 	$op = $op->sibling;
 	my $field = want_method($S, $op);
 	$op = $op->sibling;
-	if ($expect_lvalue) {
+	if ($p{lvalue}) {
 		want_unop($S, $op, "rv2cv");
 		$op = $op->sibling;
 	}
@@ -574,7 +574,7 @@ sub parse_simple_assign
 {
 	my ($S, $op) = @_;
 
-	my ($tab, $f) = get_tab_field($S, $op->last, "lvalue");
+	my ($tab, $f) = get_tab_field($S, $op->last, lvalue => 1);
 	my $saved_values = $S->{values};
 	$S->{values} = [];
 	my $set = parse_term($S, $op->first);
@@ -726,10 +726,10 @@ sub parse_expr
 {
 	my ($S, $op) = @_;
 	my $sqlop;
-	if (is_binop($op, "concat") {
+	if (is_binop($op, "concat")) {
 		my ($c, $v) = try_special_concat($S, $op);
 		if ($c) {
-			push @{$S->{values}}, $v;
+			push @{$S->{values}}, @$v;
 			return $c;
 		}
 	}
@@ -757,19 +757,83 @@ sub parse_expr
 
 sub try_special_concat
 {
-	my ($S, $op, $recursive) = @_;
+	my ($S, $op, $no_processing) = @_;
 	my @terms;
+	my $str;
 	if (is_binop($op, "concat")) {
-	} elsif (is_const($S, $op)) {
+		my @t = try_special_concat($S, $op->first, "don't process");
+		return () unless @t;
+		push @terms, @t;
+		@t = try_special_concat($S, $op->last, "don't process");
+		return () unless @t;
+		push @terms, @t;
+	} elsif (($str = is_const($S, $op))) {
+		push @terms, {str => $str};
+	} elsif (is_unop($op, "null")) {
+		$op = $op->first;
+		while (!is_null($op)) {
+			my @t = try_special_concat($S, $op, "don't process");
+			return () unless @t;
+			push @terms, @t;
+			$op = $op->sibling;
+		}
+	} elsif (is_op($op, "null")) {
+		return {skip => 1};
+	} elsif (is_unop($op, "entersub")) {
+		my ($t, $f) = eval { get_tab_field($S, $op) };
+		return () unless $f;
+		push @terms, {tab => $t, field => $f};
 	} elsif (is_op($op, "padsv")) {
-		# XXX other concat cases might be interesting here
 		my $tab = find_aliased_tab($S, $op);
 		return () unless $tab;
-		push @terms, XXX
+		push @terms, {tab => $tab};
 	} else {
 		return ();
 	}
-	return @terms if $recursive;
+	return @terms if $no_processing;
+	$str = "";
+	my @sql;
+	my @v;
+	@terms = grep { !$_->{skip} } @terms;
+	while (@terms) {
+		my $t = shift @terms;
+		if ($t->{str}) {
+			$str .= $t->{str};
+		} elsif ($t->{field}) {
+			if ($str) {
+				push @v, $str;
+				push @sql, '?';
+			}
+			if ($S->{operation} eq "delete" || $S->{operation} eq "update") {
+				push @sql, $t->{field};
+			} else {
+				push @sql, "$t->{tab}.$t->{field}";
+			}
+			$str = "";
+		} else {
+			my $t2 = shift @terms;
+			return () unless $t2;
+			return () unless $t2->{str};
+			return () unless $t2->{str} =~ s/^->(\w+)//;
+			my $f = $1;
+			if ($str) {
+				push @v, $str;
+				push @sql, '?';
+			}
+			if ($S->{operation} eq "delete" || $S->{operation} eq "update") {
+				push @sql, $f;
+			} else {
+				push @sql, "$t->{tab}.$f";
+			}
+			$str = $t2->{str};
+		}
+	}
+	if ($str) {
+		push @v, $str;
+		push @sql, '?';
+	}
+	my $sql = join " || ", @sql;
+	return ($sql, \@v);
 }
 
 sub parse_entersub

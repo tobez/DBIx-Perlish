@@ -636,6 +636,20 @@ the function might throw any of the exceptions thrown by DBI.
 The C<db_insert {}> function is exported by default.
 
 
+=head3 union()
+
+This is a helper sub which is meant to be used inside
+query subs.  Please see L</Compound queries' statements>
+for details.  The C<union()> can be exported via C<:all>
+import declaration.
+
+=head3 intersect()
+
+This is a helper sub which is meant to be used inside
+query subs.  Please see L</Compound queries' statements>
+for details.  The C<intersect()> can be exported via C<:all>
+import declaration.
+
 =head3 $SQL and @BIND_VALUES
 
 The C<DBIx::Perlish> module provides two global variables

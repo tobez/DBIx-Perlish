@@ -186,7 +186,12 @@ sub interp {
 	return "foo-$t->name-moo";
 };
 
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&interp, "select");
+sub funny_interp {
+	my $t : tab;
+	return "foo-" . $t->firstname . " $t->lastname-moo";
+};
+
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&funny_interp, "select");
 print "$sql\n";
 print "values: ", join ", ", @$v;
 print "\n";

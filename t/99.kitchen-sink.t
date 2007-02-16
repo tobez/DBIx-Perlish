@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 94;
+use Test::More tests => 108;
 use DBIx::Perlish qw/:all/;
 use t::test_utils;
 
@@ -296,7 +296,7 @@ test_select_sql {
 test_select_sql {
 	return "foo-" . tab->name . "-moo";
 } "concatenation in return",
-"select ((? || t01.name) || ?) from tab t01",
+"select (? || t01.name || ?) from tab t01",
 ["foo-","-moo"];
 
 test_select_sql {
@@ -305,3 +305,24 @@ test_select_sql {
 } "concatenation in filter",
 "select t01.name from tab t01 where (t01.name || ?) = ?",
 ["x","abcx"];
+
+test_select_sql {
+	my $t : tab;
+	return "foo-$t->name-moo";
+} "concatenation with interpolation",
+"select (? || t01.name || ?) from tab t01",
+["foo-", "-moo"];
+
+test_select_sql {
+	my $t : tab;
+	return "foo-" . $t->firstname . " $t->lastname-moo";
+} "concatenation with interpolation",
+"select (? || t01.firstname || ? || t01.lastname || ?) from tab t01",
+["foo-", " ", "-moo"];
+
+test_select_sql {
+	my $t : tab;
+	return "foo-$t->firstname $t->lastname-moo";
+} "concatenation with interpolation",
+"select (? || t01.firstname || ? || t01.lastname || ?) from tab t01",
+["foo-", " ", "-moo"];
