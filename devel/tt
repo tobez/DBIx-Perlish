@@ -181,7 +181,12 @@ sub ret_concat {
 	return "foo-" . tab->name . "-moo";
 };
 
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&ret_concat, "select");
+sub interp {
+	my $t : tab;
+	return "foo-$t->name-moo";
+};
+
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&interp, "select");
 print "$sql\n";
 print "values: ", join ", ", @$v;
 print "\n";

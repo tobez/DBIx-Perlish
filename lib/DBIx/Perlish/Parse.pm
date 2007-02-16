@@ -405,6 +405,8 @@ sub parse_term
 		return "abs($term)";
 	} elsif (is_unop($op, "null")) {
 		return parse_term($S, $op->first, %p);
+	} elsif (is_op($op, "null")) {
+		return parse_term($S, $op->sibling, %p);
 	} elsif (is_unop($op, "not")) {
 		my $subop = $op-> first;
 		if (ref($subop) eq "B::PMOP" && $subop->name eq "match") {
@@ -724,6 +726,13 @@ sub parse_expr
 {
 	my ($S, $op) = @_;
 	my $sqlop;
+	if (is_binop($op, "concat") {
+		my ($c, $v) = try_special_concat($S, $op);
+		if ($c) {
+			push @{$S->{values}}, $v;
+			return $c;
+		}
+	}
 	if ($sqlop = $binop_map{$op->name}) {
 		my $left = parse_term($S, $op->first);
 		my $right = parse_term($S, $op->last);
@@ -744,6 +753,23 @@ sub parse_expr
 	} else {
 		bailout $S, "unsupported binop " . $op->name;
 	}
+}
+
+sub try_special_concat
+{
+	my ($S, $op, $recursive) = @_;
+	my @terms;
+	if (is_binop($op, "concat")) {
+	} elsif (is_const($S, $op)) {
+	} elsif (is_op($op, "padsv")) {
+		# XXX other concat cases might be interesting here
+		my $tab = find_aliased_tab($S, $op);
+		return () unless $tab;
+		push @terms, XXX
+	} else {
+		return ();
+	}
+	return @terms if $recursive;
 }
 
 sub parse_entersub
