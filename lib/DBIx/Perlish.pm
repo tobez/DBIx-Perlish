@@ -267,7 +267,7 @@ This document describes DBIx::Perlish version 0.15
     # selects:
     my @rows = db_fetch {
         my $x : users;
-        $x->id != 0;
+        defined $x->id;
         $x->name !~ /\@/;
     };
 
@@ -764,7 +764,7 @@ only refer to a single table.
 Query filter statements have a general form of Perl expressions.
 Binary comparison operators, logical "or" (both high and lower
 precedence form), matching operators =~ and !~, binary arithmetic
-operators, string concatenation,
+operators, string concatenation, defined(expr),
 and unary ! are all valid in the filters.
 
 Individual terms can refer to a table column using dereferencing

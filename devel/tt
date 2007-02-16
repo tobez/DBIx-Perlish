@@ -196,7 +196,16 @@ sub interp_ashash {
 	return "abc$t->{name}xyz";
 };
 
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&interp_ashash, "select");
+sub null1 {
+	!defined(tab->field);
+};
+
+my @ary = (1,2,3);
+sub is1 {
+	tab->id  <-  @ary;
+};
+
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&is1, "select");
 print "$sql\n";
 print "values: ", join ", ", @$v;
 print "\n";

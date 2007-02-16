@@ -412,13 +412,20 @@ sub parse_term
 		if (ref($subop) eq "B::PMOP" && $subop->name eq "match") {
 			return parse_regex( $S, $subop, 1);
 		} else {
-			my $term = parse_term($S, $subop);
+			my ($term, $with_not) = parse_term($S, $subop);
 			if ($p{not_after}) {
 				return "$term not";
+			} elsif ($with_not) {
+				return $with_not;
 			} else {
 				return "not $term";
 			}
 		}
+	} elsif (is_unop($op, "defined")) {
+		my $term = parse_term($S, $op->first);
+		return wantarray ?
+			("$term is not null", "$term is null") :
+			"$term is not null";
 	} elsif (my ($val, $ok) = get_value($S, $op, soft => 1)) {
 		push @{$S->{values}}, $val;
 		return "?";
@@ -646,7 +653,7 @@ sub try_funcall
 			return $sql;
 		}
 
-		my @terms = map { parse_term($S, $_) } @args;
+		my @terms = map { scalar parse_term($S, $_) } @args;
 		return "sysdate"
 			if ($S->{gen_args}->{flavor}||"") eq "Oracle" &&
 				lc $func eq "sysdate" && !@terms;
@@ -851,7 +858,7 @@ sub parse_entersub
 	my ($S, $op) = @_;
 	my $tab = try_parse_attr_assignment($S, $op);
 	return () if $tab;
-	return parse_term($S, $op);
+	return scalar parse_term($S, $op);
 }
 
 sub parse_complex_regex
@@ -1023,7 +1030,7 @@ sub parse_and
 			if (is_binop($op) || $op->name eq "sassign") {
 				return parse_expr($S, $op);
 			} else {
-				return parse_term($S, $op);
+				return scalar parse_term($S, $op);
 			}
 		} else {
 			return ();
@@ -1184,7 +1191,7 @@ sub parse_op
 	} elsif (is_binop($op)) {
 		push @{$S->{where}}, parse_expr($S, $op);
 	} elsif (is_unop($op, "not")) {
-		push @{$S->{where}}, parse_term($S, $op);
+		push @{$S->{where}}, scalar parse_term($S, $op);
 	} elsif (is_logop($op, "or")) {
 		my $or = parse_or($S, $op);
 		push @{$S->{where}}, $or if $or;
@@ -1195,6 +1202,8 @@ sub parse_op
 		parse_op($S, $op->first);
 	} elsif (is_unop($op, "null")) {
 		parse_op($S, $op->first);
+	} elsif (is_unop($op, "defined")) {
+		push @{$S->{where}}, scalar parse_term($S, $op);
 	} elsif (is_op($op, "padsv")) {
 		# XXX Skip for now, it is either a variable
 		# that does not represent a table, or else

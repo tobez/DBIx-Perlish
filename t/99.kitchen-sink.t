@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 112;
+use Test::More tests => 120;
 use DBIx::Perlish qw/:all/;
 use t::test_utils;
 
@@ -333,3 +333,28 @@ test_select_sql {
 } "concat, interp, hash syntax",
 "select (? || t01.name || ?) from tab t01",
 ["abc", "xyz"];
+
+# defined
+test_select_sql {
+	defined(tab->field);
+} "defined",
+"select * from tab t01 where t01.field is not null",
+[];
+
+test_select_sql {
+	defined tab->field;
+} "defined",
+"select * from tab t01 where t01.field is not null",
+[];
+
+test_select_sql {
+	!defined(tab->field);
+} "!defined",
+"select * from tab t01 where t01.field is null",
+[];
+
+test_select_sql {
+	not defined(tab->field);
+} "not defined",
+"select * from tab t01 where t01.field is null",
+[];
