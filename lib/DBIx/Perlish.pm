@@ -1190,6 +1190,19 @@ for discussions, suggestions and code contributions.
 This work is in part sponsored by Telia Denmark.
 
 
+=head1 SUPPORT
+
+There is a project Wiki at
+  http://dbix-perlish.tobez.org/wiki/
+
+There is also the project website at
+  http://dbix-perlish.tobez.org/
+
+There is currently no mailing lists nor IRC channels dedicated to
+C<DBIx::Perlish>.  That might change in the future if there's a
+need.
+
+
 =head1 LICENSE AND COPYRIGHT
 
 Copyright (c) 2007, Anton Berezin C<< <tobez@tobez.org> >>. All rights reserved.
