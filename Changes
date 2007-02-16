@@ -1,5 +1,13 @@
 Revision history for DBIx-Perlish
 
+0.16  Fri Feb 16 21:49:06 2007
+       Column descriptors can be embedded in strings.
+       More tests.
+       More docs.
+       Pod coverage test fix.
+       Added support for defined() as IS NOT NULL.
+       Added support for tab->id  <-  @ary syntax.
+
 0.15  Fri Feb 16 10:26:44 2007
        sql() is now prototyped.
        Implemented union {} and intersect {}.
