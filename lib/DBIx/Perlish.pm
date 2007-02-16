@@ -773,6 +773,34 @@ to an integer, floating point, or string constant, to a function
 call, or to a scalar value in the outer scope (simple scalars,
 hash elements, or dereferenced hashref elements are supported).
 
+Inside constant strings, table column specifiers are interpolated;
+the result of such interpolation is represented as a sequence
+of explicit SQL concatenation operations.
+The variable interpolation syntax is somewhat different from
+normal Perl rules, which does not interpolate method calls.
+So it is perfectly legal to write
+
+    return "abc $t->name xyz";
+
+When it is impossible to distinguish between the column name
+and the following characters, the hash element syntax must be
+used instead:
+
+    return "abc$t->{name}xyz";
+
+Of course, one may want to avoid the trouble altogether and use explicit Perl
+concatenation in such cases:
+
+    return "abc" . $t->name . "xyz";
+
+Please note that specifying column names as hash elements
+is I<only> valid inside interpolated strings;  this may change
+in the future versions of the module.
+
+Please also note that column specifiers of
+C<tablename-E<gt>column> form cannot be embedded into strings;
+again, use explicit Perl concatenation in such cases.
+
 Function calls can take an arbitrary number of arguments.
 Each argument to a function must currently be a term,
 although it is expected that more general expressions will

@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 108;
+use Test::More tests => 112;
 use DBIx::Perlish qw/:all/;
 use t::test_utils;
 
@@ -316,13 +316,20 @@ test_select_sql {
 test_select_sql {
 	my $t : tab;
 	return "foo-" . $t->firstname . " $t->lastname-moo";
-} "concatenation with interpolation",
+} "concat, interp+normal",
 "select (? || t01.firstname || ? || t01.lastname || ?) from tab t01",
 ["foo-", " ", "-moo"];
 
 test_select_sql {
 	my $t : tab;
 	return "foo-$t->firstname $t->lastname-moo";
-} "concatenation with interpolation",
+} "concat, interp x 2",
 "select (? || t01.firstname || ? || t01.lastname || ?) from tab t01",
 ["foo-", " ", "-moo"];
+
+test_select_sql {
+	my $t : tab;
+	return "abc$t->{name}xyz";
+} "concat, interp, hash syntax",
+"select (? || t01.name || ?) from tab t01",
+["abc", "xyz"];

@@ -779,6 +779,16 @@ sub try_special_concat
 		}
 	} elsif (is_op($op, "null")) {
 		return {skip => 1};
+	} elsif (is_binop($op, "helem")) {
+		my $f = is_const($S, $op->last);
+		return () unless $f;
+		$op = $op->first;
+		return () unless is_unop($op, "rv2hv");
+		$op = $op->first;
+		return () unless is_op($op, "padsv");
+		my $tab = find_aliased_tab($S, $op);
+		return () unless $tab;
+		push @terms, {tab => $tab, field => $f};
 	} elsif (is_unop($op, "entersub")) {
 		my ($t, $f) = eval { get_tab_field($S, $op) };
 		return () unless $f;
