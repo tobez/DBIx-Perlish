@@ -202,7 +202,7 @@ sub null1 {
 
 my @ary = (1,2,3);
 sub is1 {
-	tab->id  <-  @ary;
+	!tab->id  <-  @ary;
 };
 
 my ($sql, $v) = DBIx::Perlish::gen_sql(\&is1, "select");

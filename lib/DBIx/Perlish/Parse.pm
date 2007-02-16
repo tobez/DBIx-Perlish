@@ -496,32 +496,44 @@ sub get_gv
 sub try_parse_subselect
 {
 	my ($S, $sop) = @_;
+	my $sql;
+	my @vals;
+
 	my $sub = $sop->last->first;
-	return unless is_unop($sub, "entersub");
-	$sub = $sub->first if is_unop($sub->first, "null");
-	return unless is_op($sub->first, "pushmark");
 
-	my $rg = $sub->first->sibling;
-	return if is_null($rg);
-	my $dbfetch = $rg->sibling;
-	return if is_null($dbfetch);
-	return unless is_null($dbfetch->sibling);
+	if (is_op($sub, "padav")) {
+		my $ary = $S->{padlist}->[1]->ARRAYelt($sub->targ)->object_2svref;
+		bailout $S, "empty array in not valid in \"<-\"" unless @$ary;
+		$sql = join ",", ("?") x @$ary;
+		@vals = @$ary;
+	} else {
+		return unless is_unop($sub, "entersub");
+		$sub = $sub->first if is_unop($sub->first, "null");
+		return unless is_op($sub->first, "pushmark");
 
-	return unless is_unop($rg, "refgen");
-	$rg = $rg->first if is_unop($rg->first, "null");
-	return unless is_op($rg->first, "pushmark");
-	my $codeop = $rg->first->sibling;
-	return unless is_svop($codeop, "anoncode");
+		my $rg = $sub->first->sibling;
+		return if is_null($rg);
+		my $dbfetch = $rg->sibling;
+		return if is_null($dbfetch);
+		return unless is_null($dbfetch->sibling);
 
-	$dbfetch = $dbfetch->first if is_unop($dbfetch->first, "null");
-	$dbfetch = $dbfetch->first;
-	my $gv = get_gv($S, $dbfetch);
-	return unless $gv;
-	return unless $gv->NAME eq "db_fetch";
+		return unless is_unop($rg, "refgen");
+		$rg = $rg->first if is_unop($rg->first, "null");
+		return unless is_op($rg->first, "pushmark");
+		my $codeop = $rg->first->sibling;
+		return unless is_svop($codeop, "anoncode");
 
-	my $sql = handle_subselect($S, $codeop);
+		$dbfetch = $dbfetch->first if is_unop($dbfetch->first, "null");
+		$dbfetch = $dbfetch->first;
+		my $gv = get_gv($S, $dbfetch);
+		return unless $gv;
+		return unless $gv->NAME eq "db_fetch";
+
+		$sql = handle_subselect($S, $codeop);
+	}
 
 	my $left = parse_term($S, $sop->first, not_after => 1);
+	push @{$S->{values}}, @vals;
 	return "$left in ($sql)";
 }
 

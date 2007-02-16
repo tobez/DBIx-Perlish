@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 120;
+use Test::More tests => 130;
 use DBIx::Perlish qw/:all/;
 use t::test_utils;
 
@@ -358,3 +358,17 @@ test_select_sql {
 } "not defined",
 "select * from tab t01 where t01.field is null",
 [];
+
+# <- @array
+my @ary = (1,2,3);
+test_select_sql {
+	tab->id  <-  @ary;
+} "in array",
+"select * from tab t01 where t01.id in (?,?,?)",
+[@ary];
+
+test_select_sql {
+	!tab->id  <-  @ary;
+} "in array",
+"select * from tab t01 where t01.id not in (?,?,?)",
+[@ary];

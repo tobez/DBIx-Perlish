@@ -766,6 +766,9 @@ Binary comparison operators, logical "or" (both high and lower
 precedence form), matching operators =~ and !~, binary arithmetic
 operators, string concatenation, defined(expr),
 and unary ! are all valid in the filters.
+There is also a special back-arrow, "comes from" C<E<lt>-> binary
+operator used for matching a column to a set of values, and for
+subqueries.
 
 Individual terms can refer to a table column using dereferencing
 syntax (either C<tablename-E<gt>column> or C<$tablevar-E<gt>column>),
@@ -823,6 +826,20 @@ for example:
         tab->state eq "new";
         tab->id = sql "some_seq.nextval";
     };
+
+The "comes from" C<E<lt>-> binary operator can be used in the
+following manner:
+
+    my @ary = (1,2,3);
+    db_fetch {
+        tab->id  <-  @ary;
+    };
+
+This is equivalent to SQL's C<IN I<list>> operator, where
+the list comes from the C<@ary> array.
+
+The C<E<lt>-> operator can also be used with L</Subqueries>,
+below.
 
 
 =head3 Return statements
@@ -1032,7 +1049,8 @@ construct, for example:
     };
 
 Another variant corresponds to the C<column IN (SELECT ...)> SQL
-construct.  It uses a special syntax with back-arrow C<E<lt>->,
+construct.  It uses a special syntax with back-arrow C<E<lt>->
+(read it as "comes from"),
 which signifies that the column specifier on the left gets
 its values from whatever is returned by a L</db_fetch {}> on
 the right:
