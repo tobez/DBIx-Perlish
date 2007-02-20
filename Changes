@@ -1,5 +1,8 @@
 Revision history for DBIx-Perlish
 
+0.17  Tue Feb 20 10:26:21 2007
+       Added autogrouping when aggregates were seen in the return statement.
+
 0.16  Fri Feb 16 21:49:06 2007
        Column descriptors can be embedded in strings.
        More tests.

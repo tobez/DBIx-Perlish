@@ -242,6 +242,10 @@ sub get_tab_field
 		$op = $op->sibling;
 	}
 	want_null($S, $op);
+	if ($S->{parsing_return} && !$S->{inside_aggregate}) {
+		my $ff = $S->{operation} eq "select" ? "$tab.$field" : $field;
+		push @{$S->{autogroup_by}}, $ff unless $S->{autogroup_fields}{$ff}++;
+	}
 	($tab, $field);
 }
 
@@ -339,6 +343,7 @@ sub parse_return
 			bailout $S, "cannot alias the whole table"
 				if defined $last_alias;
 			push @{$S->{returns}}, "$rv{table}.*";
+			$S->{no_autogroup} = 1;
 		} if (exists $rv{field}) {
 			if (defined $last_alias) {
 				push @{$S->{returns}}, "$rv{field} as $last_alias";
@@ -374,7 +379,9 @@ sub parse_return_value
 	} else {
 		my $saved_values = $S->{values};
 		$S->{values} = [];
+		$S->{parsing_return} = 1;
 		my $ret = parse_term($S, $op);
+		$S->{parsing_return} = 0;
 		push @{$S->{ret_values}}, @{$S->{values}};
 		$S->{values} = $saved_values;
 		return field => $ret;
@@ -664,8 +671,17 @@ sub try_funcall
 			return unless $sql = is_const($S, $args[0]);
 			return $sql;
 		}
+		if ($S->{parsing_return} && $S->{aggregates}{lc $func}) {
+			$S->{autogroup_needed} = 1;
+			$S->{inside_aggregate} = 1;
+		}
 
 		my @terms = map { scalar parse_term($S, $_) } @args;
+
+		if ($S->{parsing_return} && $S->{aggregates}{lc $func}) {
+			$S->{inside_aggregate} = 0;
+		}
+
 		return "sysdate"
 			if ($S->{gen_args}->{flavor}||"") eq "Oracle" &&
 				lc $func eq "sysdate" && !@terms;
@@ -1287,6 +1303,9 @@ sub init
 		order_by   => [],
 		group_by   => [],
 		additions  => [],
+		aggregates => { avg => 1, count => 1, max => 1, min => 1, sum => 1 },
+		autogroup_by     => [],
+		autogroup_fields => {},
 	};
 	$S->{alias} = $args{prefix} ? "$args{prefix}_t01" : "t01";
 	$S;

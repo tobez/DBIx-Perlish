@@ -10,7 +10,7 @@ use vars qw($VERSION @EXPORT @EXPORT_OK %EXPORT_TAGS $SQL @BIND_VALUES);
 require Exporter;
 use base 'Exporter';
 
-$VERSION = '0.16';
+$VERSION = '0.17';
 @EXPORT = qw(db_fetch db_update db_delete db_insert sql);
 @EXPORT_OK = qw(union intersect);
 %EXPORT_TAGS = (all => [@EXPORT, @EXPORT_OK]);
@@ -219,6 +219,12 @@ sub gen_sql
 	my @group_by = grep { $_ ne "" } @{$S->{group_by}};
 	my @order_by = grep { $_ ne "" } @{$S->{order_by}};
 
+	if ($S->{autogroup_needed} && !$S->{no_autogroup} &&
+		!@group_by && @{$S->{autogroup_by}})
+	{
+		@group_by = grep { $_ ne "" } @{$S->{autogroup_by}};
+	}
+
 	$sql .= " set "      . join ", ",    @sets     if @sets;
 	$sql .= " where "    . join " and ", @where    if @where;
 	$sql .= " group by " . join ", ",    @group_by if @group_by;
@@ -253,7 +259,7 @@ DBIx::Perlish - a perlish interface to SQL databases
 
 =head1 VERSION
 
-This document describes DBIx::Perlish version 0.16
+This document describes DBIx::Perlish version 0.17
 
 
 =head1 SYNOPSIS
@@ -983,6 +989,28 @@ alter the sorting order, for example:
 Specifying label C<group:>, C<groupby:>, or C<group_by:>,
 followed by a list of column specifiers is equivalent to
 the SQL clause C<GROUP BY col1, col2, ...>.
+
+The module implements an I<experimental> feature which
+in some cases allows one to omit the explicit
+C<group_by:> label.  If there is an explicit C<return> statement
+which mentions an aggregate function alongside "normal"
+column specifiers, and that return statement does not
+reference the whole table, and the explicit C<group_by:> label
+is not present in the query, the 
+C<DBIx::Perlish> module will generate one automatically.
+For example, the following query:
+
+    db_query {
+        my $t : tab;
+        return $t->name, $t->type, count($t->age);
+    };
+
+will execute the equivalent of the following SQL statement:
+
+  select name, type, count(age) from tab group by name, type
+
+The C<avg()>, C<count()>, C<max()>, C<min()>, and C<sub()>
+functions are considered to be aggregate.
 
 Specifying label C<table:> followed by a lexical variable
 declaration, followed by an assignment introduces an alternative

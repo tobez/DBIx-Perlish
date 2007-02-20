@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 130;
+use Test::More tests => 140;
 use DBIx::Perlish qw/:all/;
 use t::test_utils;
 
@@ -372,3 +372,40 @@ test_select_sql {
 } "in array",
 "select * from tab t01 where t01.id not in (?,?,?)",
 [@ary];
+
+# autogrouping
+test_select_sql {
+	my $t : tab;
+	return $t->name, $t->type, count($t->age);
+} "autogrouping",
+"select t01.name, t01.type, count(t01.age) from tab t01 group by t01.name, t01.type",
+[];
+
+test_select_sql {
+	my $t : tab;
+	return $t->name, $t->type, cnt($t->age);
+} "no autogrouping - not an aggregate",
+"select t01.name, t01.type, cnt(t01.age) from tab t01",
+[];
+
+test_select_sql {
+	my $t : tab;
+	return $t, count($t->age);
+} "no autogrouping - table reference",
+"select t01.*, count(t01.age) from tab t01",
+[];
+
+test_select_sql {
+	my $t : tab;
+	return count($t->age);
+} "no autogrouping - aggregate only",
+"select count(t01.age) from tab t01",
+[];
+
+test_select_sql {
+	my $t : tab;
+	return $t->name, count($t->age);
+	group_by: $t->name, $t->type;
+} "no autogrouping - explicit group by",
+"select t01.name, count(t01.age) from tab t01 group by t01.name, t01.type",
+[];

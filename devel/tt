@@ -205,7 +205,12 @@ sub is1 {
 	!tab->id  <-  @ary;
 };
 
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&is1, "select");
+sub autogroup {
+	my $t : tab;
+	return $t->name, $t->type, count($t->age);
+};
+
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&autogroup, "select");
 print "$sql\n";
 print "values: ", join ", ", @$v;
 print "\n";
