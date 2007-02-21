@@ -1,11 +1,12 @@
 Revision history for DBIx-Perlish
 
-NEXT
+0.18  Wed Feb 21 19:57:17 2007
        Comparisons with undefined values are converted into
        proper SQL syntax.
        Inside regular expressions, interpolate hash and hashref
        elements.
        Implemented except {}.
+       Various types of joins implemented (by Dmitry Karasik).
 
 0.17  Tue Feb 20 10:26:21 2007
        Added autogrouping when aggregates were seen in the return statement.

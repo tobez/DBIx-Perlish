@@ -10,7 +10,7 @@ use vars qw($VERSION @EXPORT @EXPORT_OK %EXPORT_TAGS $SQL @BIND_VALUES);
 require Exporter;
 use base 'Exporter';
 
-$VERSION = '0.17';
+$VERSION = '0.18';
 @EXPORT = qw(db_fetch db_update db_delete db_insert sql);
 @EXPORT_OK = qw(union intersect except);
 %EXPORT_TAGS = (all => [@EXPORT, @EXPORT_OK]);
@@ -265,7 +265,7 @@ DBIx::Perlish - a perlish interface to SQL databases
 
 =head1 VERSION
 
-This document describes DBIx::Perlish version 0.17
+This document describes DBIx::Perlish version 0.18
 
 
 =head1 SYNOPSIS
@@ -1110,7 +1110,7 @@ return value.
 
 =head3 Joins
 
-Joins are implemented not unlike sub-selects, with using embedded C<db_fetch> call
+Joins are implemented similar to subqueries, using embedded C<db_fetch> call
 to specify a join condition. The join syntax is one of:
 
     join $t1 BINARY_OP $t2;
@@ -1118,20 +1118,22 @@ to specify a join condition. The join syntax is one of:
 
 where CONDITION is an arbitrary expression using fields from C<$t1> and C<$t2>
 , and BINARY_OP is one of C<*>,C<+>,C<x>,C<&>,C<|>,C<< < >>,C<< > >> operators,
-corresponding to the following standard join types:
+which correspond to the following standard join types:
 
 =over
 
-=item Inner join or cross join
+=item Inner join
 
-These correspond to either of C<*>, C<&>, and C<x> operators. These operators
-are the only ones that can be used in both short and long notations; this is
-because, C<cross join> is exactly the same as C<inner join> without any
-C<CONDITION>
+This corresponds to either of C<*>, C<&>, and C<x> operators.
+The C<db_fetch {}> condition for inner join may be omitted,
+in which case it degenerates into a I<cross join>.
 
 =item Full outer join
 
-C<+> or C<|>
+It is specified with C<+> or C<|>.
+The C<DBIx::Perlish> module does not care
+that some database engines do not support full outer join,
+nor does it try to work around this limitation.
 
 =item Left outer join
 
@@ -1320,8 +1322,12 @@ Anton Berezin  C<< <tobez@tobez.org> >>
 
 =head1 ACKNOWLEDGEMENTS
 
-I would like to thank
-Dmitry Karasik,
+Special thanks to Dmitry Karasik,
+who contributed code and syntax ideas on several occasions,
+and with whom I spent considerable time discussing
+this module.
+
+I would also like to thank
 Henrik Andersen,
 Lars Thegler,
 and Phil Regnauld

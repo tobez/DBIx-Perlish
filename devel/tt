@@ -219,7 +219,11 @@ sub re22 {
 	tab->str =~ /^$self->{id}/;
 };
 
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&re22, "select");
+sub jj {
+	join 1-2;
+};
+
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&jj, "select");
 print "$sql\n";
 print "values: ", join ", ", @$v;
 print "\n";

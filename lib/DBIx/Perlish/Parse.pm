@@ -1083,13 +1083,13 @@ sub parse_join
 			$cv = $S->{padlist}->[1]->ARRAYelt($codeop->targ);
 		}
 		my $subref = $cv->object_2svref;
-		my $S2 = DBIx::Perlish::Parse::init( 
+		my $S2 = init( 
 			%{$S->{gen_args}}, 
 			operation => 'select',
 			prev_S    => $S,
 		);
 		$S2-> {alias} = $S-> {alias};
-		DBIx::Perlish::Parse::parse_sub($S2, $subref);
+		parse_sub($S2, $subref);
 		bailout $S, 
 			"join() db_fetch expression cannot contain anything ".
 			"but conditional expressions on already declared tables"
@@ -1097,7 +1097,7 @@ sub parse_join
 					group_by order_by autogroup_by ret_values joins
 				)) or $S2->{alias} ne $S->{alias};
 
-		unless ( @{ $S2-> {where} }) {
+		unless ( @{ $S2->{where}||[] }) {
 			bailout $S, 
 				"join() db_fetch expression must contain ".
 				"at least one conditional expression"
