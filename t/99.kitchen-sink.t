@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 140;
+use Test::More tests => 160;
 use DBIx::Perlish qw/:all/;
 use t::test_utils;
 
@@ -409,3 +409,69 @@ test_select_sql {
 } "no autogrouping - explicit group by",
 "select t01.name, count(t01.age) from tab t01 group by t01.name, t01.type",
 [];
+
+# undef comparisons
+test_select_sql {
+	tab->age == undef;
+} "undef cmp, literal, right, equal",
+"select * from tab t01 where t01.age is null",
+[];
+
+test_select_sql {
+	tab->age != undef;
+} "undef cmp, literal, right, not equal",
+"select * from tab t01 where t01.age is not null",
+[];
+
+test_select_sql {
+	undef == tab->age;
+} "undef cmp, literal, left, equal",
+"select * from tab t01 where t01.age is null",
+[];
+
+test_select_sql {
+	undef != tab->age;
+} "undef cmp, literal, left, not equal",
+"select * from tab t01 where t01.age is not null",
+[];
+
+my $undef = undef;
+test_select_sql {
+	tab->age == $undef;
+} "undef cmp, scalar, right, equal",
+"select * from tab t01 where t01.age is null",
+[];
+
+test_select_sql {
+	tab->age != $undef;
+} "undef cmp, scalar, right, not equal",
+"select * from tab t01 where t01.age is not null",
+[];
+
+test_select_sql {
+	$undef == tab->age;
+} "undef cmp, scalar, left, equal",
+"select * from tab t01 where t01.age is null",
+[];
+
+test_select_sql {
+	$undef != tab->age;
+} "undef cmp, scalar, left, not equal",
+"select * from tab t01 where t01.age is not null",
+[];
+
+# RE with vars (postgres)
+my $re = "abc";
+test_select_sql {
+	tbl->id =~ /^$re/
+} "like test, scalar",
+"select * from tbl t01 where t01.id like 'abc%'",
+[];
+
+$re = { re => "abc" };
+test_select_sql {
+	tbl->id =~ /^$re->{re}/
+} "like test, hashref",
+"select * from tbl t01 where t01.id like 'abc%'",
+[];
+

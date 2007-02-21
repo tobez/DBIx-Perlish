@@ -1255,8 +1255,6 @@ query sub.
 Although variables closed over the query sub can be used
 in it, only simple scalars, hash elements, and dereferenced
 hasref elements are understood at the moment.
-Similarly, only simple scalar variables interpolation inside regular
-expressions is supported.
 
 If you would like to see something implemented,
 or find a nice Perlish syntax for some SQL feature,

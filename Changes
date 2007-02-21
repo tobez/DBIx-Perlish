@@ -3,6 +3,8 @@ Revision history for DBIx-Perlish
 NEXT
        Comparisons with undefined values are converted into
        proper SQL syntax.
+       Inside regular expressions, interpolate hash and hashref
+       elements.
 
 0.17  Tue Feb 20 10:26:21 2007
        Added autogrouping when aggregates were seen in the return statement.

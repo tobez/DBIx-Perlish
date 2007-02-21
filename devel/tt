@@ -215,7 +215,11 @@ sub null_comp {
 	tab->age != $x;
 };
 
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&null_comp, "select");
+sub re22 {
+	tab->str =~ /^$self->{id}/;
+};
+
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&re22, "select");
 print "$sql\n";
 print "values: ", join ", ", @$v;
 print "\n";
