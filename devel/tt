@@ -210,7 +210,12 @@ sub autogroup {
 	return $t->name, $t->type, count($t->age);
 };
 
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&autogroup, "select");
+my $x = undef;
+sub null_comp {
+	tab->age != $x;
+};
+
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&null_comp, "select");
 print "$sql\n";
 print "values: ", join ", ", @$v;
 print "\n";

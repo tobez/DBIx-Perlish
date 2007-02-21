@@ -414,6 +414,8 @@ sub parse_term
 		return parse_term($S, $op->first, %p);
 	} elsif (is_op($op, "null")) {
 		return parse_term($S, $op->sibling, %p);
+	} elsif (is_op($op, "undef")) {
+		return "null";
 	} elsif (is_unop($op, "not")) {
 		my $subop = $op-> first;
 		if (ref($subop) eq "B::PMOP" && $subop->name eq "match") {
@@ -434,8 +436,12 @@ sub parse_term
 			("$term is not null", "$term is null") :
 			"$term is not null";
 	} elsif (my ($val, $ok) = get_value($S, $op, soft => 1)) {
-		push @{$S->{values}}, $val;
-		return "?";
+		if (defined $val) {
+			push @{$S->{values}}, $val;
+			return "?";
+		} else {
+			return "null";
+		}
 	} elsif (is_binop($op)) {
 		my $expr = parse_expr($S, $op);
 		return "($expr)";
@@ -771,7 +777,14 @@ sub parse_expr
 	if ($sqlop = $binop_map{$op->name}) {
 		my $left = parse_term($S, $op->first);
 		my $right = parse_term($S, $op->last);
-
+		if ($sqlop eq "=" || $sqlop eq "<>") {
+			my $not = $sqlop eq "<>" ? " not" : "";
+			if ($right eq "null") {
+				return "$left is$not null";
+			} elsif ($left eq "null") {
+				return "$right is$not null";
+			}
+		}
 		return "$left $sqlop $right";
 	} elsif ($op->name eq "lt") {
 		if (is_unop($op->last, "negate")) {
