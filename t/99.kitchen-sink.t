@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 160;
+use Test::More tests => 162;
 use DBIx::Perlish qw/:all/;
 use t::test_utils;
 
@@ -290,6 +290,12 @@ test_select_sql {
 	{ return t1->name } intersect { return t2->name }
 } "simple intersect",
 "select t01.name from t1 t01 intersect select t01.name from t2 t01",
+[];
+
+test_select_sql {
+	{ return t1->name } except { return t2->name }
+} "simple except",
+"select t01.name from t1 t01 except select t01.name from t2 t01",
 [];
 
 # string concatenation

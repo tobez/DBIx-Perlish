@@ -641,7 +641,7 @@ sub try_funcall
 		my $gv = get_gv($S, $op);
 		return unless $gv;
 		my $func = $gv->NAME;
-		if ($func =~ /^(db_fetch|union|intersect)$/) {
+		if ($func =~ /^(db_fetch|union|intersect|except)$/) {
 			return unless @args == 1;
 			my $rg = $args[0];
 			return unless is_unop($rg, "refgen");

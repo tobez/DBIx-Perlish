@@ -12,7 +12,7 @@ use base 'Exporter';
 
 $VERSION = '0.17';
 @EXPORT = qw(db_fetch db_update db_delete db_insert sql);
-@EXPORT_OK = qw(union intersect);
+@EXPORT_OK = qw(union intersect except);
 %EXPORT_TAGS = (all => [@EXPORT, @EXPORT_OK]);
 
 use DBIx::Perlish::Parse;
@@ -25,6 +25,7 @@ sub db_insert { DBIx::Perlish->insert(@_) }
 
 sub union (&) {}
 sub intersect (&) {}
+sub except (&) {}
 
 my $default_object;
 
@@ -656,6 +657,14 @@ query subs.  Please see L</Compound queries' statements>
 for details.  The C<intersect()> can be exported via C<:all>
 import declaration.
 
+=head3 except()
+
+This is a helper sub which is meant to be used inside
+query subs.  Please see L</Compound queries' statements>
+for details.  The C<except()> can be exported via C<:all>
+import declaration.
+
+
 =head3 $SQL and @BIND_VALUES
 
 The C<DBIx::Perlish> module provides two global variables
@@ -1032,7 +1041,7 @@ Special labels are only valid in L</db_fetch {}>.
 
 =head3 Compound queries' statements
 
-The SQL compound queries UNION and INTERSECT are supported
+The SQL compound queries UNION, INTERSECT, and EXCEPT are supported
 using the following syntax:
 
     db_fetch {
@@ -1045,13 +1054,13 @@ using the following syntax:
         }
     };
 
-Here I<compound-query-keyword> is one of C<union> and
-C<intersect>.
+Here I<compound-query-keyword> is one of C<union>,
+C<intersect>, or C<except>.
 
 This feature will only work if the C<use> statement for
 the C<DBIx::Perlish> module was written with C<:all>
-export declaration, since C<union> and C<intersect>
-are subs not exported by default by the module.
+export declaration, since C<union>, C<intersect>, and C<except>
+are subs that are not exported by default by the module.
 
 It is the responsibility of the programmer to make sure
 that results of the individual queries used in a compound
