@@ -52,6 +52,7 @@ gen_is("op");
 gen_is("padop");
 gen_is("svop");
 gen_is("unop");
+gen_is("pmop");
 
 sub is_const
 {
@@ -136,7 +137,7 @@ sub padname
 	my ($S, $op, %p) = @_;
 
 	my $padname = $S->{padlist}->[0]->ARRAYelt($op->targ);
-	if ($padname && ref($padname) ne "B::SPECIAL") {
+	if ($padname && !$padname->isa("B::SPECIAL")) {
 		return if $p{no_fakes} && $padname->FLAGS & B::SVf_FAKE;
 		return "my " . $padname->PVX;
 	} else {
@@ -418,7 +419,7 @@ sub parse_term
 		return "null";
 	} elsif (is_unop($op, "not")) {
 		my $subop = $op-> first;
-		if (ref($subop) eq "B::PMOP" && $subop->name eq "match") {
+		if (is_pmop($subop, "match")) {
 			return parse_regex( $S, $subop, 1);
 		} else {
 			my ($term, $with_not) = parse_term($S, $subop);
@@ -502,7 +503,7 @@ sub get_gv
 	if (!$gv || !$$gv) {
 		$gv = $S->{padlist}->[1]->ARRAYelt($gv_idx);
 	}
-	return unless ref $gv eq "B::GV";
+	return unless $gv->isa("B::GV");
 	$gv;
 }
 
@@ -1350,15 +1351,12 @@ sub parse_op
 		# skip
 	} elsif (is_unop($op, "entersub")) {
 		push @{$S->{where}}, parse_entersub($S, $op);
-	} elsif (ref($op) eq "B::PMOP" && $op->name eq "match") {
+	} elsif (is_pmop($op, "match")) {
 		push @{$S->{where}}, parse_regex( $S, $op, 0);
 	} elsif ( $op-> name eq 'join') {
 		push @{$S->{joins}}, parse_join( $S, $op);
 	} else {
 		print "$op\n";
-		if (ref($op) eq "B::PMOP") {
-			print "reg: ", $op->precomp, "\n";
-		}
 		print "type: ", $op->type, "\n";
 		print "name: ", $op->name, "\n";
 		print "desc: ", $op->desc, "\n";
