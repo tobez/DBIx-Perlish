@@ -17,6 +17,7 @@ t/00.load.t
 t/01.gen_sql-simple.t
 t/02.single-comparisons.t
 t/03.simple-closures.t
+t/04-joins.t
 t/80.parse-bad.t
 t/99.kitchen-sink.t
 t/pod-coverage.t
