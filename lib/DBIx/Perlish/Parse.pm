@@ -506,6 +506,35 @@ sub get_gv
 	$gv;
 }
 
+sub try_get_dbfetch
+{
+	my ($S, $sub) = @_;
+		
+	return unless is_unop($sub, "entersub");
+	$sub = $sub->first if is_unop($sub->first, "null");
+	return unless is_op($sub->first, "pushmark");
+
+	my $rg = $sub->first->sibling;
+	return if is_null($rg);
+	my $dbfetch = $rg->sibling;
+	return if is_null($dbfetch);
+	return unless is_null($dbfetch->sibling);
+
+	return unless is_unop($rg, "refgen");
+	$rg = $rg->first if is_unop($rg->first, "null");
+	return unless is_op($rg->first, "pushmark");
+	my $codeop = $rg->first->sibling;
+	return unless is_svop($codeop, "anoncode");
+
+	$dbfetch = $dbfetch->first if is_unop($dbfetch->first, "null");
+	$dbfetch = $dbfetch->first;
+	my $gv = get_gv($S, $dbfetch);
+	return unless $gv;
+	return unless $gv->NAME eq "db_fetch";
+
+	return $codeop;
+}
+
 sub try_parse_subselect
 {
 	my ($S, $sop) = @_;
@@ -520,28 +549,8 @@ sub try_parse_subselect
 		$sql = join ",", ("?") x @$ary;
 		@vals = @$ary;
 	} else {
-		return unless is_unop($sub, "entersub");
-		$sub = $sub->first if is_unop($sub->first, "null");
-		return unless is_op($sub->first, "pushmark");
-
-		my $rg = $sub->first->sibling;
-		return if is_null($rg);
-		my $dbfetch = $rg->sibling;
-		return if is_null($dbfetch);
-		return unless is_null($dbfetch->sibling);
-
-		return unless is_unop($rg, "refgen");
-		$rg = $rg->first if is_unop($rg->first, "null");
-		return unless is_op($rg->first, "pushmark");
-		my $codeop = $rg->first->sibling;
-		return unless is_svop($codeop, "anoncode");
-
-		$dbfetch = $dbfetch->first if is_unop($dbfetch->first, "null");
-		$dbfetch = $dbfetch->first;
-		my $gv = get_gv($S, $dbfetch);
-		return unless $gv;
-		return unless $gv->NAME eq "db_fetch";
-
+		my $codeop = try_get_dbfetch( $S, $sub);
+		return unless $codeop;
 		$sql = handle_subselect($S, $codeop);
 	}
 
@@ -1016,6 +1025,92 @@ LIKE:
 	}
 }
 
+my %join_map = (
+	bit_and  => "inner",
+	multiply => "inner",
+	repeat   => "inner",
+	bit_or   => "full outer",
+	add      => "full outer",
+	lt       => "left outer",
+	gt       => "right outer",
+);
+
+sub parse_join
+{
+	my ($S, $op) = @_;
+	my @op = get_all_children( $op);
+
+
+	# allow 2-arg syntax for cross joins:
+	#    join $a * $b
+	# and 3-arg syntax for all other joins:
+	#    join $a * $b => db_fetch { ... }
+	bailout $S, "not a valid join() syntax"
+		unless 2 <= @op and 3 >= @op and
+			$op[0]-> name eq 'pushmark' and 
+			is_binop( $op[1]);
+	my $jointype;
+	if ( 2 == @op) {
+		bailout $S, "not a valid join() syntax: one of &,*,x is expected"
+			unless 
+				exists $join_map{ $op[1]-> name } and
+				$join_map{ $op[1]-> name } eq 'inner';
+		$jointype = 'cross';
+	} else {
+		bailout $S, "not a valid join() syntax: one of &,|,x,+,*,<,> is expected"
+			unless exists $join_map{ $op[1]-> name };
+		bailout $S, "not a valid join() syntax"
+			unless is_unop( $op[2]) and $op[2]-> name eq 'entersub';
+		$jointype = $join_map{ $op[1]-> name };
+	}
+
+	# table names
+	my @tab;
+	$tab[0] = find_aliased_tab($S, $op[1]-> first) or 
+		bailout $S, "first argument join() is not a table";
+	$tab[1] = find_aliased_tab($S, $op[1]-> last) or 
+		bailout $S, "second argument join() is not a table";
+	
+	# db_fetch
+	my ( $condition, $codeop);
+	if ( $op[2]) {
+		$codeop = try_get_dbfetch( $S, $op[2]);
+		bailout $S, "third argument to join is not a db_fetch expression"
+			unless $codeop;
+
+		my $cv = $codeop->sv;
+		if (!$$cv) {
+			$cv = $S->{padlist}->[1]->ARRAYelt($codeop->targ);
+		}
+		my $subref = $cv->object_2svref;
+		my $S2 = DBIx::Perlish::Parse::init( 
+			%{$S->{gen_args}}, 
+			operation => 'select',
+			prev_S    => $S,
+		);
+		$S2-> {alias} = $S-> {alias};
+		DBIx::Perlish::Parse::parse_sub($S2, $subref);
+		bailout $S, 
+			"join() db_fetch expression cannot contain anything ".
+			"but conditional expressions on already declared tables"
+				if scalar( grep { @{ $S2-> {$_} } } qw(
+					group_by order_by autogroup_by ret_values joins
+				)) or $S2->{alias} ne $S->{alias};
+
+		unless ( @{ $S2-> {where} }) {
+			bailout $S, 
+				"join() db_fetch expression must contain ".
+				"at least one conditional expression"
+					unless $jointype eq 'inner';
+			$jointype = 'cross';
+		} else {
+			$condition = join(' and ', @{ $S2-> {where} });
+		}
+	}
+
+	return [ $jointype, @tab, $condition ];
+}
+
 sub try_parse_range
 {
 	my ($S, $op) = @_;
@@ -1257,6 +1352,8 @@ sub parse_op
 		push @{$S->{where}}, parse_entersub($S, $op);
 	} elsif (ref($op) eq "B::PMOP" && $op->name eq "match") {
 		push @{$S->{where}}, parse_regex( $S, $op, 0);
+	} elsif ( $op-> name eq 'join') {
+		push @{$S->{joins}}, parse_join( $S, $op);
 	} else {
 		print "$op\n";
 		if (ref($op) eq "B::PMOP") {
@@ -1303,6 +1400,7 @@ sub init
 		order_by   => [],
 		group_by   => [],
 		additions  => [],
+		joins      => [],
 		aggregates => { avg => 1, count => 1, max => 1, min => 1, sum => 1 },
 		autogroup_by     => [],
 		autogroup_fields => {},

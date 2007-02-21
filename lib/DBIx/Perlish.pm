@@ -195,7 +195,7 @@ sub gen_sql
 	} else {
 		die "unsupported operation: $operation\n";
 	}
-	my %tabs;
+	my (%tabs, %joins);
 	for my $var (keys %{$S->{vars}}) {
 		$tabs{$S->{var_alias}->{$var}} =
 			$no_aliases ?
@@ -209,6 +209,12 @@ sub gen_sql
 				"$tab $S->{tab_alias}->{$tab}";
 	}
 	die "no tables specified in $operation\n" unless keys %tabs;
+	for my $j ( @{$S->{joins}} ) {
+		my ( $join, $tab1, $tab2, $condition) = @$j;
+		$condition = ( defined $condition) ? " on $condition" : '';
+		$tabs{$tab1} = "$tabs{$tab1} $join join $tabs{$tab2}$condition";
+		delete $tabs{$tab2};
+	}
 	$sql .= join ", ", map { $tabs{$_} } sort keys %tabs;
 
 	$S->{sets}     ||= [];
@@ -256,7 +262,6 @@ __END__
 =head1 NAME
 
 DBIx::Perlish - a perlish interface to SQL databases
-
 
 =head1 VERSION
 
@@ -1103,6 +1108,46 @@ This variant puts a limitation on the return statement in the sub-query
 query sub.  Namely, it must contain a return statement with exactly one
 return value.
 
+=head3 Joins
+
+Joins are implemented not unlike sub-selects, with using embedded C<db_fetch> call
+to specify a join condition. The join syntax is one of:
+
+    join $t1 BINARY_OP $t2;
+    join $t1 BINARY_OP $t2 => db_fetch { CONDITION };
+
+where CONDITION is an arbitrary expression using fields from C<$t1> and C<$t2>
+, and BINARY_OP is one of C<*>,C<+>,C<x>,C<&>,C<|>,C<< < >>,C<< > >> operators,
+corresponding to the following standard join types:
+
+=over
+
+=item Inner join or cross join
+
+These correspond to either of C<*>, C<&>, and C<x> operators. These operators
+are the only ones that can be used in both short and long notations; this is
+because, C<cross join> is exactly the same as C<inner join> without any
+C<CONDITION>
+
+=item Full outer join
+
+C<+> or C<|>
+
+=item Left outer join
+
+C<< < >>
+
+=item Right outer join
+
+C<< > >>
+
+=back
+
+Example:
+
+    my $x : x;
+    my $y : y;
+    join $y * $x => db_fetch { $y-> id == $x-> id };
 
 =head2 Object-oriented interface
 
@@ -1148,7 +1193,7 @@ The C<sql()> sub can also be called in a procedural fashion,
 in which case it serves the purpose of injecting
 verbatim pieces of SQL into query subs
 (see L</Query filter statements>) or into the values
-to be inserted via L</db_insert>.
+to be inserted via L</db_insert()>.
 
 The C<sql()> function is exported by default.
 
