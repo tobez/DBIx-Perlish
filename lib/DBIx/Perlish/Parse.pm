@@ -1358,12 +1358,7 @@ sub parse_op
 	} elsif ( $op-> name eq 'join') {
 		push @{$S->{joins}}, parse_join( $S, $op);
 	} else {
-		print "$op\n";
-		print "type: ", $op->type, "\n";
-		print "name: ", $op->name, "\n";
-		print "desc: ", $op->desc, "\n";
-		print "targ: ", $op->targ, "\n";
-		bailout $S, "???";
+		bailout $S, "don't quite know what to do with op \"" . $op->name . "\"";
 	}
 }
 

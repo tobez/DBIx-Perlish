@@ -220,7 +220,8 @@ sub re22 {
 };
 
 sub jj {
-	join 1-2;
+	my $t : tbl;
+	db_fetch { $t->id == t2->some_id };
 };
 
 my ($sql, $v) = DBIx::Perlish::gen_sql(\&jj, "select");
