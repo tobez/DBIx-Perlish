@@ -452,7 +452,9 @@ sub parse_term
 			unless $or;
 		return "($or)";
 	} elsif (my ($const,$sv) = is_const($S, $op)) {
-		if (ref $sv eq "B::IV" || ref $sv eq "B::NV") {
+		if (($sv->isa("B::IV") && !$sv->isa("B::PVIV")) ||
+			($sv->isa("B::NV") && !$sv->isa("B::PVNV")))
+		{
 			# This is surely a number, so we can
 			# safely inline it in the SQL.
 			return $const;
@@ -1274,7 +1276,7 @@ sub parse_labels
 			$const = ${$sv->object_2svref};
 		}
 		bailout $S, "label ", $lop->label, " must be followed by an integer or integer variable"
-			unless $sv && ref $sv eq "B::IV";
+			unless $sv && $sv->isa("B::IV");
 		$S->{$label->{key}} = $const;
 		$S->{skipnext} = 1;
 	} elsif ($label->{kind} eq "notice") {
