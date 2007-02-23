@@ -536,7 +536,7 @@ sub try_get_dbfetch
 	$dbfetch = $dbfetch->first;
 	my $gv = get_gv($S, $dbfetch);
 	return unless $gv;
-	return unless $gv->NAME eq "db_fetch";
+	return unless $gv->NAME =~ /^(db_fetch|db_select)$/;
 
 	return $codeop;
 }
@@ -656,7 +656,7 @@ sub try_funcall
 		my $gv = get_gv($S, $op);
 		return unless $gv;
 		my $func = $gv->NAME;
-		if ($func =~ /^(db_fetch|union|intersect|except)$/) {
+		if ($func =~ /^(db_fetch|db_select|union|intersect|except)$/) {
 			return unless @args == 1;
 			my $rg = $args[0];
 			return unless is_unop($rg, "refgen");
@@ -664,7 +664,7 @@ sub try_funcall
 			return unless is_op($rg->first, "pushmark");
 			my $codeop = $rg->first->sibling;
 			return unless is_svop($codeop, "anoncode");
-			if ($func eq "db_fetch") {
+			if ($func =~ /^(db_fetch|db_select)$/) {
 				my $sql = handle_subselect($S, $codeop, returns_dont_care => 1);
 				return "exists ($sql)";
 			} else {

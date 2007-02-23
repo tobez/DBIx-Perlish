@@ -11,7 +11,7 @@ require Exporter;
 use base 'Exporter';
 
 $VERSION = '0.18';
-@EXPORT = qw(db_fetch db_update db_delete db_insert sql);
+@EXPORT = qw(db_fetch db_select db_update db_delete db_insert sql);
 @EXPORT_OK = qw(union intersect except);
 %EXPORT_TAGS = (all => [@EXPORT, @EXPORT_OK]);
 
@@ -19,6 +19,7 @@ use DBIx::Perlish::Parse;
 use DBI::Const::GetInfoType;
 
 sub db_fetch  (&) { DBIx::Perlish->fetch ($_[0]) }
+sub db_select (&) { DBIx::Perlish->fetch ($_[0]) }
 sub db_update (&) { DBIx::Perlish->update($_[0]) }
 sub db_delete (&) { DBIx::Perlish->delete($_[0]) }
 sub db_insert { DBIx::Perlish->insert(@_) }
@@ -504,6 +505,11 @@ Please see L</Query sub syntax> below for details of the
 syntax allowed in query subs.
 
 The C<db_fetch {}> function is exported by default.
+
+=head3 db_select {}
+
+The C<db_select {}> function is an alias to the C<db_fetch {}>.
+It is exported by default.
 
 =head3 db_update {}
 

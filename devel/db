@@ -15,10 +15,10 @@ $dbh->do("insert into tbl values (42,'LIFF')");
 # DBIx::Perlish::init(dbh => $bh);
 
 my $x = 2;
-my $r = db_fetch { tbl->id / $x - 1 == 20 };
+my $r = db_select { tbl->id / $x - 1 == 20 };
 print "$DBIx::Perlish::SQL\n";
 print "$r->{name}\n";
 
-my @r = db_fetch { tbl->name !~ /f/i; return tbl->name };
+my @r = db_select { tbl->name !~ /f/i; return tbl->name };
 print "$DBIx::Perlish::SQL\n";
 print "@r\n";
