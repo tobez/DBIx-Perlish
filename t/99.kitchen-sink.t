@@ -246,7 +246,7 @@ test_select_sql {
 } "sysdate() is not special",
 "select * from tab t01 where t01.foo = sysdate()",
 [];
-$main::flavor = "Oracle";
+$main::flavor = "oracle";
 test_select_sql {
 	tab->foo == sysdate();
 } "sysdate() is special",
