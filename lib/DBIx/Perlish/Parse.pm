@@ -701,7 +701,7 @@ sub try_funcall
 		}
 
 		return "sysdate"
-			if ($S->{gen_args}->{flavor}||"") eq "Oracle" &&
+			if ($S->{gen_args}->{flavor}||"") eq "oracle" &&
 				lc $func eq "sysdate" && !@terms;
 		return "$func(" . join(", ", @terms) . ")";
 	}
