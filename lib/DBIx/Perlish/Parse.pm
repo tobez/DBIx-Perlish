@@ -1056,6 +1056,14 @@ sub parse_join
 			$op[0]-> name eq 'pushmark' and 
 			is_binop( $op[1]);
 	my $jointype;
+		
+	if ( $op[1]-> name eq 'le') {
+		# support <= as well as =>
+		@op[1,2] = ( $op[1]-> first, $op[1]-> last);
+		bailout $S, "not a valid join() syntax"
+			unless is_binop( $op[1]);
+	}
+
 	if ( 2 == @op) {
 		bailout $S, "not a valid join() syntax: one of &,*,x is expected"
 			unless 

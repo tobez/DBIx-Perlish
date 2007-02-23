@@ -1110,11 +1110,13 @@ return value.
 
 =head3 Joins
 
-Joins are implemented similar to subqueries, using embedded C<db_fetch> call
-to specify a join condition. The join syntax is one of:
+Joins are implemented similar to subqueries, using embedded C<db_fetch> call to
+specify a join condition. The join syntax is one of (the last two are
+equivalent):
 
     join $t1 BINARY_OP $t2;
     join $t1 BINARY_OP $t2 => db_fetch { CONDITION };
+    join $t1 BINARY_OP $t2 <= db_fetch { CONDITION };
 
 where CONDITION is an arbitrary expression using fields from C<$t1> and C<$t2>
 , and BINARY_OP is one of C<*>,C<+>,C<x>,C<&>,C<|>,C<< < >>,C<< > >> operators,
