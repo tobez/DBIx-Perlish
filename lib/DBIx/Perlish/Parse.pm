@@ -110,7 +110,10 @@ sub want_const
 sub want_method
 {
 	my ($S, $op) = @_;
-	my $sv = want_svop($S, $op, "method_named");
+	unless (is_svop($op, "method_named")) {
+		bailout $S, "method call syntax expected";
+	}
+	my $sv = $op->sv;
 	if (!$$sv) {
 		$sv = $S->{padlist}->[1]->ARRAYelt($op->targ);
 	}
