@@ -1057,8 +1057,10 @@ sub parse_join
 			is_binop( $op[1]);
 	my $jointype;
 		
-	if ( $op[1]-> name eq 'le') {
+	if ($op[1]-> name eq 'le') {
 		# support <= as well as =>
+		bailout $S, "not a valid join() syntax"
+			unless @op == 2;
 		@op[1,2] = ( $op[1]-> first, $op[1]-> last);
 		bailout $S, "not a valid join() syntax"
 			unless is_binop( $op[1]);

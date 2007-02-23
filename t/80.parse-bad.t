@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 39;
+use Test::More tests => 40;
 use DBIx::Perlish;
 use t::test_utils;
 
@@ -119,3 +119,6 @@ test_bad_select { my $t1 : t1; my $t2 : t2;
 test_bad_select { my $t1 : t1; my $t2 : t2;
 	join $t1 + $t2 => db_fetch { }
 } "bad join 14", qr/at least one conditional/;
+test_bad_select { my $t1 : t1; my $t2 : t2;
+	join $t1 * $t2 <= db_fetch {}, 42;
+} "bad join 15", qr/not a valid join/;
