@@ -10,7 +10,7 @@ use vars qw($VERSION @EXPORT @EXPORT_OK %EXPORT_TAGS $SQL @BIND_VALUES);
 require Exporter;
 use base 'Exporter';
 
-$VERSION = '0.18';
+$VERSION = '0.19';
 @EXPORT = qw(db_fetch db_select db_update db_delete db_insert sql);
 @EXPORT_OK = qw(union intersect except);
 %EXPORT_TAGS = (all => [@EXPORT, @EXPORT_OK]);
@@ -266,7 +266,7 @@ DBIx::Perlish - a perlish interface to SQL databases
 
 =head1 VERSION
 
-This document describes DBIx::Perlish version 0.18
+This document describes DBIx::Perlish version 0.19
 
 
 =head1 SYNOPSIS
@@ -862,7 +862,9 @@ following manner:
     };
 
 This is equivalent to SQL's C<IN I<list>> operator, where
-the list comes from the C<@ary> array.
+the list comes from the C<@ary> array.  An array reference
+or an anonymous array can also be used in place of the C<@ary>
+here.
 
 The C<E<lt>-> operator can also be used with L</Subqueries>,
 below.

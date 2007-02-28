@@ -201,8 +201,19 @@ sub null1 {
 };
 
 my @ary = (1,2,3);
+my $ary = [1,2,3];
 sub is1 {
-	!tab->id  <-  @ary;
+	!tab->id  <-  @$ary;
+};
+
+# does not work
+sub is2 {
+	!tab->id  <-  map { $_*2 } @ary;
+};
+
+my $two = 2;
+sub is3 {
+	!tab->id  <-  [1,$two,3];
 };
 
 sub autogroup {
@@ -224,7 +235,7 @@ sub jj {
 	db_fetch { $t->id == t2->some_id };
 };
 
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&jj, "select");
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&is3, "select");
 print "$sql\n";
 print "values: ", join ", ", @$v;
 print "\n";

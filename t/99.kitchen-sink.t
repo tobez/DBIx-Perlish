@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 162;
+use Test::More tests => 175;
 use DBIx::Perlish qw/:all/;
 use t::test_utils;
 
@@ -373,11 +373,37 @@ test_select_sql {
 "select * from tab t01 where t01.id in (?,?,?)",
 [@ary];
 
+# <- @$array
+my $ary = [1,2,3];
+test_select_sql {
+	tab->id  <-  @$ary;
+} "in array",
+"select * from tab t01 where t01.id in (?,?,?)",
+[@$ary];
+
 test_select_sql {
 	!tab->id  <-  @ary;
-} "in array",
+} "in arrayref",
 "select * from tab t01 where t01.id not in (?,?,?)",
 [@ary];
+
+test_select_sql {
+	!tab->id  <-  [1,2,3];
+} "in list",
+"select * from tab t01 where t01.id not in (1,2,3)",
+[];
+
+test_select_sql {
+	!tab->id  <-  [1,$self{id},3];
+} "in list vals",
+"select * from tab t01 where t01.id not in (1,?,3)",
+[42];
+
+test_select_sql {
+	!tab->id  <-  [1,$self->{id},3];
+} "in list vals",
+"select * from tab t01 where t01.id not in (1,?,3)",
+[42];
 
 # autogrouping
 test_select_sql {

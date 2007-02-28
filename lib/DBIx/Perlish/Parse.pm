@@ -554,6 +554,35 @@ sub try_parse_subselect
 		bailout $S, "empty array in not valid in \"<-\"" unless @$ary;
 		$sql = join ",", ("?") x @$ary;
 		@vals = @$ary;
+	} elsif (is_unop($sub, "rv2av") && is_op($sub->first, "padsv")) {
+		my $ary = $S->{padlist}->[1]->ARRAYelt($sub->first->targ)->object_2svref;
+		bailout $S, "empty array in not valid in \"<-\"" unless @$$ary;
+		$sql = join ",", ("?") x @$$ary;
+		@vals = @$$ary;
+	} elsif (is_unop($sub, "srefgen") &&
+			 is_unop($sub->first, "null") &&
+			 is_listop($sub->first->first, "anonlist"))
+	{
+		my @what;
+		for my $v (get_all_children($sub->first->first)) {
+			next if is_op($v, "pushmark");
+			if (my ($const,$sv) = is_const($S, $v)) {
+				if (($sv->isa("B::IV") && !$sv->isa("B::PVIV")) ||
+					($sv->isa("B::NV") && !$sv->isa("B::PVNV")))
+				{
+					push @what, $const;
+				} else {
+					push @what, '?';
+					push @vals, $const;
+				}
+			} else {
+				my ($val, $ok) = get_value($S, $v);
+				push @what, '?';
+				push @vals, $val;
+			}
+		}
+		bailout $S, "empty list in not valid in \"<-\"" unless @what;
+		$sql = join ",", @what;
 	} else {
 		my $codeop = try_get_dbfetch( $S, $sub);
 		return unless $codeop;
