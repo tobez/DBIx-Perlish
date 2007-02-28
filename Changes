@@ -1,5 +1,12 @@
 Revision history for DBIx-Perlish
 
+0.19  Wed Feb 28 16:58:35 2007
+       Modify the code so that it is usable with Safe.pm.
+       Better daignostic messages.
+       Joins understand <= as well as => delimiter.
+       Make db_select {} an alias to db_fetch {}.
+       Add support for <- @$ary and <- [1,2,3].
+
 0.18  Wed Feb 21 19:57:17 2007
        Comparisons with undefined values are converted into
        proper SQL syntax.
