@@ -107,11 +107,24 @@ sub want_const
 	${$sv->object_2svref};
 }
 
+sub want_variable_method
+{
+	my ($S, $op) = @_;
+	return unless is_unop($op, "method");
+	$op = $op->first;
+	return unless is_null($op->sibling);
+	my ($name, $ok) = get_value($S, $op, soft => 1);
+	return unless $ok;
+	return $name;
+}
+
 sub want_method
 {
 	my ($S, $op) = @_;
 	unless (is_svop($op, "method_named")) {
-		bailout $S, "method call syntax expected";
+		my $r = want_variable_method($S, $op);
+		bailout $S, "method call syntax expected" unless $r;
+		return $r;
 	}
 	my $sv = $op->sv;
 	if (!$$sv) {

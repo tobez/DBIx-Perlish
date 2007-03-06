@@ -797,7 +797,11 @@ operator used for matching a column to a set of values, and for
 subqueries.
 
 Individual terms can refer to a table column using dereferencing
-syntax (either C<tablename-E<gt>column> or C<$tablevar-E<gt>column>),
+syntax
+(one of C<tablename-E<gt>column>,
+C<$tablevar-E<gt>column>,
+C<tablename-E<gt>$varcolumn>, or
+C<$tablevar-E<gt>$varcolumn>),
 to an integer, floating point, or string constant, to a function
 call, or to a scalar value in the outer scope (simple scalars,
 hash elements, or dereferenced hashref elements are supported).

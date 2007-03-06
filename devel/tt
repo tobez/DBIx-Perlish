@@ -111,8 +111,8 @@ sub retall {
 };
 
 my $vart = 'table1';
-my $self = { table => 'table1', id => 42 };
-my %self = ( table => 'table1', id => 42 );
+my $self = { table => 'table1', id => 42, col => 'col1' };
+my %self = ( table => 'table1', id => 42, col => 'col1' );
 sub vartable {
 	table: my $t1 = $vart;
 	my $t2 : table2;
@@ -235,7 +235,12 @@ sub jj {
 	db_fetch { $t->id == t2->some_id };
 };
 
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&is3, "select");
+my $col = 'blah';
+sub varcol {
+	tbl->$col == 42;
+};
+
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&varcol, "select");
 print "$sql\n";
 print "values: ", join ", ", @$v;
 print "\n";

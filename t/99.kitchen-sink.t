@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 175;
+use Test::More tests => 179;
 use DBIx::Perlish qw/:all/;
 use t::test_utils;
 
@@ -507,3 +507,16 @@ test_select_sql {
 "select * from tbl t01 where t01.id like 'abc%'",
 [];
 
+# varcols
+my $col = "col1";
+test_select_sql {
+	tab->$col == 42;
+} "varcol1",
+"select * from tab t01 where t01.col1 = 42",
+[];
+test_select_sql {
+	my $t : tab;
+	$t->$col == 42;
+} "varcol2",
+"select * from tab t01 where t01.col1 = 42",
+[];
