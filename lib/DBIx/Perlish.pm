@@ -30,6 +30,19 @@ sub except (&) {}
 
 my $default_object;
 
+sub import
+{
+	my $pkg = caller;
+	local @EXPORT_OK = @EXPORT_OK;
+	local %EXPORT_TAGS = %EXPORT_TAGS;
+	if ($pkg && $pkg->can("except")) {
+		# XXX maybe check prototype here
+		pop @EXPORT_OK;
+		%EXPORT_TAGS = (all => [@EXPORT, @EXPORT_OK]);
+	}
+	DBIx::Perlish->export_to_level(1, @_);
+}
+
 sub get_dbh
 {
 	my ($lvl) = @_;

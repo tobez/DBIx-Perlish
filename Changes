@@ -2,6 +2,7 @@ Revision history for DBIx-Perlish
 
 NEXT
        Add support for variable column names.
+       Make the module be compatible with Error.pm.
 
 0.19  Wed Feb 28 16:58:35 2007
        Modify the code so that it is usable with Safe.pm.
