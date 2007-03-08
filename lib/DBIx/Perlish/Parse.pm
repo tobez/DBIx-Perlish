@@ -970,10 +970,21 @@ sub parse_entersub
 
 sub parse_complex_regex
 {
-	my ( $S, $op) = @_;
+	my ($S, $op) = @_;
 
-	if ( is_unop( $op)) {
-		return parse_complex_regex( $S, $op-> first);
+	if (is_unop($op, "regcreset")) {
+		if (is_unop($op->first, "null")) {
+			my $rx = "";
+			my $rxop = $op->first->first;
+			while (!is_null($rxop)) {
+				$rx .= parse_complex_regex($S, $rxop)
+					unless is_op($rxop, "pushmark");
+				$rxop = $rxop->sibling;
+			}
+			return $rx;
+		} else {
+			return parse_complex_regex( $S, $op-> first);
+		}
 	} elsif ( is_binop( $op, 'concat')) {
 		$op = $op-> first;
 		return 

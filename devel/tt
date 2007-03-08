@@ -248,7 +248,11 @@ sub bad1 {
 	$self = { x => 1, y => 2};
 };
 
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&is3, "select");
+sub re_in {
+	tbl->id =~ /^$col/;
+};
+
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&re_in, "select");
 print "$sql\n";
 print "values: ", join ", ", @$v;
 print "\n";
