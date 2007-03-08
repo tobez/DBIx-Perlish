@@ -1,6 +1,6 @@
 Revision history for DBIx-Perlish
 
-NEXT
+0.21  Thu Mar  8 16:45:26 2007
        Understand `` for verbatim SQL.
        Fixes to make it work with 5.9.5.
 
