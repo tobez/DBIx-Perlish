@@ -459,6 +459,11 @@ sub parse_term
 		} else {
 			return "null";
 		}
+	} elsif (is_unop($op, "backtick")) {
+		my $fop = $op->first;
+		$fop = $fop->sibling while is_op($fop, "null");
+		my $sql = is_const($S, $fop);
+		return $sql if $sql;
 	} elsif (is_binop($op)) {
 		my $expr = parse_expr($S, $op);
 		return "($expr)";

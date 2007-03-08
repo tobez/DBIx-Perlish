@@ -870,6 +870,14 @@ for example:
         tab->id = sql "some_seq.nextval";
     };
 
+There is also a shortcut when one can use backquotes for
+verbatim SQL pieces:
+
+    db_update {
+        tab->state eq "new";
+        tab->id = `some_seq.nextval`;
+    };
+
 The "comes from" C<E<lt>-> binary operator can be used in the
 following manner:
 

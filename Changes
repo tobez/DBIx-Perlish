@@ -1,5 +1,8 @@
 Revision history for DBIx-Perlish
 
+NEXT
+       Understand `` for verbatim SQL.
+
 0.20  Tue Mar  6 12:24:35 2007
        Add support for variable column names.
        Make the module be compatible with Error.pm.
