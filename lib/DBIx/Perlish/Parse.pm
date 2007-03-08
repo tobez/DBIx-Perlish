@@ -577,12 +577,14 @@ sub try_parse_subselect
 		bailout $S, "empty array in not valid in \"<-\"" unless @$$ary;
 		$sql = join ",", ("?") x @$$ary;
 		@vals = @$$ary;
-	} elsif (is_unop($sub, "srefgen") &&
+	} elsif (is_listop($sub, "anonlist") or
+			 is_unop($sub, "srefgen") &&
 			 is_unop($sub->first, "null") &&
 			 is_listop($sub->first->first, "anonlist"))
 	{
 		my @what;
-		for my $v (get_all_children($sub->first->first)) {
+		my $alist = is_listop($sub, "anonlist") ? $sub : $sub->first->first;
+		for my $v (get_all_children($alist)) {
 			next if is_op($v, "pushmark");
 			if (my ($const,$sv) = is_const($S, $v)) {
 				if (($sv->isa("B::IV") && !$sv->isa("B::PVIV")) ||
@@ -657,7 +659,7 @@ sub parse_assign
 	}
 	bailout $S, "assignments are not understood in $S->{operation}'s query sub"
 		unless $S->{operation} eq "update";
-	if (is_unop($op->first, "srefgen")) {
+	if (is_unop($op->first, "srefgen") || is_listop($op->first, "anonhash")) {
 		parse_multi_assign($S, $op);
 	} else {
 		parse_simple_assign($S, $op);
@@ -762,9 +764,11 @@ sub parse_multi_assign
 	my ($S, $op) = @_;
 
 	my $hashop = $op->first;
-	want_unop($S, $hashop, "srefgen");
-	$hashop = $hashop->first;
-	$hashop = $hashop->first while is_unop($hashop, "null");
+	unless (is_listop($hashop, "anonhash")) {
+		want_unop($S, $hashop, "srefgen");
+		$hashop = $hashop->first;
+		$hashop = $hashop->first while is_unop($hashop, "null");
+	}
 	want_listop($S, $hashop, "anonhash");
 
 	my $saved_values = $S->{values};
