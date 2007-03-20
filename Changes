@@ -1,5 +1,9 @@
 Revision history for DBIx-Perlish
 
+0.22  Tue Mar 20 12:10:33 2007
+       Understand multi-level hash dereferencing.
+       Make empty updates not valid.
+
 0.21  Thu Mar  8 16:45:26 2007
        Understand `` for verbatim SQL.
        Fixes to make it work with 5.9.5.
