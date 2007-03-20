@@ -111,8 +111,12 @@ sub retall {
 };
 
 my $vart = 'table1';
-my $self = { table => 'table1', id => 42, col => 'col1' };
-my %self = ( table => 'table1', id => 42, col => 'col1' );
+my $self = { table => 'table1', id => 42, col => 'col1',
+	h1 => { h2 => { h3 => 42 }},
+};
+my %self = ( table => 'table1', id => 42, col => 'col1',
+	h1 => { h2 => { h3 => 42 }},
+);
 sub vartable {
 	table: my $t1 = $vart;
 	my $t2 : table2;
@@ -139,6 +143,10 @@ sub hashref1 {
 sub hashref2 {
 	my $t : table1;
 	$t->id == $self{id};
+};
+sub hashref3 {
+	my $t : table1;
+	$t->id == $self{h1}{h2}{h3};
 };
 
 sub funnytable {
@@ -252,7 +260,7 @@ sub re_in {
 	tbl->id =~ /^$col/;
 };
 
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&re_in, "select");
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&hashref3, "select");
 print "$sql\n";
 print "values: ", join ", ", @$v;
 print "\n";

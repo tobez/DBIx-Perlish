@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 184;
+use Test::More tests => 202;
 use DBIx::Perlish qw/:all/;
 use t::test_utils;
 
@@ -175,8 +175,18 @@ test_select_sql {
 [];
 
 my $vart = 'table1';
-my $self = { table => 'table1', id => 42 };
-my %self = ( table => 'table1', id => 42 );
+my $self = { table => 'table1', id => 42,
+	h1 => {
+		v  => 42,
+		h2 => { v => 42, h3 => { v => 42 } },
+	},
+};
+my %self = ( table => 'table1', id => 42,
+	h1 => {
+		v  => 42,
+		h2 => { v => 42, h3 => { v => 42 } },
+	},
+);
 test_select_sql {
 	table: my $t1 = $vart;
 	my $t2 : table2;
@@ -215,6 +225,48 @@ test_select_sql {
 	my $t : table1;
 	$t->id == $self{id};
 } "hashelement",
+"select * from table1 t01 where t01.id = ?",
+[42];
+
+test_select_sql {
+	my $t : table1;
+	$t->id == $self->{h1}{v};
+} "hashref l2",
+"select * from table1 t01 where t01.id = ?",
+[42];
+
+test_select_sql {
+	my $t : table1;
+	$t->id == $self{h1}{v};
+} "hashelement l2",
+"select * from table1 t01 where t01.id = ?",
+[42];
+
+test_select_sql {
+	my $t : table1;
+	$t->id == $self->{h1}{h2}{v};
+} "hashref l3",
+"select * from table1 t01 where t01.id = ?",
+[42];
+
+test_select_sql {
+	my $t : table1;
+	$t->id == $self{h1}{h2}{v};
+} "hashelement l3",
+"select * from table1 t01 where t01.id = ?",
+[42];
+
+test_select_sql {
+	my $t : table1;
+	$t->id == $self->{h1}{h2}{h3}{v};
+} "hashref l4",
+"select * from table1 t01 where t01.id = ?",
+[42];
+
+test_select_sql {
+	my $t : table1;
+	$t->id == $self{h1}{h2}{h3}{v};
+} "hashelement l4",
 "select * from table1 t01 where t01.id = ?",
 [42];
 

@@ -187,6 +187,9 @@ sub get_value
 				}
 				$vv = $S->{padlist}->[1]->ARRAYelt($op->targ)->object_2svref;
 				$vv = $$vv;
+			} elsif (is_binop($op, "helem")) {
+				my ($nv, $ok) = get_value($S, $op, %p);
+				$vv = $nv if $ok;
 			}
 		}
 		bailout $S, "unable to extract a value from a hash(ref)" unless $vv;

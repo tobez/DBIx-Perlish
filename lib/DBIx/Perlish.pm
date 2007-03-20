@@ -817,7 +817,8 @@ C<tablename-E<gt>$varcolumn>, or
 C<$tablevar-E<gt>$varcolumn>),
 to an integer, floating point, or string constant, to a function
 call, or to a scalar value in the outer scope (simple scalars,
-hash elements, or dereferenced hashref elements are supported).
+hash elements, or dereferenced hashref elements chained to
+an arbitrary depth are supported).
 
 Inside constant strings, table column specifiers are interpolated;
 the result of such interpolation is represented as a sequence
