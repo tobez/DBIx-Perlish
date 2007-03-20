@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 40;
+use Test::More tests => 41;
 use DBIx::Perlish;
 use t::test_utils;
 
@@ -10,6 +10,8 @@ my $testmy;
 test_bad_select {} "empty select", qr/no tables specified in select/;
 test_bad_update {} "empty update", qr/no tables specified in update/;
 test_bad_delete {} "empty delete", qr/no tables specified in delete/;
+
+test_bad_update { tbl->id == 42 } "nothing to update", qr/nothing to update/;
 
 test_bad_select {
 	table: 1;

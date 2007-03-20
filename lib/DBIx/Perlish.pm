@@ -245,6 +245,7 @@ sub gen_sql
 	{
 		@group_by = grep { $_ ne "" } @{$S->{autogroup_by}};
 	}
+	die "nothing to update\n" if $operation eq "update" && !@sets;
 
 	$sql .= " set "      . join ", ",    @sets     if @sets;
 	$sql .= " where "    . join " and ", @where    if @where;

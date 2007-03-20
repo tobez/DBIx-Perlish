@@ -260,7 +260,11 @@ sub re_in {
 	tbl->id =~ /^$col/;
 };
 
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&hashref3, "select");
+sub badupd {
+	tbl->id == 42;
+};
+
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&badupd, "update");
 print "$sql\n";
 print "values: ", join ", ", @$v;
 print "\n";
