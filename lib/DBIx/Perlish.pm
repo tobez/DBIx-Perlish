@@ -62,7 +62,7 @@ sub get_dbh
 		}
 	}
 	die "Database handle not set.  Maybe you forgot to call DBIx::Perlish::init()?\n" unless $dbh;
-	unless (ref $dbh && ref $dbh eq "DBI::db") { # XXX maybe relax for other things?
+	unless (UNIVERSAL::isa($dbh, "DBI::db")) { # XXX maybe relax for other things?
 		die "Invalid database handle found.\n";
 	}
 	$dbh;
