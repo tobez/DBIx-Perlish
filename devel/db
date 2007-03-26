@@ -5,8 +5,9 @@ use lib qw(lib);
 use DBI;
 use DBIx::Perlish;
 $DBIx::Perlish::Parse::DEVEL = 1;
+use vars qw($dbh);
 
-my $dbh = DBI->connect("dbi:SQLite:");
+$dbh = DBI->connect("dbi:SQLite:");
 $dbh->do("create table tbl (id int, name text)");
 $dbh->do("insert into tbl values (1,'hello')");
 $dbh->do("insert into tbl values (2,'fefe')");

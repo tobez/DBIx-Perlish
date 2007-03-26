@@ -264,7 +264,12 @@ sub badupd {
 	tbl->id == 42;
 };
 
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&badupd, "update");
+use Time::HiRes qw(time);
+sub timeupd {
+	tbl->updated = time;
+};
+
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&timeupd, "update");
 print "$sql\n";
 print "values: ", join ", ", @$v;
 print "\n";

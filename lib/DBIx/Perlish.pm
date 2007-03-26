@@ -60,6 +60,11 @@ sub get_dbh
 			my $vars = PadWalker::peek_our($lvl);
 			$dbh = ${$vars->{'$dbh'}} if $vars->{'$dbh'};
 		}
+		unless ($dbh) {
+			my ($pkg) = caller($lvl-1);
+			no strict 'refs';
+			$dbh = ${"${pkg}::dbh"};
+		}
 	}
 	die "Database handle not set.  Maybe you forgot to call DBIx::Perlish::init()?\n" unless $dbh;
 	unless (UNIVERSAL::isa($dbh, "DBI::db")) { # XXX maybe relax for other things?
@@ -707,7 +712,8 @@ call C<init()> before issuing any of the C<db_query {}>,
 C<db_update {}>, C<db_delete {}> or C<db_insert {}>, those
 functions look for one special case before bailing out.
 
-Namely, they try to locate a variable C<my $dbh> or C<our $dbh>,
+Namely, they try to locate a variable C<my $dbh>, C<our $dbh>,
+or caller's package global C<$dbh>,
 in that order, in the scope in which they are used.  If such
 variable is found, and if it contains a valid C<DBI> database
 handler, they will use it for performing the actual query.
