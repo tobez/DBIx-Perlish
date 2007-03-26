@@ -1,5 +1,9 @@
 Revision history for DBIx-Perlish
 
+0.23  Mon Mar 26 23:44:14 2007
+       Support inherited database handles.
+       Add special handling for package global $dbh.
+
 0.22  Tue Mar 20 12:10:33 2007
        Understand multi-level hash dereferencing.
        Make empty updates not valid.
