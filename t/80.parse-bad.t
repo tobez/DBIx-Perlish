@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 41;
+use Test::More tests => 45;
 use DBIx::Perlish;
 use t::test_utils;
 
@@ -124,3 +124,9 @@ test_bad_select { my $t1 : t1; my $t2 : t2;
 test_bad_select { my $t1 : t1; my $t2 : t2;
 	join $t1 * $t2 <= db_fetch {}, 42;
 } "bad join 15", qr/not a valid join/;
+
+test_bad_select { tbl->id++; } "selfmod in select 1", qr/self-modifications are not understood/;
+test_bad_select { tbl->id += 2; } "selfmod in select 2", qr/self-modifications are not understood/;
+
+test_bad_update { tbl->id++ - 5 } "bad selfmod 1", qr/cannot reconstruct term/;
+test_bad_update { 4 + (tbl->id += 4) } "bad selfmod 2", qr/self-modifications inside an expression is illegal/;

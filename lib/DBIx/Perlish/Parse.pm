@@ -412,6 +412,7 @@ sub parse_term
 {
 	my ($S, $op, %p) = @_;
 
+	local $S->{in_term} = 1;
 	if (is_unop($op, "entersub")) {
 		my $funcall = try_funcall($S, $op);
 		return $funcall if defined $funcall;
@@ -831,11 +832,40 @@ my %binop_map = (
 	divide   => "/",
 	concat   => "||",
 );
+my %binop2_map = (
+	add      => "+",
+	subtract => "-",
+	multiply => "*",
+	divide   => "/",
+	concat   => "||",
+);
 
 sub parse_expr
 {
 	my ($S, $op) = @_;
 	my $sqlop;
+	if (($op->flags & B::OPf_STACKED) &&
+		!$S->{parsing_return} &&
+		$binop2_map{$op->name} &&
+		is_unop($op->first, "entersub"))
+	{
+		my $lc = $op->first->first;
+		$lc = $lc->sibling until is_null($lc->sibling);
+		if (is_unop($lc, "rv2cv")) {
+			my ($tab, $f) = get_tab_field($S, $op->first, lvalue => 1);
+			bailout $S, "self-modifications are not understood in $S->{operation}'s query sub"
+				unless $S->{operation} eq "update";
+			bailout $S, "self-modifications inside an expression is illegal"
+				if $S->{in_term};
+			my $saved_values = $S->{values};
+			$S->{values} = [];
+			my $set = parse_term($S, $op->last);
+			push @{$S->{set_values}}, @{$S->{values}};
+			$S->{values} = $saved_values;
+			push @{$S->{sets}}, "$f = $f $binop2_map{$op->name} $set";
+			return ();
+		}
+	}
 	if (is_binop($op, "concat")) {
 		my ($c, $v) = try_special_concat($S, $op);
 		if ($c) {
@@ -1373,6 +1403,16 @@ sub parse_labels
 	}
 }
 
+sub parse_selfmod
+{
+	my ($S, $op, $oper) = @_;
+
+	my ($tab, $f) = get_tab_field($S, $op, lvalue => 1);
+	bailout $S, "self-modifications are not understood in $S->{operation}'s query sub"
+		unless $S->{operation} eq "update";
+	return "$f = $f $oper";
+}
+
 sub parse_op
 {
 	my ($S, $op) = @_;
@@ -1435,6 +1475,14 @@ sub parse_op
 		push @{$S->{where}}, parse_regex( $S, $op, 0);
 	} elsif ( $op-> name eq 'join') {
 		push @{$S->{joins}}, parse_join( $S, $op);
+	} elsif (is_unop($op, "postinc")) {
+		push @{$S->{sets}}, parse_selfmod($S, $op->first, "+ 1");
+	} elsif (is_unop($op, "postdec")) {
+		push @{$S->{sets}}, parse_selfmod($S, $op->first, "- 1");
+	} elsif (is_unop($op, "preinc")) {
+		push @{$S->{sets}}, parse_selfmod($S, $op->first, "+ 1");
+	} elsif (is_unop($op, "predec")) {
+		push @{$S->{sets}}, parse_selfmod($S, $op->first, "- 1");
 	} else {
 		bailout $S, "don't quite know what to do with op \"" . $op->name . "\"";
 	}

@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 202;
+use Test::More tests => 233;
 use DBIx::Perlish qw/:all/;
 use t::test_utils;
 
@@ -584,3 +584,72 @@ test_select_sql {
 } "varcol2",
 "select * from tab t01 where t01.col1 = 42",
 [];
+
+# update selfmod
+test_update_sql {
+	tab->col++;
+} "postinc",
+"update tab set col = col + 1",
+[];
+test_update_sql {
+	++tab->col;
+} "preinc",
+"update tab set col = col + 1",
+[];
+test_update_sql {
+	tab->col--;
+} "postdec",
+"update tab set col = col - 1",
+[];
+test_update_sql {
+	--tab->col;
+} "predec",
+"update tab set col = col - 1",
+[];
+
+test_update_sql {
+	tab->col += 2;
+} "+= 2",
+"update tab set col = col + 2",
+[];
+test_update_sql {
+	tab->col -= 2;
+} "-= 2",
+"update tab set col = col - 2",
+[];
+test_update_sql {
+	tab->col *= 2;
+} "*= 2",
+"update tab set col = col * 2",
+[];
+test_update_sql {
+	tab->col /= 2;
+} "/= 2",
+"update tab set col = col / 2",
+[];
+test_update_sql {
+	tab->col .= "2";
+} ".= 2",
+"update tab set col = col || ?",
+["2"];
+
+test_update_sql {
+	tab->col += $self->{id} + 2;
+} "+= complex",
+"update tab set col = col + (? + 2)",
+[42];
+test_update_sql {
+	tab->col -= $self->{id} + 2;
+} "-= complex",
+"update tab set col = col - (? + 2)",
+[42];
+test_update_sql {
+	tab->col *= $self->{id} + 2;
+} "*= complex",
+"update tab set col = col * (? + 2)",
+[42];
+test_update_sql {
+	tab->col /= $self->{id} + 2;
+} "/= complex",
+"update tab set col = col / (? + 2)",
+[42];
