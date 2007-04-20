@@ -1274,25 +1274,123 @@ sub parse_and
 	}
 }
 
+sub parse_fieldlist_label
+{
+	my ($S, $label, $lop, $op) = @_;
+
+	my @op;
+	if (is_listop($op, "list")) {
+		@op = get_all_children($op);
+	} else {
+		push @op, $op;
+	}
+	for $op (@op) {
+		next if is_op($op, "pushmark");
+		my ($t, $f) = get_tab_field($S, $op);
+		push @{$S->{$label->{key}}},
+			($S->{operation} eq "delete" || $S->{operation} eq "update") ?
+			$f : "$t.$f";
+	}
+	$S->{skipnext} = 1;
+}
+
+sub parse_orderby_label
+{
+	my ($S, $label, $lop, $op) = @_;
+
+	my @op;
+	if (is_listop($op, "list")) {
+		@op = get_all_children($op);
+	} else {
+		push @op, $op;
+	}
+	my $order = "";
+	for $op (@op) {
+		next if is_op($op, "pushmark");
+		# XXX next if is_op($op, "null");
+		my $term;
+		$term = parse_term($S, $op)
+			unless $term = is_const($S, $op);
+		if ($term =~ /^asc/i) {
+			next;  # skip "ascending"
+		} elsif ($term =~ /^desc/i) {
+			$order = "desc";
+			next;
+		} else {
+			if ($order) {
+				push @{$S->{$label->{key}}}, "$term $order";
+				$order = "";
+			} else {
+				push @{$S->{$label->{key}}}, $term;
+			}
+		}
+	}
+	$S->{skipnext} = 1;
+}
+
+sub parse_numassign_label
+{
+	my ($S, $label, $lop, $op) = @_;
+
+	# TODO more generic values
+	my ($const,$sv) = is_const($S, $op);
+	if (!$sv && is_op($op, "padsv")) {
+		if (find_aliased_tab($S, $op)) {
+			bailout $S, "cannot use table variable after ", $lop->label;
+		}
+		$sv = $S->{padlist}->[1]->ARRAYelt($op->targ);
+		$const = ${$sv->object_2svref};
+	}
+	bailout $S, "label ", $lop->label, " must be followed by an integer or integer variable"
+		unless $sv && $sv->isa("B::IV");
+	$S->{$label->{key}} = $const;
+	$S->{skipnext} = 1;
+}
+
+sub parse_notice_label
+{
+	my ($S, $label, $lop, $op) = @_;
+	$S->{$label->{key}}++;
+}
+
+sub parse_table_label
+{
+	my ($S, $label, $lop, $op) = @_;
+
+	bailout $S, "label ", $lop->label, " must be followed by an assignment"
+		unless $op->name eq "sassign";
+	my $attr = parse_simple_term($S, $op->first);
+	my $varn;
+	bailout $S, "label ", $lop->label, " must be followed by a lexical variable declaration"
+		unless is_op($op->last, "padsv") && ($varn = padname($S, $op->last, no_fakes => 1));
+	new_var($S, $varn, $attr);
+	$S->{skipnext} = 1;
+}
+
 my $action_orderby = {
-	kind => 'termlist',
-	key  => 'order_by',
+	kind    => 'termlist',
+	key     => 'order_by',
+	handler => \&parse_orderby_label,
 };
 my $action_groupby = {
-	kind => 'fieldlist',
-	key  => 'group_by',
+	kind    => 'fieldlist',
+	key     => 'group_by',
+	handler => \&parse_fieldlist_label,
 };
 my $action_limit = {
-	kind => 'numassign',
-	key  => 'limit',
+	kind    => 'numassign',
+	key     => 'limit',
+	handler => \&parse_numassign_label,
 };
 my $action_offset = {
-	kind => 'numassign',
-	key  => 'offset',
+	kind    => 'numassign',
+	key     => 'offset',
+	handler => \&parse_numassign_label,
 };
 my $action_distinct = {
-	kind => 'notice',
-	key  => 'distinct',
+	kind    => 'notice',
+	key     => 'distinct',
+	handler => \&parse_notice_label,
 };
 my %labelmap = (
 	select => {
@@ -1320,84 +1418,13 @@ sub parse_labels
 	my ($S, $lop) = @_;
 	my $label = $labelmap{$S->{operation}}->{lc $lop->label};
 	if (!$label && lc $lop->label eq "table") {
-		$label = { kind => 'table' };
+		$label = { kind => 'table', handler => \&parse_table_label };
 	}
 	bailout $S, "label ", $lop->label, " is not understood"
 		unless $label;
 	my $op = $lop->sibling;
-	if ($label->{kind} eq "termlist") {
-		my @op;
-		if (is_listop($op, "list")) {
-			@op = get_all_children($op);
-		} else {
-			push @op, $op;
-		}
-		my $order = "";
-		for $op (@op) {
-			next if is_op($op, "pushmark");
-			my $term;
-			$term = parse_term($S, $op)
-				unless $term = is_const($S, $op);
-			if ($label->{key} eq "order_by") {
-				# special case for sort order
-				if ($term =~ /^asc/i) {
-					next;  # skip "ascending"
-				} elsif ($term =~ /^desc/i) {
-					$order = "desc";
-					next;
-				} else {
-					if ($order) {
-						push @{$S->{$label->{key}}}, "$term $order";
-						$order = "";
-					} else {
-						push @{$S->{$label->{key}}}, $term;
-					}
-				}
-			} else {
-				push @{$S->{$label->{key}}}, $term;
-			}
-		}
-		$S->{skipnext} = 1;
-	} elsif ($label->{kind} eq "fieldlist") {
-		my @op;
-		if (is_listop($op, "list")) {
-			@op = get_all_children($op);
-		} else {
-			push @op, $op;
-		}
-		for $op (@op) {
-			next if is_op($op, "pushmark");
-			my ($t, $f) = get_tab_field($S, $op);
-			push @{$S->{$label->{key}}},
-				($S->{operation} eq "delete" || $S->{operation} eq "update") ?
-				$f : "$t.$f";
-		}
-		$S->{skipnext} = 1;
-	} elsif ($label->{kind} eq "numassign") {
-		# TODO more generic values
-		my ($const,$sv) = is_const($S, $op);
-		if (!$sv && is_op($op, "padsv")) {
-			if (find_aliased_tab($S, $op)) {
-				bailout $S, "cannot use table variable after ", $lop->label;
-			}
-			$sv = $S->{padlist}->[1]->ARRAYelt($op->targ);
-			$const = ${$sv->object_2svref};
-		}
-		bailout $S, "label ", $lop->label, " must be followed by an integer or integer variable"
-			unless $sv && $sv->isa("B::IV");
-		$S->{$label->{key}} = $const;
-		$S->{skipnext} = 1;
-	} elsif ($label->{kind} eq "notice") {
-		$S->{$label->{key}}++;
-	} elsif ($label->{kind} eq "table") {
-		bailout $S, "label ", $lop->label, " must be followed by an assignment"
-			unless $op->name eq "sassign";
-		my $attr = parse_simple_term($S, $op->first);
-		my $varn;
-		bailout $S, "label ", $lop->label, " must be followed by a lexical variable declaration"
-			unless is_op($op->last, "padsv") && ($varn = padname($S, $op->last, no_fakes => 1));
-		new_var($S, $varn, $attr);
-		$S->{skipnext} = 1;
+	if ($label->{handler}) {
+		$label->{handler}->($S, $label, $lop, $op);
 	} else {
 		bailout $S, "internal error parsing label ", $op->label;
 	}
@@ -1494,7 +1521,7 @@ sub parse_sub
 	if ($DEVEL) {
 		$Carp::Verbose = 1;
 		require B::Concise;
-		my $walker = B::Concise::compile('-terse', $sub);
+		my $walker = B::Concise::compile('-concise', $sub);
 		print "CODE DUMP:\n";
 		$walker->();
 		print "\n\n";
