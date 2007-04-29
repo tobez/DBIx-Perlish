@@ -708,7 +708,7 @@ to be used with the corresponding SQL code.
 =head3 Special treatment of the C<$dbh> variable
 
 If the procedural interface is used, and the user did not
-call C<init()> before issuing any of the C<db_query {}>,
+call C<init()> before issuing any of the C<db_fetch {}>,
 C<db_update {}>, C<db_delete {}> or C<db_insert {}>, those
 functions look for one special case before bailing out.
 
@@ -1055,7 +1055,7 @@ is not present in the query, the
 C<DBIx::Perlish> module will generate one automatically.
 For example, the following query:
 
-    db_query {
+    db_fetch {
         my $t : tab;
         return $t->name, $t->type, count($t->age);
     };
