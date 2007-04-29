@@ -1127,7 +1127,7 @@ construct, for example:
     db_delete {
         my $t : table1;
         db_fetch {
-            $t->id == table2->table_id;
+            $t->id == table2->table1_id;
         };
     };
 
@@ -1141,7 +1141,7 @@ the right:
     db_delete {
         my $t : table1;
         $t->id  <-  db_fetch {
-            return table2->table_id;
+            return table2->table1_id;
         };
     };
 
