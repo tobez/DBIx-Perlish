@@ -782,9 +782,24 @@ sub parse_multi_assign
 	my $field;
 	for my $c (get_all_children($hashop)) {
 		next if is_op($c, "pushmark");
+
 		if ($want_const) {
-			$field = want_const($S, $c);
-			$want_const = 0;
+			my $hash;
+			if (is_op($c, "padhv")) {
+				$hash = $S->{padlist}->[1]->ARRAYelt($c->targ)->object_2svref;
+			} elsif (is_unop($c, "rv2hv") && is_op($c->first, "padsv")) {
+				$hash = $S->{padlist}->[1]->ARRAYelt($c->first->targ)->object_2svref;
+				$hash = $$hash;
+			}
+			if ($hash) {
+				while (my ($k, $v) = each %$hash) {
+					push @{$S->{set_values}}, $v;
+					push @{$S->{sets}}, "$k = ?";
+				}
+			} else {
+				$field = want_const($S, $c);
+				$want_const = 0;
+			}
 		} else {
 			my $set = parse_term($S, $c);
 			push @{$S->{set_values}}, @{$S->{values}};
@@ -1521,7 +1536,7 @@ sub parse_sub
 	if ($DEVEL) {
 		$Carp::Verbose = 1;
 		require B::Concise;
-		my $walker = B::Concise::compile('-concise', $sub);
+		my $walker = B::Concise::compile('-terse', $sub);
 		print "CODE DUMP:\n";
 		$walker->();
 		print "\n\n";

@@ -279,7 +279,14 @@ sub order1 {
 	return $m->period;
 }
 
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&order1, "select");
+my $h = { col1 => 42, col2 => 666 };
+my %h = ( col1 => 42, col2 => 666 );
+sub upd1 {
+	my $m : tabname;
+ 	$m = {%h};
+}
+
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&upd1, "update");
 print "$sql\n";
 print "values: ", join ", ", @$v;
 print "\n";

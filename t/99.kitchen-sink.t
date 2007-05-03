@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 233;
+use Test::More tests => 249;
 use DBIx::Perlish qw/:all/;
 use t::test_utils;
 
@@ -653,3 +653,30 @@ test_update_sql {
 } "/= complex",
 "update tab set col = col / (? + 2)",
 [42];
+
+my $h = { col1 => 42, col2 => 666 };
+my %h = ( col1 => 42, col2 => 666 );
+test_update_sql {
+	my $t : tab;
+ 	$t = {%h};
+} "hash assignment 1",
+"update tab set col1 = ?, col2 = ?",
+[42,666];
+test_update_sql {
+	my $t : tab;
+ 	$t = {%$h};
+} "hashref assignment 1",
+"update tab set col1 = ?, col2 = ?",
+[42,666];
+test_update_sql {
+	my $t : tab;
+ 	$t = {%h, foobar => 2};
+} "hash assignment 2",
+"update tab set col1 = ?, col2 = ?, foobar = 2",
+[42,666];
+test_update_sql {
+	my $t : tab;
+ 	$t = {%$h, foobar => 2};
+} "hashref assignment 2",
+"update tab set col1 = ?, col2 = ?, foobar = 2",
+[42,666];
