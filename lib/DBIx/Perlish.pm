@@ -968,6 +968,27 @@ Please note a certain ugliness in C<tablename()> in the last example,
 so it is probably better to either use table vars, or stick to the
 single assignment syntax of the first example.
 
+It is possible to intermix hashes and hashrefs dereferencings with
+verbatim key/value pairs in bulk assignments:
+
+    $t = {
+        id     => 42,
+        column => $t->column + 1,
+        %$hashref_from_outer_scope
+    };
+
+Please note that the right hand side of the bulk assignment must
+be an anonymouse hash reference.  Thus, the following is invalid:
+
+    $t = $hashref_from_outer_scope;
+
+Instead, write
+
+    $t = {%$hashref_from_outer_scope};
+
+The latter emphasizes the fact that this is the bulk assignment, which
+is not clear from the former statement.
+
 Assignment statements are only valid in L</db_update {}>.
 
 =head3 Result limiting statements
