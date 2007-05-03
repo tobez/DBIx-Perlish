@@ -1,5 +1,10 @@
 Revision history for DBIx-Perlish
 
+0.24  Thu May  3 09:30:20 2007
+       Understand ++,+= etc in updates.
+       Various documentation fixes.
+       Add support $m = {%h} syntax for bulk updates.
+
 0.23  Mon Mar 26 23:44:14 2007
        Support inherited database handles.
        Add special handling for package global $dbh.
