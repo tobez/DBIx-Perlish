@@ -1,5 +1,8 @@
 Revision history for DBIx-Perlish
 
+0.25  Thu May 10 12:48:40 2007
+       Bugfix for inherited db handles.
+
 0.24  Thu May  3 09:30:20 2007
        Understand ++,+= etc in updates.
        Various documentation fixes.

@@ -10,7 +10,7 @@ use vars qw($VERSION @EXPORT @EXPORT_OK %EXPORT_TAGS $SQL @BIND_VALUES);
 require Exporter;
 use base 'Exporter';
 
-$VERSION = '0.24';
+$VERSION = '0.25';
 @EXPORT = qw(db_fetch db_select db_update db_delete db_insert sql);
 @EXPORT_OK = qw(union intersect except);
 %EXPORT_TAGS = (all => [@EXPORT, @EXPORT_OK]);
@@ -82,7 +82,7 @@ sub init
 		%p = @_;
 	}
 	die "The \"dbh\" parameter is required\n" unless $p{dbh};
-	unless (ref $p{dbh} && ref $p{dbh} eq "DBI::db") { # XXX maybe relax for other things?
+	unless (UNIVERSAL::isa($p{dbh}, "DBI::db")) { # XXX maybe relax for other things?
 		die "Invalid database handle supplied in the \"dbh\" parameter.\n";
 	}
 	$default_object = DBIx::Perlish->new(dbh => $p{dbh});
@@ -91,7 +91,7 @@ sub init
 sub new
 {
 	my ($class, %p) = @_;
-	unless (ref $p{dbh} && ref $p{dbh} eq "DBI::db") { # XXX maybe relax for other things?
+	unless (UNIVERSAL::isa($p{dbh}, "DBI::db")) { # XXX maybe relax for other things?
 		die "Invalid database handle supplied in the \"dbh\" parameter.\n";
 	}
 	bless { dbh => $p{dbh} }, $class;
@@ -285,7 +285,7 @@ DBIx::Perlish - a perlish interface to SQL databases
 
 =head1 VERSION
 
-This document describes DBIx::Perlish version 0.24
+This document describes DBIx::Perlish version 0.25
 
 
 =head1 SYNOPSIS

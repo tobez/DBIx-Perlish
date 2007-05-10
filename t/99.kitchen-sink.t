@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 249;
+use Test::More tests => 253;
 use DBIx::Perlish qw/:all/;
 use t::test_utils;
 
@@ -680,3 +680,21 @@ test_update_sql {
 } "hashref assignment 2",
 "update tab set col1 = ?, col2 = ?, foobar = 2",
 [42,666];
+
+package DBI::db;
+package good_dbh;
+use vars '@ISA';
+@ISA="DBI::db";
+package main;
+
+my $bad_dbh = bless {}, 'something';
+eval { DBIx::Perlish::init($bad_dbh) };
+like($@||"", qr/Invalid database handle supplied/, "init with bad dbh");
+eval { DBIx::Perlish->new(dbh => $bad_dbh) };
+like($@||"", qr/Invalid database handle supplied/, "new with bad dbh");
+
+my $good_dbh = bless {}, 'good_dbh';
+eval { DBIx::Perlish::init($good_dbh) };
+is($@||"", "", "init with inherited dbh");
+eval { DBIx::Perlish->new(dbh => $good_dbh) };
+is($@||"", "", "new with inherited dbh");
