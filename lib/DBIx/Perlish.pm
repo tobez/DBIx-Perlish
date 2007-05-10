@@ -1356,7 +1356,19 @@ into the standard Perl distribution.
 
 =head1 INCOMPATIBILITIES
 
-None reported.
+If you use C<DBIx::Perlish> together with L<HTML::Mason>,
+you are likely to see warnings "Useless use of ... in void context"
+that Mason helpfully converts into fatal errors.
+
+To fix this, edit your C<handler.pl> and add the following line:
+
+  $ah->interp->ignore_warnings_expr("(?i-xsm:Subroutine .* redefined|Useless use of .+ in void context)");
+
+Here C<$ah> must refer to an instance of C<HTML::Mason::ApacheHandler>
+class.
+
+Mason is to blame for this, since it disregards
+warnings' handlers installed by other modules.
 
 
 =head1 BUGS AND LIMITATIONS
