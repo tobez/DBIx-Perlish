@@ -1100,19 +1100,21 @@ sub parse_regex
 		# - LIKE is case-insensitive (for ASCII, anyway, there's a bug there);
 		# - GLOB is case-sensitive;
 		# - there is also support for MATCH - with a user func
+		#   - except that in recent version it is used for FTS
 		# Since it does not appear that SQLite can use indices
 		# for prefix matches with simple LIKE statements, we
-		# just hijack REGEXP and MATCH for case-sensitive
-		# and case-insensitive cases.  If I am wrong on that,
-		# or if SQLite gets and ability to do index-based
-		# prefix matching, this logic can be modified accordingly.
+		# just use user-defined functions PRE_N and PRE_I for
+		# case-sensitive and case-insensitive cases.
+		# If I am wrong on that, or if SQLite gets and ability to
+		# do index-based # prefix matching, this logic can be
+		# modified accordingly in at a future date.
 		if ($case) {
-			$what = "match";
+			$what = "pre_i";
 			$S->{gen_args}->{dbh}->func($what, 2, sub {
 				return scalar $_[1] =~ /\Q$_[0]\E/i;
 			}, "create_function");
 		} else {
-			$what = "regexp";
+			$what = "pre_n";
 			$S->{gen_args}->{dbh}->func($what, 2, sub {
 				return scalar $_[1] =~ /\Q$_[0]\E/;
 			}, "create_function");
