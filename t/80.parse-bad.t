@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 45;
+use Test::More tests => 48;
 use DBIx::Perlish;
 use t::test_utils;
 
@@ -8,6 +8,14 @@ our $testour;
 my $testmy;
 
 test_bad_select {} "empty select", qr/no tables specified in select/;
+# this is also empty:
+test_bad_select { return `xyz_seq.nextval` } "empty select", qr/no tables specified in select/;
+# except in Oracle:
+$main::flavor = "oracle";
+test_select_sql { return `xyz_seq.nextval` } "select from dual",
+"select xyz_seq.nextval from dual", [];
+$main::flavor = "";
+
 test_bad_update {} "empty update", qr/no tables specified in update/;
 test_bad_delete {} "empty delete", qr/no tables specified in delete/;
 

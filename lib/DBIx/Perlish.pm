@@ -10,7 +10,7 @@ use vars qw($VERSION @EXPORT @EXPORT_OK %EXPORT_TAGS $SQL @BIND_VALUES);
 require Exporter;
 use base 'Exporter';
 
-$VERSION = '0.25';
+$VERSION = '0.26';
 @EXPORT = qw(db_fetch db_select db_update db_delete db_insert sql);
 @EXPORT_OK = qw(union intersect except);
 %EXPORT_TAGS = (all => [@EXPORT, @EXPORT_OK]);
@@ -227,7 +227,16 @@ sub gen_sql
 				"$tab" :
 				"$tab $S->{tab_alias}->{$tab}";
 	}
-	die "no tables specified in $operation\n" unless keys %tabs;
+	unless (keys %tabs) {
+		if ($operation eq "select" &&
+			$args{flavor} && $args{flavor} eq "oracle" &&
+			$S->{returns})
+		{
+			$tabs{dual} = "dual";
+		} else {
+			die "no tables specified in $operation\n";
+		}
+	}
 	for my $j ( @{$S->{joins}} ) {
 		my ( $join, $tab1, $tab2, $condition) = @$j;
 		$condition = ( defined $condition) ? " on $condition" : '';
@@ -285,7 +294,7 @@ DBIx::Perlish - a perlish interface to SQL databases
 
 =head1 VERSION
 
-This document describes DBIx::Perlish version 0.25
+This document describes DBIx::Perlish version 0.26
 
 
 =head1 SYNOPSIS
@@ -1290,6 +1299,11 @@ a simple C<LIKE> won't suffice.
 
 The function call C<sysdate()> is transformed into C<sysdate>
 (without parentheses).
+
+Selects without table specification are assumed to be
+selects from DUAL, for example:
+
+    my $newval = db_fetch { return `tab_id_seq.nextval` };
 
 =head3 Postgresql
 

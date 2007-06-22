@@ -1,5 +1,8 @@
 Revision history for DBIx-Perlish
 
+0.26  Fri Jun 22 15:25:10 2007
+       Specialcase selects from DUAL in Oracle.
+
 0.25  Thu May 10 12:48:40 2007
        Bugfix for inherited db handles.
 
