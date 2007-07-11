@@ -161,6 +161,47 @@ sub padname
 	}
 }
 
+sub get_padlist_scalar_by_name
+{
+	my ($S, $n) = @_;
+	my $padlist = $S->{padlist};
+	my @n = $padlist->[0]->ARRAY;
+	for (my $k = 0; $k < @n; $k++) {
+		next if $n[$k]->isa("B::SPECIAL");
+		if ($n[$k]->PVX eq $n) {
+			my $v = $padlist->[1]->ARRAYelt($k);
+			if (!$v->isa("B::SPECIAL")) {
+				return $v;
+			}
+			if ($n[$k]->FLAGS & B::SVf_FAKE) {
+				bailout $S, "internal error: cannot retrieve value of $n: no more scopes to check"
+					unless $S->{gen_args}->{prev_S};
+				return get_padlist_scalar_by_name($S->{gen_args}->{prev_S}, $n);
+			}
+			bailout $S, "internal error: cannot retrieve value of $n: it's an in-scope SPECIAL";
+		}
+	}
+	bailout $S, "internal error: cannot retrieve value of $n: not found in outer scope";
+}
+
+sub get_padlist_scalar
+{
+	my ($S, $i) = @_;
+	my $padlist = $S->{padlist};
+	my $v = $padlist->[1]->ARRAYelt($i);
+	bailout $S, "internal error: no such pad element" unless $v;
+	if ($v->isa("B::SPECIAL")) {
+		my $n = $padlist->[0]->ARRAYelt($i);
+		if ($n->FLAGS & B::SVf_FAKE) {
+			$v = get_padlist_scalar_by_name($S, $n->PVX);
+		} else {
+			bailout $S, "internal error: cannot retrieve in-scope SPECIAL";
+		}
+	}
+	$v = $v->object_2svref;
+	return $$v;
+}
+
 sub get_value
 {
 	my ($S, $op, %p) = @_;
@@ -170,8 +211,7 @@ sub get_value
 		if (find_aliased_tab($S, $op)) {
 			bailout $S, "cannot use a table variable as a value";
 		}
-		my $vv = $S->{padlist}->[1]->ARRAYelt($op->targ)->object_2svref;
-		$val = $$vv;
+		$val = get_padlist_scalar($S, $op->targ);
 	} elsif (is_binop($op, "helem")) {
 		my $key = is_const($S, $op->last);
 		bailout $S, "only constant hash keys are understood" unless $key;
@@ -693,7 +733,7 @@ sub callarg
 
 sub try_funcall
 {
-	my ($S, $op) = @_;
+	my ($S, $op, %p) = @_;
 	my @args;
 	if (is_unop($op, "entersub")) {
 		$op = $op->first;
@@ -709,7 +749,42 @@ sub try_funcall
 		my $gv = get_gv($S, $op);
 		return unless $gv;
 		my $func = $gv->NAME;
-		if ($func =~ /^(db_fetch|db_select|union|intersect|except)$/) {
+		if ($func =~ /^(union|intersect|except)$/) {
+			return unless @args == 1 || @args == 2;
+			my $rg = $args[0];
+			return unless is_unop($rg, "refgen");
+			$rg = $rg->first if is_unop($rg->first, "null");
+			return unless is_op($rg->first, "pushmark");
+			my $codeop = $rg->first->sibling;
+			return unless is_svop($codeop, "anoncode");
+			return unless $S->{operation} eq "select";
+			my $cv = $codeop->sv;
+			if (!$$cv) {
+				$cv = $S->{padlist}->[1]->ARRAYelt($codeop->targ);
+			}
+			my $subref = $cv->object_2svref;
+			my %gen_args = %{$S->{gen_args}};
+			$gen_args{prev_S} = $S; # XXX maybe different key than prevS?
+			my ($sql, $vals, $nret) = DBIx::Perlish::gen_sql($subref, "select",
+				%gen_args);
+			# XXX maybe check for nret validity
+			push @{$S->{additions}}, {
+				type => $func,
+				sql  => $sql,
+				vals => $vals,
+			};
+			if (@args > 1) {
+				# must be another union|intersect|except
+				my $r = try_funcall($S, $args[1], union_or_friends => $func);
+				# something went wrong if it is not ""
+				return unless defined $r && $r eq "";
+			}
+			return "";
+		}
+		if ($p{union_or_friends}) {
+			bailout $S, "missing semicolon after $p{union_or_friends} sub";
+		}
+		if ($func =~ /^(db_fetch|db_select)$/) {
 			return unless @args == 1;
 			my $rg = $args[0];
 			return unless is_unop($rg, "refgen");
@@ -717,27 +792,8 @@ sub try_funcall
 			return unless is_op($rg->first, "pushmark");
 			my $codeop = $rg->first->sibling;
 			return unless is_svop($codeop, "anoncode");
-			if ($func =~ /^(db_fetch|db_select)$/) {
-				my $sql = handle_subselect($S, $codeop, returns_dont_care => 1);
-				return "exists ($sql)";
-			} else {
-				return unless $S->{operation} eq "select";
-				my $cv = $codeop->sv;
-				if (!$$cv) {
-					$cv = $S->{padlist}->[1]->ARRAYelt($codeop->targ);
-				}
-				my $subref = $cv->object_2svref;
-				my %gen_args = %{$S->{gen_args}};
-				my ($sql, $vals, $nret) = DBIx::Perlish::gen_sql($subref, "select",
-					%gen_args);
-				# XXX maybe check for nret validity
-				push @{$S->{additions}}, {
-					type => $func,
-					sql  => $sql,
-					vals => $vals,
-				};
-				return "";
-			}
+			my $sql = handle_subselect($S, $codeop, returns_dont_care => 1);
+			return "exists ($sql)";
 		} elsif ($func eq "sql") {
 			return unless @args == 1;
 			# XXX understand more complex expressions here

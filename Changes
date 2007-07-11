@@ -1,5 +1,10 @@
 Revision history for DBIx-Perlish
 
+0.27  Wed Jul 11 16:53:40 2007
+       Fix a tricky bug with outer lexical variables used inside a union
+       and friends.
+       Do not require semicolons between chained union-like constructs.
+
 0.26  Fri Jun 22 15:25:10 2007
        Specialcase selects from DUAL in Oracle.
 

@@ -1,0 +1,16 @@
+use lib 'lib';
+use DBIx::Perlish qw(:all);
+$DBIx::Perlish::Parse::DEVEL = 1;
+
+
+my @x = DBIx::Perlish::gen_sql(
+
+sub {
+	{ return t1->name } union { return t2->name } union { return t3->name }
+	# { return t1->name } union { return t2->name }
+}, "select", flavor => "oracle");
+
+print $x[0], "\n";
+for my $y (@{$x[1]}) {
+	print "$y\n";
+}

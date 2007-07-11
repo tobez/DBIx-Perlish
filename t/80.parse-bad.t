@@ -1,7 +1,7 @@
 use warnings;
 use strict;
-use Test::More tests => 48;
-use DBIx::Perlish;
+use Test::More tests => 49;
+use DBIx::Perlish qw/:all/;
 use t::test_utils;
 
 our $testour;
@@ -138,3 +138,7 @@ test_bad_select { tbl->id += 2; } "selfmod in select 2", qr/self-modifications a
 
 test_bad_update { tbl->id++ - 5 } "bad selfmod 1", qr/cannot reconstruct term/;
 test_bad_update { 4 + (tbl->id += 4) } "bad selfmod 2", qr/self-modifications inside an expression is illegal/;
+
+test_bad_select {
+	{ return t1->name } union { return t2->name } db_fetch { return t3->name }
+} "multi-union gone bad", qr/missing semicolon after union/;

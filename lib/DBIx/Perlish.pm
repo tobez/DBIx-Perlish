@@ -24,9 +24,9 @@ sub db_update (&) { DBIx::Perlish->update($_[0]) }
 sub db_delete (&) { DBIx::Perlish->delete($_[0]) }
 sub db_insert { DBIx::Perlish->insert(@_) }
 
-sub union (&) {}
-sub intersect (&) {}
-sub except (&) {}
+sub union (&;$) {}
+sub intersect (&;$) {}
+sub except (&;$) {}
 
 my $default_object;
 

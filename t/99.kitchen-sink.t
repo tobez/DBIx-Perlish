@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 253;
+use Test::More tests => 259;
 use DBIx::Perlish qw/:all/;
 use t::test_utils;
 
@@ -698,3 +698,17 @@ eval { DBIx::Perlish::init($good_dbh) };
 is($@||"", "", "init with inherited dbh");
 eval { DBIx::Perlish->new(dbh => $good_dbh) };
 is($@||"", "", "new with inherited dbh");
+
+# union with the same var check
+test_select_sql {
+	{ t1->name == $vart } union { t2->name == $vart }
+} "union with the same var",
+"select * from t1 t01 where t01.name = ? union select * from t2 t01 where t01.name = ?",
+["table1","table1"];
+
+# multi-union
+test_select_sql {
+	{ return t1->name } union { return t2->name } union { return t3->name }
+} "multi-union",
+"select t01.name from t1 t01 union select t01.name from t2 t01 union select t01.name from t3 t01",
+[];
