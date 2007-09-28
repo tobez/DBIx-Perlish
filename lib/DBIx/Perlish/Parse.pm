@@ -699,6 +699,11 @@ sub parse_assign
 			my $tab = try_parse_attr_assignment($S,
 				$op->last->first->sibling, $val);
 			return if $tab;
+		} elsif (my $codeop = try_get_dbfetch($S, $op->first)) {
+			my $sql = handle_subselect($S, $codeop, returns_dont_care => 1);
+			my $tab = try_parse_attr_assignment($S,
+				$op->last->first->sibling, "($sql)");
+			return if $tab;
 		}
 	}
 	bailout $S, "assignments are not understood in $S->{operation}'s query sub"

@@ -286,7 +286,42 @@ sub upd1 {
  	$m = {%h};
 }
 
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&upd1, "update");
+sub retvar
+{
+	my $t : table = $self->{table};
+	return $t->$val;
+}
+
+sub prior
+{
+	my $t : xxx;
+	$t->id == 42;
+	$t->a == `connect by prior`;
+}
+
+sub table_as_select_simple
+{
+	my $a : tab1;
+	my $b : table = db_fetch {
+		my $c : tab2;
+	};
+}
+
+sub table_as_select
+{
+	my $a : tab1;
+	my $b : table = db_fetch {
+		my $c : tab2;
+		my $d : tab3;
+
+		$c->x == $d->y;
+		return $c->i, $d->j;
+	};
+	$b->i == $a->j;
+	return $a->n, $b->j;
+}
+
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&table_as_select, "select");
 print "$sql\n";
 print "values: ", join ", ", @$v;
 print "\n";
