@@ -320,6 +320,15 @@ sub maybe_one_table_only
 	}
 }
 
+sub incr_string
+{
+	my ($s) = @_;
+	my ($prefix, $suffix) = $s =~ /^(.*_)?(.*)$/;
+	$prefix ||= "";
+	$suffix++;
+	return "$prefix$suffix";
+}
+
 sub new_tab
 {
 	my ($S, $tab) = @_;
@@ -327,7 +336,7 @@ sub new_tab
 		maybe_one_table_only($S);
 		$S->{tabs}{$tab} = 1;
 		$S->{tab_alias}{$tab} = $S->{alias};
-		$S->{alias}++;
+		$S->{alias} = incr_string($S->{alias});
 	}
 	$S->{tab_alias}{$tab};
 }
@@ -340,7 +349,7 @@ sub new_var
 		if $S->{vars}{$var};
 	$S->{vars}{$var} = $tab;
 	$S->{var_alias}{$var} = $S->{alias};
-	$S->{alias}++;
+	$S->{alias} = incr_string($S->{alias});
 }
 
 # parsers
@@ -1167,7 +1176,7 @@ sub parse_regex
 		# just use user-defined functions PRE_N and PRE_I for
 		# case-sensitive and case-insensitive cases.
 		# If I am wrong on that, or if SQLite gets and ability to
-		# do index-based # prefix matching, this logic can be
+		# do index-based prefix matching, this logic can be
 		# modified accordingly in at a future date.
 		if ($case) {
 			$what = "pre_i";
