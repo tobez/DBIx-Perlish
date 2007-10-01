@@ -1,5 +1,8 @@
 Revision history for DBIx-Perlish
 
+0.28  Mon Oct  1 09:32:55 2007
+       Add support for inline views.
+
 0.27  Wed Jul 11 16:53:40 2007
        Fix a tricky bug with outer lexical variables used inside a union
        and friends.

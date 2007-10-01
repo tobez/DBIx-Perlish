@@ -10,7 +10,7 @@ use vars qw($VERSION @EXPORT @EXPORT_OK %EXPORT_TAGS $SQL @BIND_VALUES);
 require Exporter;
 use base 'Exporter';
 
-$VERSION = '0.27';
+$VERSION = '0.28';
 @EXPORT = qw(db_fetch db_select db_update db_delete db_insert sql);
 @EXPORT_OK = qw(union intersect except);
 %EXPORT_TAGS = (all => [@EXPORT, @EXPORT_OK]);
@@ -294,7 +294,7 @@ DBIx::Perlish - a perlish interface to SQL databases
 
 =head1 VERSION
 
-This document describes DBIx::Perlish version 0.27
+This document describes DBIx::Perlish version 0.28
 
 
 =head1 SYNOPSIS
@@ -807,6 +807,18 @@ possible to write for example
 In this case the attribute "table" must be specified verbatim,
 and the name of the table is taken from the right-hand side of the
 assignment.
+
+Last, but not least, a combination of verbatim "table" attribute
+with a nested L</db_fetch {}> can be used to implement I<inline views>:
+
+    my $var : table = db_fetch { ... };
+
+In this case a B<select> statement corresponding to
+the nested L</db_fetch {}> will represent the table.
+Please note that not all database drivers support
+this, although at present the C<DBIx::Perlish> module
+does not care and will generate SQL which will subsequently
+fail to execute.
 
 Another possibility for declaring table variables is
 described in L</Statements with label syntax>.
