@@ -421,10 +421,15 @@ sub parse_return
 				push @{$S->{returns}}, $rv{field};
 			}
 		} elsif (exists $rv{alias}) {
+			if (defined $last_alias) {
+				# XXX maybe check whether it is a number and inline it?
+				push @{$S->{ret_values}}, $rv{alias};
+				push @{$S->{returns}}, "? as $last_alias";
+				undef $last_alias;
+				next;
+			}
 			bailout $S, "bad alias name \"$rv{alias}\""
 				unless $rv{alias} =~ /^\w+$/;
-			bailout $S, "cannot alias an alias"
-				if defined $last_alias;
 			if (lc $rv{alias} eq "distinct") {
 				bailout $S, "\"$rv{alias}\" is not a valid alias name" if @{$S->{returns}};
 				$S->{distinct}++;

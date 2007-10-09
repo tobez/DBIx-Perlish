@@ -1,5 +1,8 @@
 Revision history for DBIx-Perlish
 
+0.29  Tue Oct  9 15:16:48 2007
+       Allow aliased constants in return statements.
+
 0.28  Mon Oct  1 09:32:55 2007
        Add support for inline views.
 

@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 259;
+use Test::More tests => 268;
 use DBIx::Perlish qw/:all/;
 use t::test_utils;
 
@@ -66,6 +66,24 @@ test_select_sql {
 } "return two, second aliased",
 "select t01.name, t01.val as value from tbl t01",
 [];
+test_select_sql {
+	my $t : tbl;
+	return value => "Value";
+} "return constant alias",
+"select ? as value from tbl t01",
+["Value"];
+test_select_sql {
+	my $t : tbl;
+	return $t, value => "Value";
+} "return *, then constant alias",
+"select t01.*, ? as value from tbl t01",
+["Value"];
+test_select_sql {
+	my $t : tbl;
+	return $t->val, value => "Value";
+} "return column, then constant alias",
+"select t01.val, ? as value from tbl t01",
+["Value"];
 
 # subselects
 test_select_sql {

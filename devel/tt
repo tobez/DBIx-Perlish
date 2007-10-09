@@ -321,7 +321,14 @@ sub table_as_select
 	return $a->n, $b->j;
 }
 
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&table_as_select, "select");
+sub str
+{
+	my $a : tab;
+	$a->y == "hello";
+	return $a, constant => "Constant";
+}
+
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&str, "select");
 print "$sql\n";
 print "values: ", join ", ", @$v;
 print "\n";
