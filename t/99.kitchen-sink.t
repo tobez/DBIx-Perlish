@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 268;
+use Test::More tests => 282;
 use DBIx::Perlish qw/:all/;
 use t::test_utils;
 
@@ -729,4 +729,57 @@ test_select_sql {
 	{ return t1->name } union { return t2->name } union { return t3->name }
 } "multi-union",
 "select t01.name from t1 t01 union select t01.name from t2 t01 union select t01.name from t3 t01",
+[];
+
+# conditional returns
+test_select_sql {
+	my $a : tab;
+	return $a->smth, $a->with_id if $self->{id};
+	return $a->smth              unless $self->{id};
+} "conditional return, if true",
+"select t01.smth, t01.with_id from tab t01",
+[];
+test_select_sql {
+	my $a : tab;
+	return $a->smth, $a->with_id if $self->{noid};
+	return $a->smth              unless $self->{noid};
+} "conditional return, unless false",
+"select t01.smth from tab t01",
+[];
+
+# logical ops
+test_select_sql {
+	my $a : tab;
+	$a->x == 1 && $a->y == 2;
+} "explicit simple AND",
+"select * from tab t01 where (t01.x = 1) and (t01.y = 2)",
+[];
+test_select_sql {
+	my $a : tab;
+	$a->x == 1 || $a->y == 2;
+} "explicit simple OR",
+"select * from tab t01 where ((t01.x = 1) or (t01.y = 2))",
+[];
+test_select_sql {
+	my $a : tab;
+	$a->x == 1 && $a->y == 2
+	or
+	$a->x == 3 && $a->y == 4
+} "explicit ANDs inside OR",
+"select * from tab t01 where (((t01.x = 1) and (t01.y = 2)) or ((t01.x = 3) and (t01.y = 4)))",
+[];
+test_select_sql {
+	my $a : tab;
+	$a->x == 1 || $a->y == 2
+	and
+	$a->x == 3 || $a->y == 4
+} "explicit ORs inside AND",
+"select * from tab t01 where ((t01.x = 1) or (t01.y = 2)) and ((t01.x = 3) or (t01.y = 4))",
+[];
+test_select_sql {
+	my $a : tab;
+	$a->x == 1 || $a->y == 2;
+	$a->z == 3;
+} "explicit simple OR, implicit AND",
+"select * from tab t01 where ((t01.x = 1) or (t01.y = 2)) and t01.z = 3",
 [];

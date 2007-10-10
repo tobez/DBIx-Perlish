@@ -328,7 +328,16 @@ sub str
 	return $a, constant => "Constant";
 }
 
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&str, "select");
+my $x = 1;
+sub cond
+{
+	my $a : tab;
+	$a->x == 42 or $a->y == 50 unless $x;
+	return $a->a, $a->x if $x;
+	return $a->a, $a->nox unless $x;
+}
+
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&cond, "select");
 
 print "$sql\n";
 print "values: ", join ", ", @$v;

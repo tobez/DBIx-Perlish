@@ -527,9 +527,14 @@ sub parse_term
 		return "($expr)";
 	} elsif (is_logop($op, "or")) {
 		my $or = parse_or($S, $op);
-		bailout $S, "looks like a limiting range inside an expression\n"
+		bailout $S, "looks like a limiting range or a conditional inside an expression\n"
 			unless $or;
 		return "($or)";
+	} elsif (is_logop($op, "and")) {
+		my $and = parse_and($S, $op);
+		bailout $S, "looks like a conditional inside an expression\n"
+			unless $and;
+		return "($and)";
 	} elsif (my ($const,$sv) = is_const($S, $op)) {
 		if (($sv->isa("B::IV") && !$sv->isa("B::PVIV")) ||
 			($sv->isa("B::NV") && !$sv->isa("B::PVNV")))
@@ -1338,6 +1343,8 @@ sub parse_or
 		$S->{offset} = $from;
 		$S->{limit}  = $to-$from+1;
 		return;
+	} elsif (my ($val, $ok) = get_value($S, $op->first, soft => 1)) {
+		return compile_conditionally($S, $op, !$val);
 	} else {
 		my $left  = parse_term($S, $op->first);
 		my $right = parse_term($S, $op->first->sibling);
@@ -1349,20 +1356,32 @@ sub parse_and
 {
 	my ($S, $op) = @_;
 	if (my ($val, $ok) = get_value($S, $op->first, soft => 1)) {
-		if ($val) {
-			$op = $op->first->sibling;
-			# This strangeness is for suppressing () when parsing
-			# expr via parse_term.  There must be a better way.
-			if (is_binop($op) || $op->name eq "sassign") {
-				return parse_expr($S, $op);
-			} else {
-				return scalar parse_term($S, $op);
-			}
-		} else {
+		return compile_conditionally($S, $op, $val);
+	} else {
+		my $left  = parse_term($S, $op->first);
+		my $right = parse_term($S, $op->first->sibling);
+		return "$left and $right";
+	}
+}
+
+sub compile_conditionally
+{
+	my ($S, $op, $val) = @_;
+	if ($val) {
+		$op = $op->first->sibling;
+		# This strangeness is for suppressing () when parsing
+		# expr via parse_term.  There must be a better way.
+		if (is_binop($op) || $op->name eq "sassign") {
+			return parse_expr($S, $op);
+		} elsif (is_listop($op, "return")) {
+			# conditional returns are nice
+			parse_return($S, $op);
 			return ();
+		} else {
+			return scalar parse_term($S, $op);
 		}
 	} else {
-		bailout $S, "logical AND is not supported yet";
+		return ();
 	}
 }
 
@@ -1557,7 +1576,7 @@ sub parse_op
 		push @{$S->{where}}, scalar parse_term($S, $op);
 	} elsif (is_logop($op, "or")) {
 		my $or = parse_or($S, $op);
-		push @{$S->{where}}, $or if $or;
+		push @{$S->{where}}, "($or)" if $or;
 	} elsif (is_logop($op, "and")) {
 		my $and = parse_and($S, $op);
 		push @{$S->{where}}, $and if $and;

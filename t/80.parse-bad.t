@@ -1,11 +1,12 @@
 use warnings;
 use strict;
-use Test::More tests => 49;
+use Test::More tests => 52;
 use DBIx::Perlish qw/:all/;
 use t::test_utils;
 
 our $testour;
 my $testmy;
+my $val = 42;
 
 test_bad_select {} "empty select", qr/no tables specified in select/;
 # this is also empty:
@@ -142,3 +143,17 @@ test_bad_update { 4 + (tbl->id += 4) } "bad selfmod 2", qr/self-modifications in
 test_bad_select {
 	{ return t1->name } union { return t2->name } db_fetch { return t3->name }
 } "multi-union gone bad", qr/missing semicolon after union/;
+
+test_bad_select {
+	return tab->f1;
+	return tab->f2;
+} "multi-returns", qr/at most one return/;
+test_bad_select {
+	return tab->f1 if $val;
+	return tab->f2 if $val;
+} "multi-returns, hidden with if", qr/at most one return/;
+test_bad_select {
+	return tab->f1 unless $testmy;
+	return tab->f2 unless $testmy;
+} "multi-returns, hidden with unless", qr/at most one return/;
+# TODO same as above, with $testour - it bitches
