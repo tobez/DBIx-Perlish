@@ -1,4 +1,5 @@
 use inc::Module::Install;
+BEGIN { require 5.008002 } # please CPAN::Reporter
 
 name			'DBIx-Perlish';
 license			'bsd';
