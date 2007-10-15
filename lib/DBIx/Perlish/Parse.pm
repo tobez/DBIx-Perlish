@@ -1656,6 +1656,7 @@ sub init
 		sets       => [],
 		set_values => [],
 		ret_values => [],
+		where      => [],
 		order_by   => [],
 		group_by   => [],
 		additions  => [],

@@ -245,10 +245,6 @@ sub gen_sql
 	}
 	$sql .= join ", ", map { $tabs{$_} } sort keys %tabs;
 
-	$S->{sets}     ||= [];
-	$S->{where}    ||= [];
-	$S->{group_by} ||= [];
-	$S->{order_by} ||= [];
 	my @sets     = grep { $_ ne "" } @{$S->{sets}};
 	my @where    = grep { $_ ne "" } @{$S->{where}};
 	my @group_by = grep { $_ ne "" } @{$S->{group_by}};
@@ -272,9 +268,9 @@ sub gen_sql
 	if ($S->{offset}) {
 		$sql .= " offset $S->{offset}";
 	}
-	my $v = $S->{set_values} || [];
-	push @$v, @{$S->{ret_values} || []};
-	push @$v, @{$S->{values} || []};
+	my $v = $S->{set_values};
+	push @$v, @{$S->{ret_values}};
+	push @$v, @{$S->{values}};
 
 	for my $add (@{$S->{additions}}) {
 		$sql .= " $add->{type} $add->{sql}";

@@ -19,7 +19,9 @@ t/02.single-comparisons.t
 t/03.simple-closures.t
 t/04-joins.t
 t/08.inline-views.t
+t/50.sqlite-real.t
 t/80.parse-bad.t
+t/85.usage-bad.t
 t/99.kitchen-sink.t
 t/pod-coverage.t
 t/pod.t

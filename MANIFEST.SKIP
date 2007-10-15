@@ -5,9 +5,12 @@
 \.bak$
 ^MANIFEST\.SKIP$
 CVS
+^cover_db/.*$
 ^devel/.*$
 ^tags$
 ^Makefile$
+^Makefile.old$
+.swp$
 ^.cvsignore$
 pm_to_blib
 TODO
