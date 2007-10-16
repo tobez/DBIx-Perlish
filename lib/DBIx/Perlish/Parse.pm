@@ -1600,7 +1600,7 @@ sub parse_op
 	} elsif (is_cop($op, "nextstate")) {
 		$S->{file} = $op->file;
 		$S->{line} = $op->line;
-		$_cover->($op, $S->{file});
+		$_cover->($op);
 		if ($op->label) {
 			parse_labels($S, $op);
 		}
@@ -1689,8 +1689,10 @@ if (*Devel::Cover::Files{HASH}) {
 		if ($cov && $Seen) {
 			my $Coverage = $$cov;
 			$_cover = sub {
-				my ($op, $file) = @_;
-				return unless $Devel::Cover::Files{$file};
+				my ($op) = @_;
+				Devel::Cover::get_location($op);
+				return unless $Devel::Cover::File;
+				return unless $Devel::Cover::Files{$Devel::Cover::File};
 				my $key = Devel::Cover::get_key($op);
 				$Coverage->{statement}{$key} ||= 1;
 				$Seen->{statement}{$$op}++;
