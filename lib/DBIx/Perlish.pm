@@ -1050,6 +1050,19 @@ will generate the equivalent to C<select * from products where type = 'ICBM'>,
 while the same code would generate just C<select * from products> if C<$type>
 were false.
 
+Similarly,
+
+    my $want_z = 1;
+    db_fetch {
+        my $p : products;
+        return $p->x, $p->y         unless $want_z;
+        return $p->x, $p->y, $p->z  if     $want_z;
+    };
+
+will generate the equivalent of C<select x, y from products> when
+C<$want_z> is false, and C<select x, y, z from products> when
+C<$want_z> is true.
+
 
 =head3 Statements with label syntax
 
@@ -1360,6 +1373,24 @@ cannot be done in Perl"?
 
 DBIx::Perlish requires no configuration files or environment variables.
 
+=head2 Running under L<Devel::Cover>
+
+When the C<DBIx::Perlish> module detects that the current program
+is being run under L<Devel::Cover>,
+it tries to cheat a little bit and feeds L<Devel::Cover>
+with I<false> information to make those
+query subs which were parsed by the module
+to appear "covered".
+
+This is done because the query subs are B<never> executed,
+and thus would normally be presented as "not covered" by
+the L<Devel::Cover> reporter.
+Although a developer has no trouble deciding to ignore
+such "red islands", he has to perform this decision every
+time he looks at the coverage data, which tends to become
+annoying rather quickly.
+
+Currently, only statement and sub execution data are faked.
 
 =head1 DEPENDENCIES
 
@@ -1435,9 +1466,6 @@ This work is in part sponsored by Telia Denmark.
 
 
 =head1 SUPPORT
-
-There is a project Wiki at
-  http://dbix-perlish.tobez.org/wiki/
 
 There is also the project website at
   http://dbix-perlish.tobez.org/

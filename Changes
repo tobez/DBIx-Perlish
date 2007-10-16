@@ -1,11 +1,16 @@
 Revision history for DBIx-Perlish
 
-0.30
+0.30  Tue Oct 16 14:31:59 2007
+       When run under Devel::Cover, do some cheating,
+       so that query subs that are parsed appear to
+       be "covered" (statements & subs).
+       Add tests to provide better test coverage.
        Implement explicit logical AND.
        Fix logical OR precedence problems in generated SQL.
        Allow returns to be evaluated conditionally
        (so that a single query sub can return different
        things, depending on the outside information).
+       Please CPAN::Reporter.
 
 0.29  Tue Oct  9 15:16:48 2007
        Allow aliased constants in return statements.
