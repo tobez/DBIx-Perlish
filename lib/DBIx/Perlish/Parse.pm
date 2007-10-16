@@ -1684,10 +1684,9 @@ $_cover = sub {};
 if (*Devel::Cover::Files{HASH}) {
 	eval { require PadWalker; };
 	unless ($@) {
-		my $cov = PadWalker::closed_over(\&Devel::Cover::add_statement_cover)->{'$Coverage'};
 		my $Seen = PadWalker::closed_over(\&Devel::Cover::deparse)->{'%Seen'};
-		if ($cov && $Seen) {
-			my $Coverage = $$cov;
+		if ($Seen) {
+			my $Coverage = Devel::Cover::coverage(0);
 			$_cover = sub {
 				my ($op) = @_;
 				Devel::Cover::get_location($op);
