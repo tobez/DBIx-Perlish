@@ -5,6 +5,7 @@ use warnings;
 use strict;
 
 our $DEVEL;
+our $_cover;
 
 use B;
 use Carp;
@@ -1599,6 +1600,7 @@ sub parse_op
 	} elsif (is_cop($op, "nextstate")) {
 		$S->{file} = $op->file;
 		$S->{line} = $op->line;
+		$_cover->($op, $S->{file});
 		if ($op->label) {
 			parse_labels($S, $op);
 		}
@@ -1677,5 +1679,24 @@ $SIG{__WARN__} = sub {
 		warn(@_);
 	}
 };
+
+$_cover = sub {};
+if (*Devel::Cover::Files{HASH}) {
+	eval { require PadWalker; };
+	unless ($@) {
+		my $cov = PadWalker::closed_over(\&Devel::Cover::add_statement_cover)->{'$Coverage'};
+		my $Seen = PadWalker::closed_over(\&Devel::Cover::deparse)->{'%Seen'};
+		if ($cov && $Seen) {
+			my $Coverage = $$cov;
+			$_cover = sub {
+				my ($op, $file) = @_;
+				return unless $Devel::Cover::Files{$file};
+				my $key = Devel::Cover::get_key($op);
+				$Coverage->{statement}{$key} ||= 1;
+				$Seen->{statement}{$$op}++;
+			};
+		}
+	}
+}
 
 1;
