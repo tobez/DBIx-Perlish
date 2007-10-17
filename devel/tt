@@ -328,7 +328,7 @@ sub str
 	return $a, constant => "Constant";
 }
 
-my $x = 1;
+$x = 1;
 sub cond
 {
 	my $a : tab;
@@ -337,7 +337,14 @@ sub cond
 	return $a->a, $a->nox unless $x;
 }
 
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&cond, "select");
+sub order
+{
+	my $a : tab;
+	sort $a->src, desc => $a->dst;
+	return $a->id;
+}
+
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&order, "select");
 
 print "$sql\n";
 print "values: ", join ", ", @$v;

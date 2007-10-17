@@ -784,7 +784,7 @@ assignments;
 
 =item *
 
-result limiting statements;
+result limiting and ordering statements;
 
 =item *
 
@@ -1028,7 +1028,7 @@ is not clear from the former statement.
 
 Assignment statements are only valid in L</db_update {}>.
 
-=head3 Result limiting statements
+=head3 Result limiting and ordering statements
 
 The C<last> command can be used to limit the number of
 results returned by a fetch operation.
@@ -1046,7 +1046,29 @@ is equivalent to
 
     OFFSET 5 LIMIT 16
 
-Result limiting statements are only valid in L</db_fetch {}>.
+
+The C<sort> builtin can be used to specify the desired order
+of the results:
+
+    sort $t->col1, $t->col2;
+
+is equivalent to
+
+    ORDER BY col1, col2
+
+In order to support the ordering direction, the sort expressions
+can be preceded by a literal string which
+must satisfy the pattern /^(asc)/i (for ascending order,
+which is the default), or /^(desc)/i for descending order:
+
+    sort desc => $t->col1, asc => $t->col2;
+
+is equivalent to
+
+    ORDER BY col1 DESC, col2
+
+Result limiting and ordering statements are only valid in L</db_fetch {}>.
+
 
 =head3 Conditional statements
 

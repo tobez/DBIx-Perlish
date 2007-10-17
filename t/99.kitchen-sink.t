@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 282;
+use Test::More tests => 288;
 use DBIx::Perlish qw/:all/;
 use t::test_utils;
 
@@ -162,7 +162,7 @@ test_select_sql {
 test_select_sql {
 	my $t : tbl;
 	order_by: descending => $t->name;
-} "simple order by",
+} "simple order by, descending",
 "select * from tbl t01 order by t01.name desc",
 [];
 
@@ -170,7 +170,31 @@ test_select_sql {
 test_select_sql {
 	my $t : tbl;
 	order_by: asc => $t->name, desc => $t->age;
-} "simple order by",
+} "order by several",
+"select * from tbl t01 order by t01.name, t01.age desc",
+[];
+
+# sort
+test_select_sql {
+	my $t : tbl;
+	sort $t->name;
+} "simple sort",
+"select * from tbl t01 order by t01.name",
+[];
+
+# sort desc
+test_select_sql {
+	my $t : tbl;
+	sort descending => $t->name;
+} "simple sort, descending",
+"select * from tbl t01 order by t01.name desc",
+[];
+
+# sort several
+test_select_sql {
+	my $t : tbl;
+	sort asc => $t->name, desc => $t->age;
+} "sort several",
 "select * from tbl t01 order by t01.name, t01.age desc",
 [];
 

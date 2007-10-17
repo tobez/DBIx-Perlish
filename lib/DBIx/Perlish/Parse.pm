@@ -1406,12 +1406,21 @@ sub parse_fieldlist_label
 	$S->{skipnext} = 1;
 }
 
+sub parse_sort
+{
+	my ($S, $op) = @_;
+	parse_orderby_label($S, "order_by", undef, $op);
+	delete $S->{skipnext};
+}
+
 sub parse_orderby_label
 {
 	my ($S, $label, $lop, $op) = @_;
 
+	my $key = ref $label ? $label->{key} : $label;
+
 	my @op;
-	if (is_listop($op, "list")) {
+	if (is_listop($op, "list") || is_listop($op, "sort")) {
 		@op = get_all_children($op);
 	} else {
 		push @op, $op;
@@ -1430,10 +1439,10 @@ sub parse_orderby_label
 			next;
 		} else {
 			if ($order) {
-				push @{$S->{$label->{key}}}, "$term $order";
+				push @{$S->{$key}}, "$term $order";
 				$order = "";
 			} else {
-				push @{$S->{$label->{key}}}, $term;
+				push @{$S->{$key}}, $term;
 			}
 		}
 	}
@@ -1612,9 +1621,11 @@ sub parse_op
 	} elsif (is_unop($op, "entersub")) {
 		push @{$S->{where}}, parse_entersub($S, $op);
 	} elsif (is_pmop($op, "match")) {
-		push @{$S->{where}}, parse_regex( $S, $op, 0);
-	} elsif ( $op-> name eq 'join') {
-		push @{$S->{joins}}, parse_join( $S, $op);
+		push @{$S->{where}}, parse_regex($S, $op, 0);
+	} elsif ( $op->name eq 'join') {
+		push @{$S->{joins}}, parse_join($S, $op);
+	} elsif ($op->name eq 'sort') {
+		parse_sort($S, $op);
 	} elsif (is_unop($op, "postinc")) {
 		push @{$S->{sets}}, parse_selfmod($S, $op->first, "+ 1");
 	} elsif (is_unop($op, "postdec")) {
