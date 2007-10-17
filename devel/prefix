@@ -1,0 +1,17 @@
+#! /usr/bin/perl
+use lib "lib";
+use DBIx::Perlish;
+use DBI;
+
+my $dbh = DBI->connect("dbi:SQLite:");
+$dbh->do("create table names (id integer, name text)");
+my $foodbh = DBI->connect("dbi:SQLite:");
+$foodbh->do("create table foo (id integer, name text)");
+
+use DBIx::Perlish prefix => "foo", dbh => \$foodbh;
+
+db_insert 'names', { id => 1, name => "blah" }, { id => 2, name => "hest" };
+my @r = db_fetch { my $t : names };
+foo_insert 'foo', @r;
+print scalar foo_fetch { my $t : foo; $t->id == 2; return $t->name };
+print "\n";
