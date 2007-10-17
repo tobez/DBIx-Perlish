@@ -1326,6 +1326,65 @@ Example:
     print join(", ", $db->bind_values), "\n";
 
 
+=head2 Working with multiple database handles
+
+There are several ways in which the C<DBIx::Perlish> module can be used
+with several different database handles within the same program:
+
+=over
+
+=item Using object-oriented interface
+
+The advantage of this approach is that there is no confusion
+about which database handle is in use, since a DBIx::Perlish object
+is always created with an explicit database handle as a parameter
+to L</new()>.
+
+The obvious disadvantage is that one has to explicitly use "sub"
+when specifying a query sub, so the syntax is unwieldy.
+
+=item Switching handles with L</init()>
+
+This will work, but it will add quite a bit of clutter to the
+code, especially if queries to multiple databases are intermixed
+with each other.
+
+=item Switching handles via manipulation of the C<$dbh> variable
+
+This has the same disadvantage as the previous method.  Besides,
+it looks like vodoo.
+
+=item Using special import syntax
+
+It is possible to import differently named specialized versions
+of the subs
+normally exported by the C<DBIx::Perlish> module, which will
+use specified database handle.  The syntax is as follows:
+
+    use DBIx::Perlish;
+    my $dbh = DBI->connect(...);
+
+    my $foo_dbh = DBI->connect(...);
+    use DBIx::Perlish prefix => "foo", dbh => \$foo_dbh;
+
+    my $bar_dbh = DBI->connect(...);
+    use DBIx::Perlish prefix => "bar", dbh => \$bar_dbh;
+
+    my @default =  db_fetch { ... };
+    my @foo     = foo_fetch { ... };
+    my @bar     = bar_fetch { ... };
+
+The syntax and semantics of such specialized versions is exactly
+the same as with the normal L</db_fetch {}>, L</db_select {}>,
+L</db_update {}>, L</db_delete {}>, and L</db_insert()>,
+except that they use the database handle specified in the C<use>
+statement for all operations.  As can be seen from the example above,
+the normal versions still work as intended, employing the usual mechanisms
+for determining which handle to use.
+
+=back
+
+
 =head2 Database driver specifics
 
 The generated SQL output can differ depending on
