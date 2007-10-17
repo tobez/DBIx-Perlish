@@ -1,6 +1,6 @@
 ---
 name: DBIx-Perlish
-version: 0.30
+version: 0.31
 author:
   - 'Anton Berezin <tobez@tobez.org>'
 abstract: a perlish interface to SQL databases
@@ -11,7 +11,7 @@ requires:
 provides:
   DBIx::Perlish:
     file: lib/DBIx/Perlish.pm
-    version: 0.30
+    version: 0.31
   DBIx::Perlish::Parse:
     file: lib/DBIx/Perlish/Parse.pm
 generated_by: hand
