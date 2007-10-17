@@ -40,6 +40,26 @@ sub import
 		pop @EXPORT_OK;
 		%EXPORT_TAGS = (all => [@EXPORT, @EXPORT_OK]);
 	}
+	if (@_ == 5) {
+		my %p = @_[1..4];
+		if ($p{prefix} && $p{prefix} =~ /^[a-zA-Z_]\w+$/ &&
+			$p{dbh} && ref $p{dbh} && ref $p{dbh} eq "SCALAR")
+		{
+			my $dbhref = $p{dbh};
+			my $o;
+			no strict 'refs';
+			*{$pkg."::$p{prefix}_fetch"} =
+			*{$pkg."::$p{prefix}_select"} =
+				sub (&) { $o ||= DBIx::Perlish->new(dbh => $$dbhref); $o->fetch(@_) };
+			*{$pkg."::$p{prefix}_update"} =
+				sub (&) { $o ||= DBIx::Perlish->new(dbh => $$dbhref); $o->update(@_) };
+			*{$pkg."::$p{prefix}_delete"} =
+				sub (&) { $o ||= DBIx::Perlish->new(dbh => $$dbhref); $o->delete(@_) };
+			*{$pkg."::$p{prefix}_insert"} =
+				sub { $o ||= DBIx::Perlish->new(dbh => $$dbhref); $o->insert(@_) };
+			return;
+		}
+	}
 	DBIx::Perlish->export_to_level(1, @_);
 }
 
