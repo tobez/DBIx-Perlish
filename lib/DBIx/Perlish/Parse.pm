@@ -1692,23 +1692,9 @@ $SIG{__WARN__} = sub {
 };
 
 $_cover = sub {};
-if (*Devel::Cover::Files{HASH}) {
-	eval { require PadWalker; };
-	unless ($@) {
-		my $Seen = PadWalker::closed_over(\&Devel::Cover::deparse)->{'%Seen'};
-		if ($Seen) {
-			my $Coverage = Devel::Cover::coverage(0);
-			$_cover = sub {
-				my ($op) = @_;
-				Devel::Cover::get_location($op);
-				return unless $Devel::Cover::File;
-				return unless $Devel::Cover::Files{$Devel::Cover::File};
-				my $key = Devel::Cover::get_key($op);
-				$Coverage->{statement}{$key} ||= 1;
-				$Seen->{statement}{$$op}++;
-			};
-		}
-	}
+if (*Devel::Cover::coverage{CODE}) {
+	my $Coverage = Devel::Cover::coverage(0);
+	$_cover = sub { $Coverage->{statement}{Devel::Cover::get_key($_[0])} ||= 1 };
 }
 
 1;
