@@ -1192,12 +1192,12 @@ sub parse_regex
 		if ($case) {
 			$what = "pre_i";
 			$S->{gen_args}->{dbh}->func($what, 2, sub {
-				return scalar $_[1] =~ /\Q$_[0]\E/i;
+				return scalar $_[1] =~ /$_[0]/i;
 			}, "create_function");
 		} else {
 			$what = "pre_n";
 			$S->{gen_args}->{dbh}->func($what, 2, sub {
-				return scalar $_[1] =~ /\Q$_[0]\E/;
+				return scalar $_[1] =~ /$_[0]/;
 			}, "create_function");
 		}
 		push @{$S->{values}}, $like;

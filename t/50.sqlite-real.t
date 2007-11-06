@@ -10,7 +10,7 @@ plan skip_all => "DBD::SQLite cannot be loaded" if $@;
 eval "use PadWalker;";
 plan skip_all => "PadWalker cannot be loaded" if $@;
 
-plan tests => 35;
+plan tests => 39;
 
 my $dbh = DBI->connect("dbi:SQLite:");
 ok($dbh, "db connection");
@@ -19,8 +19,12 @@ ok($dbh->do("create table names (id integer, name text)"), "table create");
 my $o = DBIx::Perlish->new(dbh => $dbh);
 
 ok((db_insert 'names', { id => 1, name => "hello" }), "insert one");
+ok((db_insert 'names', { id => 33, name => "smth/xx" }), "insert one more");
 ok($o->insert('names', { id => 3, name => "ehlo" }), "obj: insert one");
 is(scalar db_fetch { my $t : names; $t->id == 1; return $t->name; }, "hello", "fetch inserted");
+is(scalar db_fetch { my $t : names; $t->name =~ /^h/; return $t->name; }, "hello", "fetch anchored regex");
+is(scalar db_fetch { my $t : names; $t->name =~ /\//; return $t->name; }, "smth/xx", "fetch regex with /");
+ok((db_delete { names->id == 33 }), "delete one now");
 
 my $r = db_fetch { my $t : names; $t->id == 1 };
 ok($r, "fetch hashref");

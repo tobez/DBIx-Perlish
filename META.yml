@@ -1,6 +1,6 @@
 ---
 name: DBIx-Perlish
-version: 0.31
+version: 0.32
 author:
   - 'Anton Berezin <tobez@tobez.org>'
 abstract: a perlish interface to SQL databases

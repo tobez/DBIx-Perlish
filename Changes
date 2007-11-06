@@ -1,5 +1,8 @@
 Revision history for DBIx-Perlish
 
+0.32  Tue Nov  6 10:07:13 2007
+       Fix incorrect regex handling with sqlite driver.
+
 0.31  Wed Oct 17 13:14:54 2007
        Add new import syntax to ease working with
        multiple DB handles at the same time, and
