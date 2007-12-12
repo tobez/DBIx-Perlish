@@ -43,7 +43,7 @@ sub import
 	if (@_ == 5) {
 		my %p = @_[1..4];
 		if ($p{prefix} && $p{prefix} =~ /^[a-zA-Z_]\w+$/ &&
-			$p{dbh} && ref $p{dbh} && ref $p{dbh} eq "SCALAR")
+			$p{dbh} && ref $p{dbh} && (ref $p{dbh} eq "SCALAR" || ref $p{dbh} eq "REF"))
 		{
 			my $dbhref = $p{dbh};
 			my $o;
