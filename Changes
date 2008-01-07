@@ -1,5 +1,8 @@
 Revision history for DBIx-Perlish
 
+0.34  Mon Jan  7 17:19:15 2008
+       Add support for getting next value of a sequence
+       using "next" with a label argument syntax.
        Selects without table specification are valid if there
        is anything to return.  Still handle Oracle specially.
 

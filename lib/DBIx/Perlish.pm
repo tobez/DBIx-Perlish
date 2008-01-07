@@ -10,7 +10,7 @@ use vars qw($VERSION @EXPORT @EXPORT_OK %EXPORT_TAGS $SQL @BIND_VALUES);
 require Exporter;
 use base 'Exporter';
 
-$VERSION = '0.33';
+$VERSION = '0.34';
 @EXPORT = qw(db_fetch db_select db_update db_delete db_insert sql);
 @EXPORT_OK = qw(union intersect except);
 %EXPORT_TAGS = (all => [@EXPORT, @EXPORT_OK]);
@@ -314,7 +314,7 @@ DBIx::Perlish - a perlish interface to SQL databases
 
 =head1 VERSION
 
-This document describes DBIx::Perlish version 0.33
+This document describes DBIx::Perlish version 0.34
 
 
 =head1 SYNOPSIS
@@ -864,7 +864,8 @@ C<$tablevar-E<gt>column>,
 C<tablename-E<gt>$varcolumn>, or
 C<$tablevar-E<gt>$varcolumn>),
 to an integer, floating point, or string constant, to a function
-call, or to a scalar value in the outer scope (simple scalars,
+call, to C<next> statement with an argument,
+or to a scalar value in the outer scope (simple scalars,
 hash elements, or dereferenced hashref elements chained to
 an arbitrary depth are supported).
 
@@ -927,6 +928,20 @@ verbatim SQL pieces:
         tab->id = `some_seq.nextval`;
     };
 
+A C<next> statement with a (label) argument is interpreted as
+an operator of getting the next value out of a sequence,
+where the label name is the name of the sequence.
+Syntax specific to the DBI driver will be used to represent
+this operation.  It is a fatal error to use such a statement
+with DBI drivers which do not support sequences.  For example,
+the following is exactly equivalent to the example above,
+except it is more portable:
+
+    db_update {
+        tab->state eq "new";
+        tab->id = next some_seq;
+    };
+
 The "comes from" C<E<lt>-> binary operator can be used in the
 following manner:
 
@@ -968,6 +983,11 @@ One can also specify a "distinct" or "DISTINCT"
 string constant in the beginning of the return list,
 in which case duplicated rows will be eliminated
 from the result set.
+
+It is also permissible to use a C<next> operator with a label
+argument (see above) in return statements:
+
+    return next some_seq;
 
 Return statements are only valid in L</db_fetch {}>.
 

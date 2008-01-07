@@ -44,6 +44,7 @@ sub gen_is
 }
 
 gen_is("binop");
+gen_is("pvop");
 gen_is("cop");
 gen_is("listop");
 gen_is("logop");
@@ -549,6 +550,18 @@ sub parse_term
 			# value.
 			push @{$S->{values}}, $const;
 			return "?";
+		}
+	} elsif (is_pvop($op, "next")) {
+		my $seq = $op->pv;
+		my $flavor = $S->{gen_args}->{flavor}||"";
+		if ($flavor eq "oracle") {
+			bailout $S, "Sequence name looks wrong" unless $seq =~ /^\w+$/;
+			return "$seq.nextval";
+		} elsif ($flavor eq "postgresql") {
+			bailout $S, "Sequence name looks wrong" if $seq =~ /'/; # XXX well, I am lazy
+			return "nextval('$seq')";
+		} else {
+			bailout $S, "Sequences do not seem to be supported for this DBI flavor";
 		}
 	} else {
 		bailout $S, "cannot reconstruct term from operation \"",

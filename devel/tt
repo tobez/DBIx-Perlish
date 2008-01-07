@@ -344,7 +344,12 @@ sub order
 	return $a->id;
 }
 
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&order, "select");
+sub seq_x
+{
+	return next 'hardware_id_seq';
+}
+
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&seq_x, "select", flavor => 'oracle');
 
 print "$sql\n";
 print "values: ", join ", ", @$v;
