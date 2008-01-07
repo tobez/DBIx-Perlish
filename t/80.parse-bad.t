@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 52;
+use Test::More tests => 53;
 use DBIx::Perlish qw/:all/;
 use t::test_utils;
 
@@ -9,9 +9,10 @@ my $testmy;
 my $val = 42;
 
 test_bad_select {} "empty select", qr/no tables specified in select/;
-# this is also empty:
-test_bad_select { return `xyz_seq.nextval` } "empty select", qr/no tables specified in select/;
-# except in Oracle:
+# this is not empty:
+test_select_sql { return `xyz_seq.nextval` } "select from nothing",
+"select xyz_seq.nextval", [];
+# and it is different in Oracle:
 $main::flavor = "oracle";
 test_select_sql { return `xyz_seq.nextval` } "select from dual",
 "select xyz_seq.nextval from dual", [];

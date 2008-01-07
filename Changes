@@ -1,5 +1,8 @@
 Revision history for DBIx-Perlish
 
+       Selects without table specification are valid if there
+       is anything to return.  Still handle Oracle specially.
+
 0.33  Wed Dec 12 11:43:20 2007
        Fix a bug in special import syntax implementation.
        Add special import syntax tests.

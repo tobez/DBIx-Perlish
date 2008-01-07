@@ -209,7 +209,8 @@ sub gen_sql
 
 	my $S = DBIx::Perlish::Parse::init(%args, operation => $operation);
 	DBIx::Perlish::Parse::parse_sub($S, $sub);
-	my $sql;
+	my $sql = "";
+	my $next_bit = "";
 	my $nret = 9999;
 	my $no_aliases;
 	if ($operation eq "select") {
@@ -224,13 +225,13 @@ sub gen_sql
 		} else {
 			$sql .= "*";
 		}
-		$sql .= " from ";
+		$next_bit = " from ";
 	} elsif ($operation eq "delete") {
 		$no_aliases = 1;
-		$sql = "delete from ";
+		$next_bit = "delete from ";
 	} elsif ($operation eq "update") {
 		$no_aliases = 1;
-		$sql = "update ";
+		$next_bit = "update ";
 	} else {
 		die "unsupported operation: $operation\n";
 	}
@@ -248,15 +249,17 @@ sub gen_sql
 				"$tab $S->{tab_alias}->{$tab}";
 	}
 	unless (keys %tabs) {
-		if ($operation eq "select" &&
-			$args{flavor} && $args{flavor} eq "oracle" &&
-			$S->{returns})
-		{
-			$tabs{dual} = "dual";
+		if ($operation eq "select" && $S->{returns}) {
+			if ($args{flavor} && $args{flavor} eq "oracle") {
+				$tabs{dual} = "dual";
+			} else {
+				$next_bit = " ";
+			}
 		} else {
 			die "no tables specified in $operation\n";
 		}
 	}
+	$sql .= $next_bit;
 	for my $j ( @{$S->{joins}} ) {
 		my ( $join, $tab1, $tab2, $condition) = @$j;
 		$condition = ( defined $condition) ? " on $condition" : '';
@@ -296,6 +299,7 @@ sub gen_sql
 		$sql .= " $add->{type} $add->{sql}";
 		push @$v, @{$add->{vals}};
 	}
+	$sql =~ s/\s+$//;
 
 	return ($sql, $v, $nret);
 }
