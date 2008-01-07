@@ -21,6 +21,7 @@ t/04-joins.t
 t/08.inline-views.t
 t/20.import.t
 t/50.sqlite-real.t
+t/78.sequences.t
 t/80.parse-bad.t
 t/85.usage-bad.t
 t/99.kitchen-sink.t
