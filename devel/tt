@@ -349,7 +349,14 @@ sub seq_x
 	return next 'hardware_id_seq';
 }
 
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&seq_x, "select", flavor => 'oracle');
+my $tabname = "blah";
+sub func_in
+{
+	my $t : tab;
+	$t->x <- pt_forward($id);
+}
+
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&func_in, "select", flavor => 'postgresql');
 
 print "$sql\n";
 print "values: ", join ", ", @$v;

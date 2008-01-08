@@ -682,8 +682,18 @@ sub try_parse_subselect
 		$sql = join ",", @what;
 	} else {
 		my $codeop = try_get_dbfetch( $S, $sub);
-		return unless $codeop;
-		$sql = handle_subselect($S, $codeop);
+		if ($codeop) {
+			$sql = handle_subselect($S, $codeop);
+		} else {
+			$sql = try_funcall($S, $sub, only_normal_funcs => 1);
+			return unless $sql;
+			if (($S->{gen_args}->{flavor}||"") eq "oracle") {
+				$sql = "select * from table($sql)";
+			} else {
+				# XXX we know this works in postgres, what about the rest?
+				$sql = "select $sql";
+			}
+		}
 	}
 
 	my $left = parse_term($S, $sop->first, not_after => 1);
@@ -788,6 +798,7 @@ sub try_funcall
 		return unless $gv;
 		my $func = $gv->NAME;
 		if ($func =~ /^(union|intersect|except)$/) {
+			return if $p{only_normal_funcs};
 			return unless @args == 1 || @args == 2;
 			my $rg = $args[0];
 			return unless is_unop($rg, "refgen");
@@ -823,6 +834,7 @@ sub try_funcall
 			bailout $S, "missing semicolon after $p{union_or_friends} sub";
 		}
 		if ($func =~ /^(db_fetch|db_select)$/) {
+			return if $p{only_normal_funcs};
 			return unless @args == 1;
 			my $rg = $args[0];
 			return unless is_unop($rg, "refgen");
@@ -833,6 +845,7 @@ sub try_funcall
 			my $sql = handle_subselect($S, $codeop, returns_dont_care => 1);
 			return "exists ($sql)";
 		} elsif ($func eq "sql") {
+			return if $p{only_normal_funcs};
 			return unless @args == 1;
 			# XXX understand more complex expressions here
 			my $sql;
