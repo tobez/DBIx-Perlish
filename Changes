@@ -1,5 +1,8 @@
 Revision history for DBIx-Perlish
 
+0.35  Tue Jan  8 16:53:06 2008
+       Add support for table functions.
+
 0.34  Mon Jan  7 17:19:15 2008
        Add support for getting next value of a sequence
        using "next" with a label argument syntax.

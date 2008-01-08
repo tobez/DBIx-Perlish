@@ -10,7 +10,7 @@ use vars qw($VERSION @EXPORT @EXPORT_OK %EXPORT_TAGS $SQL @BIND_VALUES);
 require Exporter;
 use base 'Exporter';
 
-$VERSION = '0.34';
+$VERSION = '0.35';
 @EXPORT = qw(db_fetch db_select db_update db_delete db_insert sql);
 @EXPORT_OK = qw(union intersect except);
 %EXPORT_TAGS = (all => [@EXPORT, @EXPORT_OK]);
@@ -314,7 +314,7 @@ DBIx::Perlish - a perlish interface to SQL databases
 
 =head1 VERSION
 
-This document describes DBIx::Perlish version 0.34
+This document describes DBIx::Perlish version 0.35
 
 
 =head1 SYNOPSIS
@@ -1265,6 +1265,17 @@ the right:
 This variant puts a limitation on the return statement in the sub-query
 query sub.  Namely, it must contain a return statement with exactly one
 return value.
+
+If the right-hand side of the "comes from" operator is a function call,
+the function is assumed to be a function potentially returning a set
+of values, or a "table function", in Oracle terminology.
+Such construct is converted into a driver-dependent subselect involving
+the table function:
+
+    db_fetch {
+        tbl->id  <-  tablefunc($id);
+    };
+
 
 =head3 Joins
 

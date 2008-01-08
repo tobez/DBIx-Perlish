@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 288;
+use Test::More tests => 300;
 use DBIx::Perlish qw/:all/;
 use t::test_utils;
 
@@ -96,6 +96,31 @@ test_select_sql {
 } "simple NOT IN subselect",
 "select * from tbl t01 where t01.id not in (select s01_t01.some_id from t2 s01_t01)",
 [];
+
+my $someid = 42;
+$main::flavor = "oracle";
+test_select_sql {
+	tbl->id  <- tablefunc($someid);
+} "Ora: tablefunc IN subselect",
+"select * from tbl t01 where t01.id in (select * from table(tablefunc(?)))",
+[42];
+test_select_sql {
+	!tbl->id  <- tablefunc($someid);
+} "Ora: tablefunc NOT IN subselect",
+"select * from tbl t01 where t01.id not in (select * from table(tablefunc(?)))",
+[42];
+$main::flavor = "postgresql";
+test_select_sql {
+	tbl->id  <- tablefunc($someid);
+} "Pg: tablefunc IN subselect",
+"select * from tbl t01 where t01.id in (select tablefunc(?))",
+[42];
+test_select_sql {
+	!tbl->id  <- tablefunc($someid);
+} "Pg: tablefunc NOT IN subselect",
+"select * from tbl t01 where t01.id not in (select tablefunc(?))",
+[42];
+$main::flavor = "";
 
 test_select_sql {
 	my $t : tbl;
