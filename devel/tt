@@ -356,7 +356,13 @@ sub func_in
 	$t->x <- pt_forward($id);
 }
 
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&func_in, "select", flavor => 'postgresql');
+my $VRF_ID = 42;
+sub baah
+{
+	vrf->ID == $VRF_ID; return vrf->NAME
+}
+
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&baah, "select", flavor => 'oracle');
 
 print "$sql\n";
 print "values: ", join ", ", @$v;
