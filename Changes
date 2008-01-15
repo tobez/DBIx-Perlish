@@ -1,5 +1,9 @@
 Revision history for DBIx-Perlish
 
+0.36  Tue Jan 15 16:33:52 2008
+       Add an ability to register driver-dependent quirks.
+       Add "table_func_cast" quirk for Oracle.
+
 0.35  Tue Jan  8 16:53:06 2008
        Add support for table functions.
 

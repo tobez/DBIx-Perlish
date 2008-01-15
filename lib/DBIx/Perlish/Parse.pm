@@ -685,9 +685,14 @@ sub try_parse_subselect
 		if ($codeop) {
 			$sql = handle_subselect($S, $codeop);
 		} else {
-			$sql = try_funcall($S, $sub, only_normal_funcs => 1);
+			my $fn;
+			$sql = try_funcall($S, $sub, only_normal_funcs => 1, func_name_return => \$fn);
 			return unless $sql;
 			if (($S->{gen_args}->{flavor}||"") eq "oracle") {
+				my $cast;
+				if ($cast = $S->{gen_args}{quirks}{oracle_table_func_cast}{$fn}) {
+					$sql = "cast($sql as $cast)";
+				}
 				$sql = "select * from table($sql)";
 			} else {
 				# XXX we know this works in postgres, what about the rest?
@@ -797,6 +802,7 @@ sub try_funcall
 		my $gv = get_gv($S, $op);
 		return unless $gv;
 		my $func = $gv->NAME;
+		${$p{func_name_return}} = $func if $p{func_name_return};
 		if ($func =~ /^(union|intersect|except)$/) {
 			return if $p{only_normal_funcs};
 			return unless @args == 1 || @args == 2;

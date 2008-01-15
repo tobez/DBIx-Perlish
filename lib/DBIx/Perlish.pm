@@ -10,7 +10,7 @@ use vars qw($VERSION @EXPORT @EXPORT_OK %EXPORT_TAGS $SQL @BIND_VALUES);
 require Exporter;
 use base 'Exporter';
 
-$VERSION = '0.35';
+$VERSION = '0.36';
 @EXPORT = qw(db_fetch db_select db_update db_delete db_insert sql);
 @EXPORT_OK = qw(union intersect except);
 %EXPORT_TAGS = (all => [@EXPORT, @EXPORT_OK]);
@@ -29,6 +29,7 @@ sub intersect (&;$) {}
 sub except (&;$) {}
 
 my $default_object;
+my $non_object_quirks = {};
 
 sub import
 {
@@ -114,7 +115,36 @@ sub new
 	unless (UNIVERSAL::isa($p{dbh}, "DBI::db")) { # XXX maybe relax for other things?
 		die "Invalid database handle supplied in the \"dbh\" parameter.\n";
 	}
-	bless { dbh => $p{dbh} }, $class;
+	my $me = bless { dbh => $p{dbh}, quirks => {} }, $class;
+	if ($p{quirks} && ref $p{quirks} eq "ARRAY") {
+		for my $q (@{$p{quirks}}) {
+			$me->quirk(@$q);
+		}
+	}
+	return $me;
+}
+
+sub quirk
+{
+	my $flavor = shift;
+	my $quirks = $non_object_quirks;
+	if (ref $flavor) {
+		$quirks = $flavor->{quirks};
+		$flavor = shift;
+	}
+	$flavor = lc $flavor;
+	if ($flavor eq "oracle") {
+		my $qtype = shift;
+		if ($qtype eq "table_func_cast") {
+			my ($func, $cast) = @_;
+			die "table_func_cast requires a function name and a type name" unless $cast;
+			$quirks->{oracle_table_func_cast}{$func} = $cast;
+		} else {
+			die "unknown quirk $qtype for $flavor";
+		}
+	} else {
+		die "there are currently no quirks for $flavor";
+	}
 }
 
 sub fetch
@@ -127,6 +157,7 @@ sub fetch
 	($me->{sql}, $me->{bind_values}, $nret) = gen_sql($sub, "select", 
 		flavor => lc $dbh->get_info($GetInfoType{SQL_DBMS_NAME}),
 		dbh    => $dbh,
+		quirks => $me->{quirks} || $non_object_quirks,
 	);
 	$SQL = $me->{sql}; @BIND_VALUES = @{$me->{bind_values}};
 	if ($nret > 1) {
@@ -148,6 +179,7 @@ sub update
 	($me->{sql}, $me->{bind_values}) = gen_sql($sub, "update",
 		flavor => lc $dbh->get_info($GetInfoType{SQL_DBMS_NAME}),
 		dbh    => $dbh,
+		quirks => $me->{quirks} || $non_object_quirks,
 	);
 	$SQL = $me->{sql}; @BIND_VALUES = @{$me->{bind_values}};
 	$dbh->do($me->{sql}, {}, @{$me->{bind_values}});
@@ -162,6 +194,7 @@ sub delete
 	($me->{sql}, $me->{bind_values}) = gen_sql($sub, "delete",
 		flavor => lc $dbh->get_info($GetInfoType{SQL_DBMS_NAME}),
 		dbh    => $dbh,
+		quirks => $me->{quirks} || $non_object_quirks,
 	);
 	$SQL = $me->{sql}; @BIND_VALUES = @{$me->{bind_values}};
 	$dbh->do($me->{sql}, {}, @{$me->{bind_values}});
@@ -207,6 +240,7 @@ sub gen_sql
 {
 	my ($sub, $operation, %args) = @_;
 
+	$args{quirks} = $non_object_quirks unless $args{quirks};
 	my $S = DBIx::Perlish::Parse::init(%args, operation => $operation);
 	DBIx::Perlish::Parse::parse_sub($S, $sub);
 	my $sql = "";
@@ -314,7 +348,7 @@ DBIx::Perlish - a perlish interface to SQL databases
 
 =head1 VERSION
 
-This document describes DBIx::Perlish version 0.35
+This document describes DBIx::Perlish version 0.36
 
 
 =head1 SYNOPSIS
@@ -453,9 +487,7 @@ The C<init()> sub initializes procedural interface
 to the module.
 
 It accepts named parameters.
-The C<init()> function understands only one such parameter,
-C<dbh>, which must be a valid DBI database handler.
-This parameter is required.
+One parameter, C<dbh>, is required and must be a valid DBI database handler.
 
 All other parameters are silently ignored.
 
@@ -715,6 +747,45 @@ This is a helper sub which is meant to be used inside
 query subs.  Please see L</Compound queries' statements>
 for details.  The C<intersect()> can be exported via C<:all>
 import declaration.
+
+=head3 quirk()
+
+Unfortunately it is not always possible to generate an
+SQL statement which is valid for different DBI drivers,
+even when the C<DBIx::Perlish> module has the knowledge
+about what driver is in use.
+
+The C<quirk()> sub exists to alleviate this problem in
+certain situations by registering "quirks".
+Please avoid using it if possible.
+
+It accepts at least two positional parameters.  The
+first parameter is the DBI driver flavor.
+The second parameter identifies a particular quirk.
+The rest of parameters are quirk-dependent.
+
+It is a fatal error to attempt to register a quirk that
+is not recognized by the module.
+
+Currently only Oracle has any quirks, which are listed
+below:
+
+=over
+
+=item table_func_cast
+
+When table functions are used in Oracle, one sometimes
+gets an error
+"ORA-22905: cannot access rows from a non-nested table item".
+The solution recommended by Oracle is to do an explicit type
+cast to a correct type.  Since the C<DBIx::Perlish> module
+has no way of knowing what the correct type is, it needs
+a little help.  The C<table_func_cast> quirk requires two extra
+parameters, the name of a table function and the type to cast
+it to.
+
+=back
+
 
 =head3 except()
 
@@ -1328,8 +1399,15 @@ Example:
 
 Constructs and returns a new DBIx::Perlish object.
 
-Takes a single mandatory named parameter, C<dbh>,
-which must be a valid DBI database handler.
+Takes named parameter.
+
+One parameter, C<dbh>, is required and
+must be a valid DBI database handler.
+
+Another parameter which the C<new()> understands is C<quirks>,
+which, if present, must be a reference to an array of anonymous
+arrays, each corresponding to a single call to C<quirk()>.
+Please see C<quirk()> for details.
 
 Can throw an exception if the supplied parameters
 are incorrect.
@@ -1381,6 +1459,10 @@ Example:
 
     $db->query(sub { users->name eq "john" });
     print join(", ", $db->bind_values), "\n";
+
+=head3 quirk()
+
+An object-oriented version of L</quirk()>.
 
 
 =head2 Working with multiple database handles
@@ -1461,6 +1543,11 @@ Selects without table specification are assumed to be
 selects from DUAL, for example:
 
     my $newval = db_fetch { return `tab_id_seq.nextval` };
+
+Table functions in Oracle are handled specially.
+
+There are quirks (see L</quirk()>) that can be registered
+for Oracle driver.
 
 =head3 Postgresql
 
