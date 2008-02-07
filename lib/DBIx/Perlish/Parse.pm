@@ -236,8 +236,10 @@ sub get_value
 		}
 		bailout $S, "unable to extract a value from a hash(ref)" unless $vv;
 		$val = $vv->{$key};
-	} elsif (is_svop($op, "gvsv")) {
-		$val = ${$op->gv->SV->object_2svref};
+	} elsif (is_svop($op, "gvsv") || is_padop($op, "gvsv")) {
+		my $gv = get_gv($S, $op);
+		bailout $S, "unable to get GV from \"", $op->name, "\"" unless $gv;
+		$val = ${$gv->SV->object_2svref};
 	} else {
 		return () if $p{soft};
 		bailout $S, "cannot parse \"", $op->name, "\" op as a value or value reference";
@@ -591,9 +593,9 @@ sub get_gv
 	my ($S, $op) = @_;
 
 	my ($gv_on_pad, $gv_idx);
-	if (is_svop($op, "gv")) {
+	if (is_svop($op, "gv") || is_svop($op, "gvsv")) {
 		$gv_idx = $op->targ;
-	} elsif (is_padop($op, "gv")) {
+	} elsif (is_padop($op, "gv") || is_padop($op, "gvsv")) {
 		$gv_idx = $op->padix;
 		$gv_on_pad = 1;
 	} else {
