@@ -364,7 +364,7 @@ sub baah
 
 DBIx::Perlish::quirk(oracle => table_func_cast => "pt_forward" => "single_number_table");
 
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&func_in, "select", flavor => 'oracle');
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&baah, "select", flavor => 'oracle');
 
 print "$sql\n";
 print "values: ", join ", ", @$v;

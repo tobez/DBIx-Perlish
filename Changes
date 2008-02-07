@@ -1,5 +1,8 @@
 Revision history for DBIx-Perlish
 
+0.37  Thu Feb  7 12:21:04 2008
+       Understand global scalar vars in query subs.
+
 0.36  Tue Jan 15 16:33:52 2008
        Add an ability to register driver-dependent quirks.
        Add "table_func_cast" quirk for Oracle.

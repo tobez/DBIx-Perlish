@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 300;
+use Test::More tests => 303;
 use DBIx::Perlish qw/:all/;
 use t::test_utils;
 
@@ -254,6 +254,7 @@ my %self = ( table => 'table1', id => 42,
 		h2 => { v => 42, h3 => { v => 42 } },
 	},
 );
+our $GLOBAL = 42;
 test_select_sql {
 	table: my $t1 = $vart;
 	my $t2 : table2;
@@ -292,6 +293,13 @@ test_select_sql {
 	my $t : table1;
 	$t->id == $self{id};
 } "hashelement",
+"select * from table1 t01 where t01.id = ?",
+[42];
+
+test_select_sql {
+	my $t : table1;
+	$t->id == $GLOBAL;
+} "global scalar",
 "select * from table1 t01 where t01.id = ?",
 [42];
 

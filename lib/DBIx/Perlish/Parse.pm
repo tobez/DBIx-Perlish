@@ -236,6 +236,8 @@ sub get_value
 		}
 		bailout $S, "unable to extract a value from a hash(ref)" unless $vv;
 		$val = $vv->{$key};
+	} elsif (is_svop($op, "gvsv")) {
+		$val = ${$op->gv->SV->object_2svref};
 	} else {
 		return () if $p{soft};
 		bailout $S, "cannot parse \"", $op->name, "\" op as a value or value reference";
