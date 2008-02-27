@@ -7,7 +7,7 @@ $DBIx::Perlish::Parse::DEVEL = 1;
 
 sub s1 {
 	my $x : product_tree;
-	$x->circuit_number =~ /^FB-/;
+	$x->circuit_number =~ /^FB_%/;
 	$x->id == product_eda_adsl->id;
 };
 
@@ -364,7 +364,7 @@ sub baah
 
 DBIx::Perlish::quirk(oracle => table_func_cast => "pt_forward" => "single_number_table");
 
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&baah, "select", flavor => 'oracle');
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&s1, "select", flavor => 'oracle');
 
 print "$sql\n";
 print "values: ", join ", ", @$v;

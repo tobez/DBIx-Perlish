@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 303;
+use Test::More tests => 313;
 use DBIx::Perlish qw/:all/;
 use t::test_utils;
 
@@ -43,6 +43,31 @@ test_select_sql {
 	tbl->id !~ /^abc/i
 } "not ilike test",
 "select * from tbl t01 where t01.id not ilike 'abc%'",
+[];
+test_select_sql {
+	tbl->id =~ /^abc_/
+} "like underscore",
+"select * from tbl t01 where t01.id like 'abc!_%' escape '!'",
+[];
+test_select_sql {
+	tbl->id =~ /^abc%/
+} "like percent",
+"select * from tbl t01 where t01.id like 'abc!%%' escape '!'",
+[];
+test_select_sql {
+	tbl->id =~ /^abc!/
+} "like exclamation",
+"select * from tbl t01 where t01.id like 'abc!!%' escape '!'",
+[];
+test_select_sql {
+	tbl->id =~ /^abc!_%/
+} "like exclamation underscore percent",
+"select * from tbl t01 where t01.id like 'abc!!!_!%%' escape '!'",
+[];
+test_select_sql {
+	tbl->id =~ /^abc!!__%%/
+} "like exclamation underscore percent doubled",
+"select * from tbl t01 where t01.id like 'abc!!!!!_!_!%!%%' escape '!'",
 [];
 
 # return

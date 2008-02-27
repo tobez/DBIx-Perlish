@@ -1,5 +1,8 @@
 Revision history for DBIx-Perlish
 
+0.38  Wed Feb 27 10:48:52 2008
+       Fix metacharacter escaping in regexes.
+
 0.37  Thu Feb  7 12:21:04 2008
        Understand global scalar vars in query subs.
 

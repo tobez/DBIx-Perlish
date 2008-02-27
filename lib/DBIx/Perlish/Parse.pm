@@ -1183,7 +1183,7 @@ sub parse_regex
 	my $flavor = lc($S-> {gen_args}-> {flavor} || '');
 	my $what = 'like';
 
-	my $can_like = $like =~ /^\^?[-\s\w]*\$?$/; # like that begins with non-% can use indexes
+	my $can_like = $like =~ /^\^?[-!%\s\w]*\$?$/; # like that begins with non-% can use indexes
 	
 	if ( $flavor eq 'mysql') {
 	
@@ -1247,15 +1247,24 @@ sub parse_regex
 		bailout $S, "Regex too complex for implementation using LIKE keyword: $like"
 			if $like =~ /(?<!\\)[\[\]\(\)\{\}\?\|]/;
 LIKE:
-		$like =~ s/%/\\%/g;
-		$like =~ s/_/\\_/g;
+		my $escape = "";
+		if ($flavor eq "postgresql" || $flavor eq "oracle") {
+			# XXX it is possible that more flavors support like...escape
+			my $need_esc = 1 if $like =~ s/!/!!/g;
+			   $need_esc = 1 if $like =~ s/%/!%/g;
+			   $need_esc = 1 if $like =~ s/_/!_/g;
+			$escape = " escape '!'" if $need_esc;
+		} else {
+			$like =~ s/%/\\%/g;
+			$like =~ s/_/\\_/g;
+		}
 		$like =~ s/\.\*/%/g;
 		$like =~ s/\./_/g;
 		$like = "%$like" unless $like =~ s|^\^||;
 		$like = "$like%" unless $like =~ s|\$$||;
 		return "$tab.$field " . 
 			( $neg ? 'not ' : '') . 
-			"$what '$like'"
+			"$what '$like'$escape"
 		;
 	}
 }
