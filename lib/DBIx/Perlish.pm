@@ -10,7 +10,7 @@ use vars qw($VERSION @EXPORT @EXPORT_OK %EXPORT_TAGS $SQL @BIND_VALUES);
 require Exporter;
 use base 'Exporter';
 
-$VERSION = '0.38';
+$VERSION = '0.39';
 @EXPORT = qw(db_fetch db_select db_update db_delete db_insert sql);
 @EXPORT_OK = qw(union intersect except);
 %EXPORT_TAGS = (all => [@EXPORT, @EXPORT_OK]);
@@ -327,6 +327,7 @@ sub gen_sql
 	}
 	my $v = $S->{set_values};
 	push @$v, @{$S->{ret_values}};
+	push @$v, @{$S->{join_values}};
 	push @$v, @{$S->{values}};
 
 	for my $add (@{$S->{additions}}) {
@@ -348,7 +349,7 @@ DBIx::Perlish - a perlish interface to SQL databases
 
 =head1 VERSION
 
-This document describes DBIx::Perlish version 0.38
+This document describes DBIx::Perlish version 0.39
 
 
 =head1 SYNOPSIS

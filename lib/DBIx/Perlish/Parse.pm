@@ -1339,8 +1339,10 @@ sub parse_join
 		my $subref = $cv->object_2svref;
 		my $S2 = init( 
 			%{$S->{gen_args}}, 
-			operation => 'select',
-			prev_S    => $S,
+			operation   => 'select',
+			values      => [],
+			join_values => [],
+			prev_S      => $S,
 		);
 		$S2-> {alias} = $S-> {alias};
 		parse_sub($S2, $subref);
@@ -1359,6 +1361,7 @@ sub parse_join
 			$jointype = 'cross';
 		} else {
 			$condition = join(' and ', @{ $S2-> {where} });
+			push @{$S->{join_values}}, @{$S2->{values}};
 		}
 	}
 
@@ -1705,21 +1708,22 @@ sub init
 {
 	my %args = @_;
 	my $S = {
-		gen_args   => \%args,
-		file       => '??',
-		line       => '??',
-		subselect  => 's01',
-		operation  => $args{operation},
-		values     => [],
-		sets       => [],
-		set_values => [],
-		ret_values => [],
-		where      => [],
-		order_by   => [],
-		group_by   => [],
-		additions  => [],
-		joins      => [],
-		aggregates => { avg => 1, count => 1, max => 1, min => 1, sum => 1 },
+		gen_args    => \%args,
+		file        => '??',
+		line        => '??',
+		subselect   => 's01',
+		operation   => $args{operation},
+		values      => [],
+		join_values => [],
+		sets        => [],
+		set_values  => [],
+		ret_values  => [],
+		where       => [],
+		order_by    => [],
+		group_by    => [],
+		additions   => [],
+		joins       => [],
+		aggregates  => { avg => 1, count => 1, max => 1, min => 1, sum => 1 },
 		autogroup_by     => [],
 		autogroup_fields => {},
 	};
