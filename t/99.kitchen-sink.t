@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 313;
+use Test::More tests => 317;
 use DBIx::Perlish qw/:all/;
 use t::test_utils;
 
@@ -69,6 +69,15 @@ test_select_sql {
 } "like exclamation underscore percent doubled",
 "select * from tbl t01 where t01.id like 'abc!!!!!_!_!%!%%' escape '!'",
 [];
+
+# lowercasing case-independent like
+$main::flavor = "oracle";
+test_select_sql {
+	tbl->id =~ /AbC/i
+} "ilike emulation",
+"select * from tbl t01 where lower(t01.id) like '%abc%'",
+[];
+$main::flavor = "";
 
 # return
 test_select_sql {
@@ -190,13 +199,23 @@ test_select_sql {
 "select * from tbl t01 offset 42",
 [];
 
-# limit & offset via a label
+# limit & offset via a label (with int vars)
 my $lim = 10;  my $ofs = 20;
 test_select_sql {
 	my $t : tbl;
 	limit: $lim;
 	offset: $ofs;
-} "simple limit/offset label with closure",
+} "simple limit/offset label with int vars",
+"select * from tbl t01 limit 10 offset 20",
+[];
+
+# limit & offset via a label (with string vars)
+my $s_lim = '10';  my $s_ofs = '20';
+test_select_sql {
+	my $t : tbl;
+	limit: $s_lim;
+	offset: $s_ofs;
+} "simple limit/offset label with string vars",
 "select * from tbl t01 limit 10 offset 20",
 [];
 

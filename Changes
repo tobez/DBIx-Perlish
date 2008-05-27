@@ -1,5 +1,12 @@
 Revision history for DBIx-Perlish
 
+0.40 Tue May 27 12:33:44 2008
+       Recognize integer values that are not IVs internally
+       in label syntax expressions.
+       In regexes, left-hand side can be a full term now,
+       not just a column specification.
+       Emulate case-insensitive regex match when possible.
+
 0.39  Thu Apr 24 16:04:21 2008
        Fix handling of bound values in joins.
 

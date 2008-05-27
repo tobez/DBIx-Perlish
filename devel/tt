@@ -371,7 +371,23 @@ sub join_bind
 	join $x < $y => db_fetch { $x->blah == "hello" };
 }
 
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&join_bind, "select", flavor => 'oracle');
+my $per_sync = '10000';
+sub a_z1 { my $t : tabtab; $t->rep_id == 0; sort $t->seq; limit: $per_sync; }
+
+sub lcreg
+{
+	my $x : x;
+	$x->col =~ /AbC/i;
+}
+
+my $o;
+sub mcall
+{
+	my $x : x;
+	$x->col == $o->method();
+}
+
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&lcreg, "select", flavor => 'oracle');
 
 print "$sql\n";
 print "values: ", join ", ", @$v;

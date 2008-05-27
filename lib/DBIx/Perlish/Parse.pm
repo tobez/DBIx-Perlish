@@ -1178,7 +1178,7 @@ sub parse_regex
 		$like = parse_complex_regex( $S, $logop-> first);
 	}
 
-	my ($tab, $field) = get_tab_field($S, $op->first);
+	my $lhs = parse_term($S, $op->first);
 
 	my $flavor = lc($S-> {gen_args}-> {flavor} || '');
 	my $what = 'like';
@@ -1191,7 +1191,7 @@ sub parse_regex
 		goto LIKE if not $case and $can_like;
 
 		return 
-			"$tab.$field ".
+			"$lhs ".
 			( $neg ? 'not ' : '') . 
 			'regexp ' .
 			( $case ? '' : 'binary ') .
@@ -1204,7 +1204,7 @@ sub parse_regex
 			goto LIKE;
 		} 
 		return 
-			"$tab.$field ".
+			"$lhs ".
 			( $neg ? '!' : '') . 
 			'~' .
 			( $case ? '*' : '') .
@@ -1238,12 +1238,14 @@ sub parse_regex
 		}
 		push @{$S->{values}}, $like;
 		# $what = $neg ? "not $what" : $what;
-		# return "$tab.$field $what ?";
-		return ($neg ? "not " : "") . "$what(?, $tab.$field)";
+		# return "$lhs $what ?";
+		return ($neg ? "not " : "") . "$what(?, $lhs)";
 	} else {
 		# XXX is SQL-standard LIKE case-sensitive or not?
-		bailout $S, "Don't know how to set case-insensitive flag for this DBI flavor"
-			if $case;
+		if ($case) {
+			$lhs = "lower($lhs)";
+			$like = lc $like;
+		}
 		bailout $S, "Regex too complex for implementation using LIKE keyword: $like"
 			if $like =~ /(?<!\\)[\[\]\(\)\{\}\?\|]/;
 LIKE:
@@ -1262,7 +1264,7 @@ LIKE:
 		$like =~ s/\./_/g;
 		$like = "%$like" unless $like =~ s|^\^||;
 		$like = "$like%" unless $like =~ s|\$$||;
-		return "$tab.$field " . 
+		return "$lhs " . 
 			( $neg ? 'not ' : '') . 
 			"$what '$like'$escape"
 		;
@@ -1511,7 +1513,7 @@ sub parse_numassign_label
 		$const = ${$sv->object_2svref};
 	}
 	bailout $S, "label ", $lop->label, " must be followed by an integer or integer variable"
-		unless $sv && $sv->isa("B::IV");
+		unless $sv && $const && $const =~ /^\d+$/ && $const > 0;
 	$S->{$label->{key}} = $const;
 	$S->{skipnext} = 1;
 }
