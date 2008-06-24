@@ -1684,6 +1684,8 @@ sub parse_op
 		push @{$S->{sets}}, parse_selfmod($S, $op->first, "+ 1");
 	} elsif (is_unop($op, "predec")) {
 		push @{$S->{sets}}, parse_selfmod($S, $op->first, "- 1");
+	} elsif (is_listop($op, "exec")) {
+		$S->{seen_exec}++;
 	} else {
 		bailout $S, "don't quite know what to do with op \"" . $op->name . "\"";
 	}

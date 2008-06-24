@@ -1,5 +1,9 @@
 Revision history for DBIx-Perlish
 
+0.41 Tue Jun 24 23:14:40 2008
+       Do not allow unfiltered updates and deletes
+       unless enabled with an "exec".
+
 0.40 Tue May 27 12:33:44 2008
        Recognize integer values that are not IVs internally
        in label syntax expressions.

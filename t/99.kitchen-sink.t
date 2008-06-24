@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 317;
+use Test::More tests => 319;
 use DBIx::Perlish qw/:all/;
 use t::test_utils;
 
@@ -704,71 +704,90 @@ test_select_sql {
 "select * from tab t01 where t01.col1 = 42",
 [];
 
+test_select_sql {
+	my $t : tab;
+} "select with exec is no mistake",
+"select * from tab t01",
+[];
+
 # update selfmod
 test_update_sql {
 	tab->col++;
+	exec;
 } "postinc",
 "update tab set col = col + 1",
 [];
 test_update_sql {
 	++tab->col;
+	exec;
 } "preinc",
 "update tab set col = col + 1",
 [];
 test_update_sql {
 	tab->col--;
+	exec;
 } "postdec",
 "update tab set col = col - 1",
 [];
 test_update_sql {
 	--tab->col;
+	exec;
 } "predec",
 "update tab set col = col - 1",
 [];
 
 test_update_sql {
 	tab->col += 2;
+	exec;
 } "+= 2",
 "update tab set col = col + 2",
 [];
 test_update_sql {
 	tab->col -= 2;
+	exec;
 } "-= 2",
 "update tab set col = col - 2",
 [];
 test_update_sql {
 	tab->col *= 2;
+	exec;
 } "*= 2",
 "update tab set col = col * 2",
 [];
 test_update_sql {
 	tab->col /= 2;
+	exec;
 } "/= 2",
 "update tab set col = col / 2",
 [];
 test_update_sql {
 	tab->col .= "2";
+	exec;
 } ".= 2",
 "update tab set col = col || ?",
 ["2"];
 
 test_update_sql {
 	tab->col += $self->{id} + 2;
+	exec;
 } "+= complex",
 "update tab set col = col + (? + 2)",
 [42];
 test_update_sql {
 	tab->col -= $self->{id} + 2;
+	exec;
 } "-= complex",
 "update tab set col = col - (? + 2)",
 [42];
 test_update_sql {
 	tab->col *= $self->{id} + 2;
+	exec;
 } "*= complex",
 "update tab set col = col * (? + 2)",
 [42];
 test_update_sql {
 	tab->col /= $self->{id} + 2;
+	exec;
 } "/= complex",
 "update tab set col = col / (? + 2)",
 [42];
@@ -778,24 +797,28 @@ my %h = ( col1 => 42, col2 => 666 );
 test_update_sql {
 	my $t : tab;
  	$t = {%h};
+	exec;
 } "hash assignment 1",
 "update tab set col1 = ?, col2 = ?",
 [42,666];
 test_update_sql {
 	my $t : tab;
  	$t = {%$h};
+	exec;
 } "hashref assignment 1",
 "update tab set col1 = ?, col2 = ?",
 [42,666];
 test_update_sql {
 	my $t : tab;
  	$t = {%h, foobar => 2};
+	exec;
 } "hash assignment 2",
 "update tab set col1 = ?, col2 = ?, foobar = 2",
 [42,666];
 test_update_sql {
 	my $t : tab;
  	$t = {%$h, foobar => 2};
+	exec;
 } "hashref assignment 2",
 "update tab set col1 = ?, col2 = ?, foobar = 2",
 [42,666];

@@ -387,7 +387,14 @@ sub mcall
 	$x->col == $o->method();
 }
 
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&lcreg, "select", flavor => 'oracle');
+sub upd
+{
+	my $t : t;
+	$t->x = 42;
+	exec;
+}
+
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&upd, "update", flavor => 'oracle');
 
 print "$sql\n";
 print "values: ", join ", ", @$v;

@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 53;
+use Test::More tests => 55;
 use DBIx::Perlish qw/:all/;
 use t::test_utils;
 
@@ -20,6 +20,9 @@ $main::flavor = "";
 
 test_bad_update {} "empty update", qr/no tables specified in update/;
 test_bad_delete {} "empty delete", qr/no tables specified in delete/;
+
+test_bad_update { tbl->id = 42 } "unfiltered update", qr/unfiltered update is dangerous/;
+test_bad_delete { my $t : tbl } "unfiltered delete", qr/unfiltered delete is dangerous/;
 
 test_bad_update { tbl->id == 42 } "nothing to update", qr/nothing to update/;
 

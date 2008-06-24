@@ -10,7 +10,7 @@ use vars qw($VERSION @EXPORT @EXPORT_OK %EXPORT_TAGS $SQL @BIND_VALUES);
 require Exporter;
 use base 'Exporter';
 
-$VERSION = '0.40';
+$VERSION = '0.41';
 @EXPORT = qw(db_fetch db_select db_update db_delete db_insert sql);
 @EXPORT_OK = qw(union intersect except);
 %EXPORT_TAGS = (all => [@EXPORT, @EXPORT_OK]);
@@ -247,6 +247,7 @@ sub gen_sql
 	my $next_bit = "";
 	my $nret = 9999;
 	my $no_aliases;
+	my $dangerous;
 	if ($operation eq "select") {
 		$sql = "select ";
 		$sql .= "distinct " if $S->{distinct};
@@ -262,9 +263,11 @@ sub gen_sql
 		$next_bit = " from ";
 	} elsif ($operation eq "delete") {
 		$no_aliases = 1;
+		$dangerous = 1;
 		$next_bit = "delete from ";
 	} elsif ($operation eq "update") {
 		$no_aliases = 1;
+		$dangerous = 1;
 		$next_bit = "update ";
 	} else {
 		die "unsupported operation: $operation\n";
@@ -319,6 +322,10 @@ sub gen_sql
 	$sql .= " group by " . join ", ",    @group_by if @group_by;
 	$sql .= " order by " . join ", ",    @order_by if @order_by;
 
+	if ($dangerous && !@where && !$S->{seen_exec}) {
+		die "unfiltered $operation is dangerous: use exec if you want it\n";
+	}
+
 	if ($S->{limit}) {
 		$sql .= " limit $S->{limit}";
 	}
@@ -349,7 +356,7 @@ DBIx::Perlish - a perlish interface to SQL databases
 
 =head1 VERSION
 
-This document describes DBIx::Perlish version 0.40
+This document describes DBIx::Perlish version 0.41
 
 
 =head1 SYNOPSIS
@@ -616,6 +623,12 @@ by subqueries).
 Neither C<return> statements nor C<last> statements are
 allowed in the C<db_update {}> function's query subs.
 
+An attempt to call the C<db_update {}> function with
+no filtering expressions in the query sub will throw
+an exception since such is very likely a dangerous mistake.
+To allow such an update to proceed, include an C<exec>
+call with no parameters anywhere in the query sub.
+
 L</Subqueries> are permitted in db_update's query subs.
 
 Please see L</Query sub syntax> below for details of the
@@ -627,6 +640,11 @@ Examples:
         tbl->id == 41;
         tbl->id = tbl->id - 1;
         tbl->name = "luff";
+    };
+
+    db_update {
+        tbl->id = 42;
+		exec;  # without this an exception is thrown
     };
 
     db_update {
@@ -674,6 +692,12 @@ by subqueries).
 Neither C<return> statements nor C<last> statements are
 allowed in the C<db_delete {}> function's query subs.
 
+An attempt to call the C<db_delete {}> function with
+no filtering expressions in the query sub will throw
+an exception since such is very likely a dangerous mistake.
+To allow such a delete to proceed, include an C<exec>
+call with no parameters anywhere in the query sub.
+
 L</Subqueries> are permitted in db_delete's query subs.
 
 Please see L</Query sub syntax> below for details of the
@@ -681,7 +705,7 @@ syntax allowed in query subs.
 
 Examples:
 
-    db_delete { $x : users } # delete all users
+    db_delete { $x : users; exec; } # delete all users
 
     # delete with a subquery
     db_delete {

@@ -48,8 +48,8 @@ is(scalar $o->bind_values, 0, "obj: bind_values()");
 
 is(scalar $o->fetch(sub { my $t : names; $t->id == 1; return $t->name; }), "hello", "obj: fetch inserted");
 is(scalar db_fetch { my $t : names; $t->id == 2; return $t->name; }, undef, "fetch non-existent");
-ok((db_update { names->name = "aha" }), "update all");
-ok($o->update(sub { names->name = "behe" }), "obj: update all");
+ok((db_update { names->name = "aha"; exec }), "update all");
+ok($o->update(sub { names->name = "behe"; exec }), "obj: update all");
 @n = $o->bind_values;
 is(scalar(@n), 1, "obj: update all bind_values count");
 is($n[0], "behe", "obj: update all bind_values value");
