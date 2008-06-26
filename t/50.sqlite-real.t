@@ -10,7 +10,7 @@ plan skip_all => "DBD::SQLite cannot be loaded" if $@;
 eval "use PadWalker;";
 plan skip_all => "PadWalker cannot be loaded" if $@;
 
-plan tests => 39;
+plan tests => 55;
 
 my $dbh = DBI->connect("dbi:SQLite:");
 ok($dbh, "db connection");
@@ -25,6 +25,28 @@ is(scalar db_fetch { my $t : names; $t->id == 1; return $t->name; }, "hello", "f
 is(scalar db_fetch { my $t : names; $t->name =~ /^h/; return $t->name; }, "hello", "fetch anchored regex");
 is(scalar db_fetch { my $t : names; $t->name =~ /\//; return $t->name; }, "smth/xx", "fetch regex with /");
 ok((db_delete { names->id == 33 }), "delete one now");
+
+my $h = db_fetch { my $t : names; $t->id == 1; return -k $t->id, $t; };
+ok($h, "fetch all hashref");
+is($h->{1}{id},   1, "fetch all hashref key id");
+is($h->{1}{name}, "hello", "fetch all hashref key name");
+
+my %h = db_fetch { my $t : names; $t->id == 1; return -k $t->id, $t; };
+ok(%h, "fetch all hash");
+ok($h{1},   "fetch all hash 1 present");
+ok(!$h{3},  "fetch all hash 3 not present");
+is($h{1}{id},   1, "fetch all hash key id");
+is($h{1}{name}, "hello", "fetch all hash key name");
+
+%h = db_fetch { my $t : names; return -k $t->id, $t; };
+ok(%h, "fetch all hash unfiltered");
+ok($h{1},   "fetch all hash 1 present");
+ok($h{3},   "fetch all hash 3 present");
+ok(!$h{2},  "fetch all hash 2 not present");
+is($h{1}{id},   1, "fetch all hash unfiltered 1 key id");
+is($h{1}{name}, "hello", "fetch all hash unfiltered 1 key name");
+is($h{3}{id},   3, "fetch all hash unfiltered 3 key id");
+is($h{3}{name}, "ehlo", "fetch all hash unfiltered 3 key name");
 
 my $r = db_fetch { my $t : names; $t->id == 1 };
 ok($r, "fetch hashref");

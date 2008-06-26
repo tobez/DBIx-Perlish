@@ -419,12 +419,20 @@ sub parse_return
 				if defined $last_alias;
 			push @{$S->{returns}}, "$rv{table}.*";
 			$S->{no_autogroup} = 1;
-		} if (exists $rv{field}) {
+		} elsif (exists $rv{field}) {
 			if (defined $last_alias) {
+				bailout $S, "a key field cannot be aliased" if $rv{key_field};
 				push @{$S->{returns}}, "$rv{field} as $last_alias";
 				undef $last_alias;
 			} else {
-				push @{$S->{returns}}, $rv{field};
+				if ($rv{key_field}) {
+					my $kf = '$kf-' . $S->{key_field};
+					$S->{key_field}++;
+					push @{$S->{returns}}, "$rv{field} as \"$kf\"";
+					push @{$S->{key_fields}}, $kf;
+				} else {
+					push @{$S->{returns}}, $rv{field};
+				}
 			}
 		} elsif (exists $rv{alias}) {
 			if (defined $last_alias) {
@@ -456,6 +464,12 @@ sub parse_return_value
 		return alias => $const;
 	} elsif (is_op($op, "pushmark")) {
 		return ();
+	} elsif (is_unop($op, "ftsvtx")) {
+		my %r = parse_return_value($S, $op->first);
+		bailout $S, "only a single value return specification can be a key field"
+			unless $r{field};
+		$r{key_field} = 1 unless $S->{gen_args}->{prev_S};
+		return %r;
 	} else {
 		my $saved_values = $S->{values};
 		$S->{values} = [];
@@ -1727,6 +1741,7 @@ sub init
 		group_by    => [],
 		additions   => [],
 		joins       => [],
+		key_field   => 1,
 		aggregates  => { avg => 1, count => 1, max => 1, min => 1, sum => 1 },
 		autogroup_by     => [],
 		autogroup_fields => {},

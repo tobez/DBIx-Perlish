@@ -1,5 +1,10 @@
 Revision history for DBIx-Perlish
 
+0.42 Thu Jun 26 14:04:29 2008
+       Add an ability to db_fetch {} to return a hash
+       keyed by one or more "key fields", similar to
+       selectall_hashref.
+
 0.41 Tue Jun 24 23:14:40 2008
        Do not allow unfiltered updates and deletes
        unless enabled with an "exec".

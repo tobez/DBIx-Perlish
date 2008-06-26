@@ -394,8 +394,18 @@ sub upd
 	exec;
 }
 
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&upd, "update", flavor => 'oracle');
+sub ind
+{
+	my $t : t;
+	#return -k $t->id, $t;
+	return -k $t->id, -k $t->name;
+}
+
+my @kf;
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&ind, "select", flavor => 'oracle', key_fields => \@kf);
 
 print "$sql\n";
 print "values: ", join ", ", @$v;
+print "\n";
+print "kf: @kf\n";
 print "\n";

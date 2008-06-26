@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 55;
+use Test::More tests => 60;
 use DBIx::Perlish qw/:all/;
 use t::test_utils;
 
@@ -161,3 +161,25 @@ test_bad_select {
 	return tab->f2 unless $testmy;
 } "multi-returns, hidden with unless", qr/at most one return/;
 # TODO same as above, with $testour - it bitches
+
+test_bad_select {
+	my $t : tab;
+	return -k $t->f1;
+} "only key fields 1", qr/all returns are key fields/;
+test_bad_select {
+	my $t : tab;
+	return -k $t->id, -k $t->name;
+} "only key fields 2", qr/all returns are key fields/;
+test_bad_select {
+	my $t : tab;
+	return blah => -k $t->id, $t;
+} "aliased key field", qr/a key field cannot be aliased/;
+test_bad_select {
+	my $t : tab;
+	return -k $t;
+} "* key field", qr/only a single value return specification can be a key field/;
+test_bad_select {
+	my $t : tab;
+	return -k "heps";
+} "constant key field", qr/only a single value return specification can be a key field/;
+

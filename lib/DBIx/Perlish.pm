@@ -10,7 +10,7 @@ use vars qw($VERSION @EXPORT @EXPORT_OK %EXPORT_TAGS $SQL @BIND_VALUES);
 require Exporter;
 use base 'Exporter';
 
-$VERSION = '0.41';
+$VERSION = '0.42';
 @EXPORT = qw(db_fetch db_select db_update db_delete db_insert sql);
 @EXPORT_OK = qw(union intersect except);
 %EXPORT_TAGS = (all => [@EXPORT, @EXPORT_OK]);
@@ -154,18 +154,26 @@ sub fetch
 
 	my $nret;
 	my $dbh = $me->{dbh} || get_dbh(3);
+	my @kf;
 	($me->{sql}, $me->{bind_values}, $nret) = gen_sql($sub, "select", 
-		flavor => lc $dbh->get_info($GetInfoType{SQL_DBMS_NAME}),
-		dbh    => $dbh,
-		quirks => $me->{quirks} || $non_object_quirks,
+		flavor     => lc $dbh->get_info($GetInfoType{SQL_DBMS_NAME}),
+		dbh        => $dbh,
+		quirks     => $me->{quirks} || $non_object_quirks,
+		key_fields => \@kf,
 	);
 	$SQL = $me->{sql}; @BIND_VALUES = @{$me->{bind_values}};
-	if ($nret > 1) {
-		my $r = $dbh->selectall_arrayref($me->{sql}, {Slice=>{}}, @{$me->{bind_values}}) || [];
-		return wantarray ? @$r : $r->[0];
+	if (@kf) {
+		my $kf = @kf == 1 ? $kf[0] : [@kf];
+		my $r = $dbh->selectall_hashref($me->{sql}, $kf, {}, @{$me->{bind_values}}) || {};
+		return wantarray ? %$r : $r;
 	} else {
-		my $r = $dbh->selectcol_arrayref($me->{sql}, {}, @{$me->{bind_values}}) || [];
-		return wantarray ? @$r : $r->[0];
+		if ($nret > 1) {
+			my $r = $dbh->selectall_arrayref($me->{sql}, {Slice=>{}}, @{$me->{bind_values}}) || [];
+			return wantarray ? @$r : $r->[0];
+		} else {
+			my $r = $dbh->selectcol_arrayref($me->{sql}, {}, @{$me->{bind_values}}) || [];
+			return wantarray ? @$r : $r->[0];
+		}
 	}
 }
 
@@ -249,6 +257,11 @@ sub gen_sql
 	my $no_aliases;
 	my $dangerous;
 	if ($operation eq "select") {
+		my $nkf = 0;
+		if ($S->{key_fields}) {
+			$nkf = @{$S->{key_fields}};
+			push @{$args{key_fields}}, @{$S->{key_fields}} if $args{key_fields};
+		}
 		$sql = "select ";
 		$sql .= "distinct " if $S->{distinct};
 		if ($S->{returns}) {
@@ -261,6 +274,7 @@ sub gen_sql
 			$sql .= "*";
 		}
 		$next_bit = " from ";
+		die "all returns are key fields, this is nonsensical\n" if $nkf == $nret;
 	} elsif ($operation eq "delete") {
 		$no_aliases = 1;
 		$dangerous = 1;
@@ -356,7 +370,7 @@ DBIx::Perlish - a perlish interface to SQL databases
 
 =head1 VERSION
 
-This document describes DBIx::Perlish version 0.41
+This document describes DBIx::Perlish version 0.42
 
 
 =head1 SYNOPSIS
@@ -579,6 +593,28 @@ Again, borrowing from DBI, this is analogous to
     my @users = @{$dbh->selectall_arrayref("select * from user",
         {Slice=>{}})};
     print "name: $_->{name}, id: $_->{id}\n" for @users;
+
+There is also a way to specify that one or several of
+the return values are the B<key fields>, to obtain a behavior
+similar to that of the DBI's C<selectall_hashref()> function.
+A return value is a B<key field> if it is prepended with B<-k>:
+
+    my %data = db_fetch {
+        my $u : users;
+        return -k $u->name, $u;
+    };
+
+This is analogous to
+
+    my %data = %{$dbh->selectall_hashref(
+      "select name, * from users", "name")};
+
+If the C<db_fetch {}> containing key fields is called in the
+scalar context, it returns a hash reference instead of a hash.
+In both cases the complete result set is returned.
+This is different from calling the C<db_fetch {}> without key fields
+in the scalar context, which always returns a single row (or a single
+value), as explained above.
 
 The C<db_fetch {}> function will throw an exception if it is unable to
 find a valid database handle to use, or if it is unable to convert its
