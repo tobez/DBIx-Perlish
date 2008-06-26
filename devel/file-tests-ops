@@ -1,0 +1,36 @@
+All -X flags are either SVOPs with a GV attached,
+or UNOPs with a value starting in $op->first.
+
+-r fteread
+-w ftewrite
+-x fteexec
+-o fteowned
+
+-R ftrread
+-W ftrwrite
+-X ftrexec
+-O ftrowned
+
+-e ftis
+-z ftzero
+-s ftsize
+
+-f ftfile
+-d ftdir
+-l ftlink
+-p ftpipe
+-S ftsock
+-b ftblk
+-c ftchr
+-t fttty
+
+-u ftsuid
+-g ftsgid
+-k ftsvtx
+
+-T fttext
+-B ftbinary
+
+-M ftmtime
+-A ftatime
+-C ftctime
