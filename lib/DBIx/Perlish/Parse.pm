@@ -219,6 +219,7 @@ sub get_value
 		bailout $S, "only constant hash keys are understood" unless $key;
 		$op = $op->first;
 		my $vv;
+
 		if (is_op($op, "padhv")) {
 			$vv = $S->{padlist}->[1]->ARRAYelt($op->targ)->object_2svref;
 		} elsif (is_unop($op, "rv2hv")) {
@@ -229,6 +230,9 @@ sub get_value
 				}
 				$vv = $S->{padlist}->[1]->ARRAYelt($op->targ)->object_2svref;
 				$vv = $$vv;
+			} elsif (is_svop($op, "gv")) {
+				my $gv = get_gv($S, $op, bailout => 1);
+				$vv = $gv->HV->object_2svref;
 			} elsif (is_binop($op, "helem")) {
 				my ($nv, $ok) = get_value($S, $op, %p);
 				$vv = $nv if $ok;
@@ -237,8 +241,7 @@ sub get_value
 		bailout $S, "unable to extract a value from a hash(ref)" unless $vv;
 		$val = $vv->{$key};
 	} elsif (is_svop($op, "gvsv") || is_padop($op, "gvsv")) {
-		my $gv = get_gv($S, $op);
-		bailout $S, "unable to get GV from \"", $op->name, "\"" unless $gv;
+		my $gv = get_gv($S, $op, bailout => 1);
 		$val = ${$gv->SV->object_2svref};
 	} else {
 		return () if $p{soft};
@@ -604,7 +607,7 @@ sub parse_simple_term
 
 sub get_gv
 {
-	my ($S, $op) = @_;
+	my ($S, $op, %p) = @_;
 
 	my ($gv_on_pad, $gv_idx);
 	if (is_svop($op, "gv") || is_svop($op, "gvsv")) {
@@ -613,16 +616,19 @@ sub get_gv
 		$gv_idx = $op->padix;
 		$gv_on_pad = 1;
 	} else {
-		return;
+		goto BAIL_OUT;
 	}
-	return unless is_null($op->sibling);
+	goto BAIL_OUT unless is_null($op->sibling);
 
 	my $gv = $gv_on_pad ? "" : $op->sv;
 	if (!$gv || !$$gv) {
 		$gv = $S->{padlist}->[1]->ARRAYelt($gv_idx);
 	}
-	return unless $gv->isa("B::GV");
-	$gv;
+	goto BAIL_OUT unless $gv->isa("B::GV");
+	return $gv;
+BAIL_OUT:
+	bailout $S, "unable to get GV from \"", $op->name, "\"" if $p{bailout};
+	return;
 }
 
 sub try_get_dbfetch

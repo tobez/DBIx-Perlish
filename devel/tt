@@ -401,8 +401,20 @@ sub ind
 	return -k $t->id, -k $t->name;
 }
 
+use vars '$global_val', '%global_hash';
+$global_val = 42;
+#$global_hash{l1} = 42;
+$global_hash{l1}{l2} = 42;
+our %our_hash;
+$our_hash{l1}{l2} = 33;
+
+sub getval
+{
+	product_tree->product_type_id == $our_hash{l1}{l2};
+}
+
 my @kf;
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&ind, "select", flavor => 'oracle', key_fields => \@kf);
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&getval, "select", flavor => 'oracle', key_fields => \@kf);
 
 print "$sql\n";
 print "values: ", join ", ", @$v;
