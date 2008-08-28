@@ -230,7 +230,7 @@ sub get_value
 				}
 				$vv = $S->{padlist}->[1]->ARRAYelt($op->targ)->object_2svref;
 				$vv = $$vv;
-			} elsif (is_svop($op, "gv")) {
+			} elsif (is_svop($op, "gv") || is_padop($op, "gv")) {
 				my $gv = get_gv($S, $op, bailout => 1);
 				$vv = $gv->HV->object_2svref;
 			} elsif (is_binop($op, "helem")) {
