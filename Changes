@@ -1,5 +1,8 @@
 Revision history for DBIx-Perlish
 
+0.43  Thu Aug 28 13:10:17 CEST 2008
+       Understand global hash vars in query subs.
+
 0.42 Thu Jun 26 14:04:29 2008
        Add an ability for db_fetch {} to return a hash
        keyed by one or more "key fields", similar to
