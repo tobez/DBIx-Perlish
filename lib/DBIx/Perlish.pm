@@ -47,17 +47,16 @@ sub import
 			$p{dbh} && ref $p{dbh} && (ref $p{dbh} eq "SCALAR" || ref $p{dbh} eq "REF"))
 		{
 			my $dbhref = $p{dbh};
-			my $o;
 			no strict 'refs';
 			*{$pkg."::$p{prefix}_fetch"} =
 			*{$pkg."::$p{prefix}_select"} =
-				sub (&) { $o ||= DBIx::Perlish->new(dbh => $$dbhref); $o->fetch(@_) };
+				sub (&) { my $o = DBIx::Perlish->new(dbh => $$dbhref); $o->fetch(@_) };
 			*{$pkg."::$p{prefix}_update"} =
-				sub (&) { $o ||= DBIx::Perlish->new(dbh => $$dbhref); $o->update(@_) };
+				sub (&) { my $o = DBIx::Perlish->new(dbh => $$dbhref); $o->update(@_) };
 			*{$pkg."::$p{prefix}_delete"} =
-				sub (&) { $o ||= DBIx::Perlish->new(dbh => $$dbhref); $o->delete(@_) };
+				sub (&) { my $o = DBIx::Perlish->new(dbh => $$dbhref); $o->delete(@_) };
 			*{$pkg."::$p{prefix}_insert"} =
-				sub { $o ||= DBIx::Perlish->new(dbh => $$dbhref); $o->insert(@_) };
+				sub { my $o = DBIx::Perlish->new(dbh => $$dbhref); $o->insert(@_) };
 			return;
 		}
 	}
