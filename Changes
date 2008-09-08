@@ -1,5 +1,9 @@
 Revision history for DBIx-Perlish
 
+0.44  Mon Sep  8 09:47:09 CEST 2008
+       Remove overoptimizations made in multiple DB
+       handlers code.
+
 0.43  Thu Aug 28 13:10:17 CEST 2008
        Understand global hash vars in query subs.
 
