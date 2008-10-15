@@ -413,8 +413,14 @@ sub getval
 	product_tree->product_type_id == $our_hash{l1}{l2};
 }
 
+sub extr
+{
+	my $l : location;
+	return $l->expires, utime => extract(epoch => $l->expires);
+}
+
 my @kf;
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&getval, "select", flavor => 'oracle', key_fields => \@kf);
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&extr, "select", flavor => 'postgresql', key_fields => \@kf);
 
 print "$sql\n";
 print "values: ", join ", ", @$v;
