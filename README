@@ -1,4 +1,4 @@
-DBIx-Perlish version 0.44
+DBIx-Perlish version 0.45
 
 DBIx::Perlish - a perlish interface to SQL databases.
 
@@ -44,12 +44,12 @@ Perl 5.8.2, DBI, PadWalker (optional).
 
 COPYRIGHT AND LICENCE
 
-Copyright (C) 2007, Anton Berezin
+Copyright (C) 2007, 2008, Anton Berezin
 
 The software known as DBIx::Perlish is distributed under the following
 terms:
 
-Copyright (C) 2007 Anton Berezin. All rights reserved.
+Copyright (C) 2007, 2008 Anton Berezin. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions

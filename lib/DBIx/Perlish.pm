@@ -10,7 +10,7 @@ use vars qw($VERSION @EXPORT @EXPORT_OK %EXPORT_TAGS $SQL @BIND_VALUES);
 require Exporter;
 use base 'Exporter';
 
-$VERSION = '0.44';
+$VERSION = '0.45';
 @EXPORT = qw(db_fetch db_select db_update db_delete db_insert sql);
 @EXPORT_OK = qw(union intersect except);
 %EXPORT_TAGS = (all => [@EXPORT, @EXPORT_OK]);
@@ -369,7 +369,7 @@ DBIx::Perlish - a perlish interface to SQL databases
 
 =head1 VERSION
 
-This document describes DBIx::Perlish version 0.44
+This document describes DBIx::Perlish version 0.45
 
 
 =head1 SYNOPSIS
@@ -1038,10 +1038,32 @@ syntax.  For example:
 
     lower($t1->name) eq lower($t2->lastname);
 
-The C<lc> and C<uc> builtin functions are translated to
-C<lower> and C<upper>, respectively.
+Some of the functions are handled specially:
 
-A special case is when C<sql()> function (with a single
+=over
+
+=item C<lc> and C<uc>
+
+The Perl builtins C<lc> and C<uc> are translated into C<lower> and
+C<upper>, respectively.
+
+=item C<extract>
+
+A two-argument form of the C<extract> function, where the first
+argument is a constant string, will be converted into the form
+understood by the SQL standard.  For example,
+
+    extract(day => $t->field)
+
+will be converted into something like
+
+    EXTRACT(DAY FROM t01.field)
+
+as is required.
+
+=back
+
+Another special case is when C<sql()> function (with a single
 parameter) is called.  In this case the parameter of the
 function call inserted verbatim into the generated SQL,
 for example:
@@ -1756,7 +1778,7 @@ There is also the project website at
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright (c) 2007, Anton Berezin C<< <tobez@tobez.org> >>. All rights reserved.
+Copyright (c) 2007, 2008, Anton Berezin C<< <tobez@tobez.org> >>. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions

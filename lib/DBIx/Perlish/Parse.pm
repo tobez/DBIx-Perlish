@@ -902,9 +902,7 @@ sub try_funcall
 		return "sysdate"
 			if ($S->{gen_args}->{flavor}||"") eq "oracle" &&
 				lc $func eq "sysdate" && !@terms;
-		if (lc $func eq "extract" && @terms == 2 &&
-			($S->{gen_args}->{flavor}||"") eq "postgresql")
-		{
+		if (lc $func eq "extract" && @terms == 2) {
 			if (UNIVERSAL::isa($terms[0], "DBIx::Perlish::Placeholder")) {
 				my $val = $terms[0]->undo;
 				@terms = ("$val from $terms[1]");
@@ -1787,7 +1785,7 @@ if (*Devel::Cover::coverage{CODE}) {
 
 package DBIx::Perlish::Placeholder;
 
-use overload '""' => sub { "?" };
+use overload '""' => sub { "?" }, eq => sub { "$_[0]" eq "$_[1]" };
 
 sub new
 {

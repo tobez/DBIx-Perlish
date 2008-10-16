@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 348;
+use Test::More tests => 362;
 use DBIx::Perlish qw/:all/;
 use t::test_utils;
 
@@ -954,3 +954,43 @@ test_select_sql {
 } "two simple key field plus some other field",
 "select t01.id as \"\$kf-1\", t01.name as \"\$kf-2\", t01.x from tab t01",
 [], ['$kf-1','$kf-2'];
+
+# extract quirk
+test_select_sql {
+	my $a : tab;
+	return extract(day => $a->dfield);
+} "simple extract",
+"select extract(day from t01.dfield) from tab t01",
+[];
+my $mm = "month";
+test_select_sql {
+	my $a : tab;
+	return extract($mm => $a->dfield);
+} "simple extract, extract expression in a var",
+"select extract(month from t01.dfield) from tab t01",
+[];
+test_select_sql {
+	my $a : tab;
+	return extract();
+} "extract as a normal function, no arguments",
+"select extract() from tab t01",
+[];
+test_select_sql {
+	my $a : tab;
+	return extract("day");
+} "extract as a normal function, one argument",
+"select extract(?) from tab t01",
+["day"];
+test_select_sql {
+	my $a : tab;
+	return extract("day",1,2);
+} "extract as a normal function, three arguments",
+"select extract(?, 1, 2) from tab t01",
+["day"];
+test_select_sql {
+	my $a : tab;
+	return extract($a->f1,$a->f2);
+} "extract as a normal function, two arguments, tricky",
+"select extract(t01.f1, t01.f2) from tab t01",
+[];
+
