@@ -243,6 +243,9 @@ sub get_value
 	} elsif (is_svop($op, "gvsv") || is_padop($op, "gvsv")) {
 		my $gv = get_gv($S, $op, bailout => 1);
 		$val = ${$gv->SV->object_2svref};
+	} elsif (is_unop($op, "null") && (is_svop($op->first, "gvsv") || is_padop($op->first, "gvsv"))) {
+		my $gv = get_gv($S, $op->first, bailout => 1);
+		$val = ${$gv->SV->object_2svref};
 	} else {
 		return () if $p{soft};
 		bailout $S, "cannot parse \"", $op->name, "\" op as a value or value reference";
@@ -383,16 +386,21 @@ sub try_parse_attr_assignment
 	$op = $op->sibling;
 	my $attr = is_const($S, $op);
 	return unless $attr;
+	my @attr = grep { length($_) } split /(?:[\(\)])/, $attr;
+	return unless @attr;
 	$op = $op->sibling;
 	return unless is_svop($op, "method_named");
 	return unless want_method($S, $op, "import");
 	if ($realname) {
-		if (lc $attr eq "table") {
-			$attr = $realname;
+		if (lc $attr[0] eq "table") {
+			@attr = ($realname);
 		} else {
-			bailout $S, "cannot decide whether you refer to $realname table or to $attr table";
+			bailout $S, "cannot decide whether you refer to $realname table or to @attr table";
 		}
+	} else {
+		shift @attr if lc $attr[0] eq "table" && @attr > 1;
 	}
+	$attr = join ".", @attr;
 	new_var($S, $varn, $attr);
 	return $attr;
 }
@@ -774,6 +782,10 @@ sub parse_assign
 	{
 		my ($val, $ok) = get_value($S, $op->first, soft => 1);
 		if ($ok) {
+			my $tab = try_parse_attr_assignment($S,
+				$op->last->first->sibling, $val);
+			return if $tab;
+		} elsif ($val = is_const($S, $op->first)) {
 			my $tab = try_parse_attr_assignment($S,
 				$op->last->first->sibling, $val);
 			return if $tab;

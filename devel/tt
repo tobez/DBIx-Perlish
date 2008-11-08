@@ -419,8 +419,17 @@ sub extr
 	return $l->expires, utime => extract(epoch => $l->expires);
 }
 
+sub tabfunc1
+{
+	my $h : prod(hosts);
+#	defined($h->community) &&
+#	($h->id_host_type == 1 || $h->id_host_type == 2);
+#	sort $h->fqdn;
+#	return $h;
+}
+
 my @kf;
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&extr, "select", flavor => 'postgresql', key_fields => \@kf);
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&tabfunc1, "select", flavor => 'postgresql', key_fields => \@kf);
 
 print "$sql\n";
 print "values: ", join ", ", @$v;

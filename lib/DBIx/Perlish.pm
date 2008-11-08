@@ -10,7 +10,7 @@ use vars qw($VERSION @EXPORT @EXPORT_OK %EXPORT_TAGS $SQL @BIND_VALUES);
 require Exporter;
 use base 'Exporter';
 
-$VERSION = '0.45';
+$VERSION = '0.46';
 @EXPORT = qw(db_fetch db_select db_update db_delete db_insert sql);
 @EXPORT_OK = qw(union intersect except);
 %EXPORT_TAGS = (all => [@EXPORT, @EXPORT_OK]);
@@ -369,7 +369,7 @@ DBIx::Perlish - a perlish interface to SQL databases
 
 =head1 VERSION
 
-This document describes DBIx::Perlish version 0.45
+This document describes DBIx::Perlish version 0.46
 
 
 =head1 SYNOPSIS
@@ -958,6 +958,32 @@ possible to write for example
 In this case the attribute "table" must be specified verbatim,
 and the name of the table is taken from the right-hand side of the
 assignment.
+
+Database schemas ("schemaname.tablename") are supported in
+several different ways:
+
+=over
+
+=item Using the runtime mechanism described above:
+
+    my $tabnam = "schemaname.tablename";
+    db_fetch {
+        my $t : table = $tabnam;
+    };
+
+=item Using a similar verbatim "table" attribute with a string constant:
+
+    my $t : table = "schemaname.tablename";
+
+=item Using attribute argument with the verbatim "table" attribute:
+
+    my $t : table(schemaname.tablename);
+
+=item Using schema name as the attribute and table name as its argument:
+
+    my $t : schemaname(tablename);
+
+=back
 
 Last, but not least, a combination of verbatim "table" attribute
 with a nested L</db_fetch {}> can be used to implement I<inline views>:
@@ -1763,9 +1789,10 @@ this module.
 
 I would also like to thank
 Henrik Andersen,
-Lars Thegler,
-and Phil Regnauld
-for discussions, suggestions and code contributions.
+Mathieu Arnold,
+Phil Regnauld,
+and Lars Thegler,
+for discussions, suggestions, bug reports and code contributions.
 
 This work is in part sponsored by Telia Denmark.
 

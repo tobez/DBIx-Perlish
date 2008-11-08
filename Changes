@@ -1,5 +1,11 @@
 Revision history for DBIx-Perlish
 
+0.46  Sat Nov  8 18:28:13 CET 2008
+       Understand global vars as variable table names.
+       Understand string constants as variable table names.
+       Support for database schemas "schemaname.tablename"
+       in table specifications, see the docs for details.
+
 0.45  Thu Oct 16 10:15:08 CEST 2008
        Add special handling for the "extract" function.
 

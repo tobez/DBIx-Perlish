@@ -6,8 +6,12 @@ use DBI;
 use DBIx::Perlish;
 $DBIx::Perlish::Parse::DEVEL = 1;
 
-my $dbh = DBI->connect("dbi:SQLite:");
+my $dbh = DBI->connect("dbi:SQLite:","","",{RaiseError => 1});
 $dbh->do("create table tbl (id int, name text)");
+
+db_fetch {
+	return now();
+};
 
 db_insert 'tbl', {
 	id   => 1,

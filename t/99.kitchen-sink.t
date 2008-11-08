@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 362;
+use Test::More tests => 372;
 use DBIx::Perlish qw/:all/;
 use t::test_utils;
 
@@ -408,6 +408,38 @@ test_select_sql {
 	my $t : table = $self->{table};
 } "vartable attribute",
 "select * from table1 t01",
+[];
+
+our $glotab = "prod.table1";
+test_select_sql {
+	my $t : table = $glotab;
+} "vartable attribute in a global",
+"select * from prod.table1 t01",
+[];
+
+my $mytab = "prod.table1";
+test_select_sql {
+	my $t : table = $mytab;
+} "vartable attribute in a my",
+"select * from prod.table1 t01",
+[];
+
+test_select_sql {
+	my $t : table = "prod.table1";
+} "vartable attribute in a constant",
+"select * from prod.table1 t01",
+[];
+
+test_select_sql {
+	my $t : table(prod.table1);
+} "vartable attribute in an attribute argument",
+"select * from prod.table1 t01",
+[];
+
+test_select_sql {
+	my $t : prod(table1);
+} "schema attribute with table name as an argument",
+"select * from prod.table1 t01",
 [];
 
 # conditional post-if
