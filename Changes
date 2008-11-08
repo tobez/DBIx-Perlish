@@ -5,6 +5,7 @@ Revision history for DBIx-Perlish
        Understand string constants as variable table names.
        Support for database schemas "schemaname.tablename"
        in table specifications, see the docs for details.
+       Thanks for Mathieu Arnold for bugreport and discussion.
 
 0.45  Thu Oct 16 10:15:08 CEST 2008
        Add special handling for the "extract" function.
