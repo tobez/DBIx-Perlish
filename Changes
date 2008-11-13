@@ -1,5 +1,9 @@
 Revision history for DBIx-Perlish
 
+0.47  Thu Nov 13 09:50:25 CET 2008
+       Understand 0 in last unless 0..9.
+       Reported by Mathieu Arnold.
+
 0.46  Sat Nov  8 18:28:13 CET 2008
        Understand global vars as variable table names.
        Understand string constants as variable table names.

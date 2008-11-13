@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 372;
+use Test::More tests => 376;
 use DBIx::Perlish qw/:all/;
 use t::test_utils;
 
@@ -217,6 +217,22 @@ test_select_sql {
 	offset: $s_ofs;
 } "simple limit/offset label with string vars",
 "select * from tbl t01 limit 10 offset 20",
+[];
+
+# limit & offset via last unless
+test_select_sql {
+	my $t : tbl;
+	last unless 20..29;
+} "limit/offset via last unless",
+"select * from tbl t01 limit 10 offset 20",
+[];
+
+# limit via last unless
+test_select_sql {
+	my $t : tbl;
+	last unless 0..9;
+} "limit via last unless",
+"select * from tbl t01 limit 10",
 [];
 
 # order by

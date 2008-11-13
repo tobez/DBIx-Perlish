@@ -428,8 +428,13 @@ sub tabfunc1
 #	return $h;
 }
 
+sub offset0 {
+	my $t : ttt;
+	last unless 0..10;
+};
+
 my @kf;
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&tabfunc1, "select", flavor => 'postgresql', key_fields => \@kf);
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&offset0, "select", flavor => 'postgresql', key_fields => \@kf);
 
 print "$sql\n";
 print "values: ", join ", ", @$v;

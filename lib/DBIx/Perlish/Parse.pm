@@ -609,7 +609,7 @@ sub placeholder_value
 sub parse_simple_term
 {
 	my ($S, $op) = @_;
-	if (my $const = is_const($S, $op)) {
+	if (my ($const,$sv) = is_const($S, $op)) {
 		return $const;
 	} elsif (my ($val, $ok) = get_value($S, $op, soft => 1)) {
 		return $val;
