@@ -1,7 +1,7 @@
 # $Id$
 use warnings;
 use strict;
-use Test::More tests => 35;
+use Test::More tests => 40;
 use DBIx::Perlish qw/:all/;
 use t::test_utils;
 
@@ -50,7 +50,7 @@ test_select_sql {
 	join $x < $y => db_fetch { $x-> id > $y-> id };
 	$x->id == $w->x_id;
 } "funny join 2",
-"select * from w t01, z t02, x t03 left outer join y t04 on t03.id > t04.id where t04.id = t02.y_id and t03.id = t01.x_id",
+"select * from x t03 left outer join y t04 on t03.id > t04.id, w t01, z t02 where t04.id = t02.y_id and t03.id = t01.x_id",
 [];
 
 test_select_sql {
@@ -62,7 +62,7 @@ test_select_sql {
 	join $x < $y => db_fetch { $x-> id > $y-> id };
 	$x->id == $w->x_id;
 } "funny join 3",
-"select * from w t01, x t02 left outer join y t03 on t02.id > t03.id, z t04 where t03.id = t04.y_id and t02.id = t01.x_id",
+"select * from x t02 left outer join y t03 on t02.id > t03.id, w t01, z t04 where t03.id = t04.y_id and t02.id = t01.x_id",
 [];
 
 test_select_sql {
@@ -82,7 +82,7 @@ test_select_sql {
 	join $x + $y <= db_fetch { $x-> id > $y-> id };
 	$x->id == $w->x_id;
 } "inverse join 2",
-"select * from w t01, x t02 full outer join y t03 on t02.id > t03.id, z t04 where t03.id = t04.y_id and t02.id = t01.x_id",
+"select * from x t02 full outer join y t03 on t02.id > t03.id, w t01, z t04 where t03.id = t04.y_id and t02.id = t01.x_id",
 [];
 
 test_select_sql {
@@ -127,3 +127,32 @@ test_select_sql {
 } "complex join with bound values",
 "select * from w t01 where t01.w1 = ? and t01.id in (select s01_t01.toret from x s01_t01 left outer join y s01_t02 on s01_t01.blah = ? where s01_t02.yy = ? and s01_t01.xx = ?) and t01.w2 = ?",
 ["w1", "hello", "y", "x", "w2"];
+
+
+test_select_sql {
+	my $s : sensors;
+	my $z : zones;
+	my $d : prod(datacenters);
+	my $t : types;
+
+	$t->name == "Temperature"; 
+	$d->short_ref == 'eqx';
+	join $s x $z => db_fetch { $s->id_zone == $z->id_zone };
+	join $z x $d => db_fetch { $z->id_datacenter == $d->id_datacenter };
+	join $s x $t => db_fetch { $s->id_type == $t->id_type };
+	return $s, $z;
+} "real life multiple join",
+"select t01.*, t02.* from sensors t01 inner join zones t02 on t01.id_zone = t02.id_zone inner join prod.datacenters t03 on t02.id_datacenter = t03.id_datacenter inner join types t04 on t01.id_type = t04.id_type where t04.name = ? and t03.short_ref = ?",
+["Temperature", "eqx"];
+
+test_bad_select {
+	my $a : taba;
+	my $b : tabb;
+	my $c : tabc;
+
+	join $a x $b <= db_fetch { $a->id == $b->id };
+	join $b x $c <= db_fetch { $b->id == $c->id };
+	join $a x $c <= db_fetch { $a->id == $c->id };
+} "strange join, prolly a bug",
+qr/not sure what to do with repeated table .*? in a join/;
+

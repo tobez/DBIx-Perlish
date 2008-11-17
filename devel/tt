@@ -431,10 +431,41 @@ sub tabfunc1
 sub offset0 {
 	my $t : ttt;
 	last unless 0..10;
-};
+}
+
+sub mat1 {
+	my $q : questions_last_asked;
+	$q->quiz_id == 1 or ( 0 == 1 );
+	return $q->id;
+}
+
+sub mat2 {
+	my $s : sensors;
+	my $z : zones;
+	my $d : prod(datacenters);
+	my $t : types;
+
+	$t->name == "Temperature"; 
+	$d->short_ref == 'eqx';
+	join $s x $z => db_fetch { $s->id_zone == $z->id_zone };
+	join $z x $d => db_fetch { $z->id_datacenter == $d->id_datacenter };
+	join $s x $t => db_fetch { $s->id_type == $t->id_type };
+	return $s, $z;
+}
+
+sub mat3_strange_join
+{
+	my $a : taba;
+	my $b : tabb;
+	my $c : tabc;
+
+	join $a x $b <= db_fetch { $a->id == $b->id };
+	join $b x $c <= db_fetch { $b->id == $c->id };
+	join $a x $c <= db_fetch { $a->id == $c->id };
+}
 
 my @kf;
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&offset0, "select", flavor => 'postgresql', key_fields => \@kf);
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&mat2, "select", flavor => 'postgresql', key_fields => \@kf);
 
 print "$sql\n";
 print "values: ", join ", ", @$v;
