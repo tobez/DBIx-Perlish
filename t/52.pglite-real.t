@@ -6,16 +6,18 @@ use t::test_utils;
 
 eval "use DBD::SQLite;";
 plan skip_all => "DBD::SQLite cannot be loaded" if $@;
+eval "use DBD::PgLite 0.11;";
+plan skip_all => "The right version of DBD::PgLite cannot be loaded" if $@;
 
 eval "use PadWalker;";
 plan skip_all => "PadWalker cannot be loaded" if $@;
 
-plan tests => 56;
+plan tests => 57;
 
-my $dbh = DBI->connect("dbi:SQLite:");
+my $dbh = DBI->connect("dbi:PgLite:");
 ok($dbh, "db connection");
 ok($dbh->do("create table names (id integer, name text)"), "table create");
-is(DBIx::Perlish::_get_flavor($dbh), "sqlite", "correct flavor");
+is(DBIx::Perlish::_get_flavor($dbh), "pglite", "correct flavor");
 
 my $o = DBIx::Perlish->new(dbh => $dbh);
 
@@ -83,6 +85,9 @@ ok($o->delete(sub { names->id == 1 }), "obj: delete one");
 is(scalar db_fetch { my $t : names; $t->id == 1; return $t->name; }, undef, "fetch deleted");
 
 ok((db_insert 'names', { id => sql 5, name => "five" }), "insert with verbatim");
+
+# pglite sequences
+is(scalar db_fetch { return next names_id_seq }, 6, "next works");
 
 # just to bump up coverage - those red things annoy me
 union     {}; pass("coverage: union");

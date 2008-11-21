@@ -10,13 +10,12 @@ use vars qw($VERSION @EXPORT @EXPORT_OK %EXPORT_TAGS $SQL @BIND_VALUES);
 require Exporter;
 use base 'Exporter';
 
-$VERSION = '0.48';
+$VERSION = '0.49';
 @EXPORT = qw(db_fetch db_select db_update db_delete db_insert sql);
 @EXPORT_OK = qw(union intersect except);
 %EXPORT_TAGS = (all => [@EXPORT, @EXPORT_OK]);
 
 use DBIx::Perlish::Parse;
-use DBI::Const::GetInfoType;
 
 sub db_fetch  (&) { DBIx::Perlish->fetch ($_[0]) }
 sub db_select (&) { DBIx::Perlish->fetch ($_[0]) }
@@ -146,6 +145,13 @@ sub quirk
 	}
 }
 
+sub _get_flavor
+{
+	my ($real_dbh) = @_;
+	my $dbh = tied(%$real_dbh) || $real_dbh;
+	return lc $dbh->{Driver}{Name};
+}
+
 sub fetch
 {
 	my ($moi, $sub) = @_;
@@ -155,7 +161,7 @@ sub fetch
 	my $dbh = $me->{dbh} || get_dbh(3);
 	my @kf;
 	($me->{sql}, $me->{bind_values}, $nret) = gen_sql($sub, "select", 
-		flavor     => lc $dbh->get_info($GetInfoType{SQL_DBMS_NAME}),
+		flavor     => _get_flavor($dbh),
 		dbh        => $dbh,
 		quirks     => $me->{quirks} || $non_object_quirks,
 		key_fields => \@kf,
@@ -184,7 +190,7 @@ sub update
 
 	my $dbh = $me->{dbh} || get_dbh(3);
 	($me->{sql}, $me->{bind_values}) = gen_sql($sub, "update",
-		flavor => lc $dbh->get_info($GetInfoType{SQL_DBMS_NAME}),
+		flavor => _get_flavor($dbh),
 		dbh    => $dbh,
 		quirks => $me->{quirks} || $non_object_quirks,
 	);
@@ -199,7 +205,7 @@ sub delete
 
 	my $dbh = $me->{dbh} || get_dbh(3);
 	($me->{sql}, $me->{bind_values}) = gen_sql($sub, "delete",
-		flavor => lc $dbh->get_info($GetInfoType{SQL_DBMS_NAME}),
+		flavor => _get_flavor($dbh),
 		dbh    => $dbh,
 		quirks => $me->{quirks} || $non_object_quirks,
 	);
@@ -379,7 +385,7 @@ DBIx::Perlish - a perlish interface to SQL databases
 
 =head1 VERSION
 
-This document describes DBIx::Perlish version 0.48
+This document describes DBIx::Perlish version 0.49
 
 
 =head1 SYNOPSIS
@@ -1672,12 +1678,16 @@ for Oracle driver.
 Native Postgresql regular expressions are used if possible and if
 a simple C<LIKE> won't suffice.
 
+The same applies to PgLite, which is a Postgresql-like wrapper around
+SQLite.  In this case, "native" PgLite regular expressions are actually
+native Perl regular expressions, but the C<DBIx::Perlish> module
+pretends it does not know about it.
+
 =head3 SQLite
 
 Native Perl regular expressions are used with SQLite even for
 simple match cases, since SQLite does not know how to optimize
 C<LIKE> applied to an indexed column with a constant prefix.
-
 
 =head2 Implementation details and more ideology
 

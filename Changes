@@ -1,5 +1,8 @@
 Revision history for DBIx-Perlish
 
+0.49  Fri Nov 21 16:04:31 CET 2008
+       Add support for PgLite databases.
+
 0.48  Mon Nov 17 13:35:52 CET 2008
        Better handling of multiple joins.  There are
        probably still some rough edges in this code.

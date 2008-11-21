@@ -584,7 +584,7 @@ sub parse_term
 		if ($flavor eq "oracle") {
 			bailout $S, "Sequence name looks wrong" unless $seq =~ /^\w+$/;
 			return "$seq.nextval";
-		} elsif ($flavor eq "postgresql") {
+		} elsif ($flavor eq "postgresql" || $flavor eq "pglite") {
 			bailout $S, "Sequence name looks wrong" if $seq =~ /'/; # XXX well, I am lazy
 			return "nextval('$seq')";
 		} else {
@@ -1241,7 +1241,7 @@ sub parse_regex
 			( $case ? '' : 'binary ') .
 			"'$like'"
 			;
-	} elsif ( $flavor eq 'postgresql') {
+	} elsif ( $flavor eq 'postgresql' || $flavor eq "pglite") {
 		# LIKE is case-sensitive
 		if ( $can_like) {
 			$what = 'ilike' if $case;
@@ -1254,7 +1254,7 @@ sub parse_regex
 			( $case ? '*' : '') .
 			" '$like'"
 			;
-	} elsif ( $flavor eq 'sqlite') {
+	} elsif ($flavor eq "sqlite") {
 		# SQLite as it is now is a bit tricky:
 		# - there is support for REGEXP with a func provided the user
 		#   supplies his own function;
