@@ -7,12 +7,9 @@ all_from		'lib/DBIx/Perlish.pm';
 
 requires		perl => '5.8.2';
 requires		'DBI';
+requires		'PadWalker';
 build_requires	'Test::More' => '0.42';
 
 no_index		directory => 'devel';
-
-features		'$dbh special handling' => [
-	-default	=> 1,
-	PadWalker	=> ''];
 
 WriteAll;

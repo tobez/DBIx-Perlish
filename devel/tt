@@ -464,8 +464,23 @@ sub mat3_strange_join
 	join $a x $c <= db_fetch { $a->id == $c->id };
 }
 
+my $a = 1;
+sub mat4
+{
+	my $p : tabp;
+	$p->bugguy == ($a ? "t" : "f");
+}
+
+my @a = qw(it does not work for mat);
+sub mat5
+{
+	my $h : ports;
+	port_name($h) <- @a;
+	return $h;
+}
+
 my @kf;
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&mat2, "select", flavor => 'postgresql', key_fields => \@kf);
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&mat5, "select", flavor => 'postgresql', key_fields => \@kf);
 
 print "$sql\n";
 print "values: ", join ", ", @$v;
