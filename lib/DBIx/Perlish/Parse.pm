@@ -1817,4 +1817,4 @@ sub undo
 	splice @{$me->{S}{values}}, $me->{position}, 1;
 }
 
-1;
+"the magic stops here; welcome to the real world";
