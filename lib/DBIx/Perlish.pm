@@ -10,7 +10,7 @@ use vars qw($VERSION @EXPORT @EXPORT_OK %EXPORT_TAGS $SQL @BIND_VALUES);
 require Exporter;
 use base 'Exporter';
 
-$VERSION = '0.49';
+$VERSION = '0.50';
 @EXPORT = qw(db_fetch db_select db_update db_delete db_insert sql);
 @EXPORT_OK = qw(union intersect except);
 %EXPORT_TAGS = (all => [@EXPORT, @EXPORT_OK]);
@@ -291,7 +291,7 @@ sub gen_sql
 	} else {
 		die "unsupported operation: $operation\n";
 	}
-	my (%tabs, %joins);
+	my %tabs;
 	for my $var (keys %{$S->{vars}}) {
 		$tabs{$S->{var_alias}->{$var}} =
 			$no_aliases ?
@@ -317,21 +317,23 @@ sub gen_sql
 	}
 	$sql .= $next_bit;
 	my %seentab;
-	my @joins;
+	my $joins = "";
 	for my $j ( @{$S->{joins}} ) {
 		my ($join, $tab1, $tab2, $condition) = @$j;
 		$condition = ( defined $condition) ? " on $condition" : '';
 		if ($seentab{$tab1}) {
-			push @joins, "$join join $tabs{$tab2}$condition";
+			$joins .= " " if $joins;
+			$joins .= "$join join $tabs{$tab2}$condition";
 		} else {
-			push @joins, "$tabs{$tab1} $join join $tabs{$tab2}$condition";
+			$joins .= ", " if $joins;
+			$joins .= "$tabs{$tab1} $join join $tabs{$tab2}$condition";
 		}
 		die "not sure what to do with repeated table ($tabs{$tab2}) in a join\n"
 			if $seentab{$tab2};
 		$seentab{$tab1}++;
 		$seentab{$tab2}++;
 	}
-	@joins = @joins ? (join " ", @joins) : ();
+	my @joins = $joins ? ($joins) : ();
 	$sql .= join ", ", @joins, map { $tabs{$_} } grep { !$seentab{$_} } sort keys %tabs;
 
 	my @sets     = grep { $_ ne "" } @{$S->{sets}};
@@ -385,7 +387,7 @@ DBIx::Perlish - a perlish interface to SQL databases
 
 =head1 VERSION
 
-This document describes DBIx::Perlish version 0.49
+This document describes DBIx::Perlish version 0.50
 
 
 =head1 SYNOPSIS

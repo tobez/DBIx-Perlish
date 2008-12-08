@@ -479,8 +479,27 @@ sub mat5
 	return $h;
 }
 
+sub join_bug
+{
+	my $p : product_tree;
+	my $m : product_mab_dsl;
+	my $pt : product_type;
+	my $pp : product_tree;
+	my $ppt : product_type;
+	my $sb : site_basic;
+	my $eda : product_eda_adsl;
+
+	join $p < $sb => db_fetch {
+		$p->circuit_number == $sb->circuit_number;
+	};
+
+	join $pp < $eda => db_fetch {
+		$pp->id == $eda->id;
+	};
+}
+
 my @kf;
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&mat5, "select", flavor => 'postgresql', key_fields => \@kf);
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&join_bug, "select", flavor => 'postgresql', key_fields => \@kf);
 
 print "$sql\n";
 print "values: ", join ", ", @$v;

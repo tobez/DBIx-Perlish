@@ -1,7 +1,7 @@
 # $Id$
 use warnings;
 use strict;
-use Test::More tests => 40;
+use Test::More tests => 42;
 use DBIx::Perlish qw/:all/;
 use t::test_utils;
 
@@ -156,3 +156,22 @@ test_bad_select {
 } "strange join, prolly a bug",
 qr/not sure what to do with repeated table .*? in a join/;
 
+test_select_sql {
+	my $p : product_tree;
+	my $m : product_mab_dsl;
+	my $pt : product_type;
+	my $pp : product_tree;
+	my $ppt : product_type;
+	my $sb : site_basic;
+	my $eda : product_eda_adsl;
+
+	join $p < $sb => db_fetch {
+		$p->circuit_number == $sb->circuit_number;
+	};
+
+	join $pp < $eda => db_fetch {
+		$pp->id == $eda->id;
+	};
+} "real life disjoint multiple join",
+"select * from product_tree t01 left outer join site_basic t06 on t01.circuit_number = t06.circuit_number, product_tree t04 left outer join product_eda_adsl t07 on t04.id = t07.id, product_mab_dsl t02, product_type t03, product_type t05",
+[];
