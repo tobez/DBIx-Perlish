@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 376;
+use Test::More tests => 378;
 use DBIx::Perlish qw/:all/;
 use t::test_utils;
 
@@ -946,6 +946,12 @@ test_select_sql {
 	$a->x == 1 || $a->y == 2;
 } "explicit simple OR",
 "select * from tab t01 where ((t01.x = 1) or (t01.y = 2))",
+[];
+test_select_sql {
+	my $a : tab;
+	$a->x =~ /abc/ || $a->y =~ /cde/;
+} "explicit OR with RE",
+"select * from tab t01 where (t01.x like '%abc%' or t01.y like '%cde%')",
 [];
 test_select_sql {
 	my $a : tab;

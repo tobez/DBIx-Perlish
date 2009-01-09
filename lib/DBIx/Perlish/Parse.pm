@@ -590,6 +590,8 @@ sub parse_term
 		} else {
 			bailout $S, "Sequences do not seem to be supported for this DBI flavor";
 		}
+	} elsif (is_pmop($op, "match")) {
+		return parse_regex($S, $op, 0);
 	} else {
 		bailout $S, "cannot reconstruct term from operation \"",
 				$op->name, '"';

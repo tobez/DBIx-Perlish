@@ -10,7 +10,7 @@ use vars qw($VERSION @EXPORT @EXPORT_OK %EXPORT_TAGS $SQL @BIND_VALUES);
 require Exporter;
 use base 'Exporter';
 
-$VERSION = '0.50';
+$VERSION = '0.51';
 @EXPORT = qw(db_fetch db_select db_update db_delete db_insert sql);
 @EXPORT_OK = qw(union intersect except);
 %EXPORT_TAGS = (all => [@EXPORT, @EXPORT_OK]);
@@ -321,6 +321,16 @@ sub gen_sql
 	for my $j ( @{$S->{joins}} ) {
 		my ($join, $tab1, $tab2, $condition) = @$j;
 		$condition = ( defined $condition) ? " on $condition" : '';
+		die "not sure what to do with repeated tables ($tabs{$tab1} and $tabs{$tab2}) in a join\n"
+			if $seentab{$tab1} && $seentab{$tab2};
+		if ($seentab{$tab2}) {
+			($tab1, $tab2) = ($tab2, $tab1);
+			if ($join eq "left outer") {
+				$join = "right outer";
+			} elsif ($join eq "right outer") {
+				$join = "left outer";
+			}
+		}
 		if ($seentab{$tab1}) {
 			$joins .= " " if $joins;
 			$joins .= "$join join $tabs{$tab2}$condition";
@@ -328,8 +338,6 @@ sub gen_sql
 			$joins .= ", " if $joins;
 			$joins .= "$tabs{$tab1} $join join $tabs{$tab2}$condition";
 		}
-		die "not sure what to do with repeated table ($tabs{$tab2}) in a join\n"
-			if $seentab{$tab2};
 		$seentab{$tab1}++;
 		$seentab{$tab2}++;
 	}
@@ -387,7 +395,7 @@ DBIx::Perlish - a perlish interface to SQL databases
 
 =head1 VERSION
 
-This document describes DBIx::Perlish version 0.50
+This document describes DBIx::Perlish version 0.51
 
 
 =head1 SYNOPSIS

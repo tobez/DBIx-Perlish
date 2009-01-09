@@ -1,7 +1,7 @@
 # $Id$
 use warnings;
 use strict;
-use Test::More tests => 42;
+use Test::More tests => 46;
 use DBIx::Perlish qw/:all/;
 use t::test_utils;
 
@@ -154,7 +154,7 @@ test_bad_select {
 	join $b x $c <= db_fetch { $b->id == $c->id };
 	join $a x $c <= db_fetch { $a->id == $c->id };
 } "strange join, prolly a bug",
-qr/not sure what to do with repeated table .*? in a join/;
+qr/not sure what to do with repeated tables .*? in a join/;
 
 test_select_sql {
 	my $p : product_tree;
@@ -175,3 +175,24 @@ test_select_sql {
 } "real life disjoint multiple join",
 "select * from product_tree t01 left outer join site_basic t06 on t01.circuit_number = t06.circuit_number, product_tree t04 left outer join product_eda_adsl t07 on t04.id = t07.id, product_mab_dsl t02, product_type t03, product_type t05",
 [];
+
+test_select_sql {
+	my $h : hosts;
+	my $s : services;
+	my $hs : host_service;
+	join $hs * $s => db_fetch { $hs->id_service == $s->id_service };
+	join $h x $s => db_fetch { $h->id_host == $s->id_host };
+} "strange join, rearrange",
+"select * from host_service t03 inner join services t02 on t03.id_service = t02.id_service inner join hosts t01 on t01.id_host = t02.id_host",
+[];
+
+test_select_sql {
+	my $h : hosts;
+	my $s : services;
+	my $hs : host_service;
+	join $hs < $s => db_fetch { $hs->id_service == $s->id_service };
+	join $h < $s => db_fetch { $h->id_host == $s->id_host };
+} "strange join, rearrange with swap",
+"select * from host_service t03 left outer join services t02 on t03.id_service = t02.id_service right outer join hosts t01 on t01.id_host = t02.id_host",
+[];
+

@@ -1,5 +1,9 @@
 Revision history for DBIx-Perlish
 
+0.51  Fri Jan  9 16:50:15 CET 2009
+       Chase another problem with multiple joins.
+       Support REs as a term.
+
 0.50  Mon Dec  8 13:32:20 CET 2008
        Fix multiple joins bug introduced in 0.48.
        Change docs to reflect established best practices.

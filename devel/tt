@@ -498,8 +498,25 @@ sub join_bug
 	};
 }
 
+sub mat6
+{
+	my $h : hosts;
+	my $s : services;
+	my $hs : host_service;
+	join $hs < $s => db_fetch { $hs->id_service == $s->id_service };
+	join $h < $s => db_fetch { $h->id_host == $s->id_host };
+}
+
+my $q = "abc";
+sub tagg1
+{
+	my $poi : ebsa_poi;
+	$poi->name =~ /$q/ ||
+		$poi->circuit_number =~ /$q/;
+}
+
 my @kf;
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&join_bug, "select", flavor => 'postgresql', key_fields => \@kf);
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&mat6, "select", flavor => 'postgresql', key_fields => \@kf);
 
 print "$sql\n";
 print "values: ", join ", ", @$v;
