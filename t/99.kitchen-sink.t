@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 378;
+use Test::More tests => 387;
 use DBIx::Perlish qw/:all/;
 use t::test_utils;
 
@@ -472,6 +472,49 @@ test_select_sql {
 	$t->type eq $type if $type;
 } "conditional post-if, false",
 "select * from products t01",
+[];
+
+# conditional real-if
+$type = "ICBM";
+test_select_sql {
+	my $t : products;
+	if ($type) {
+		$t->type eq $type;
+	}
+} "conditional real-if, true",
+"select * from products t01 where t01.type = ?",
+["ICBM"];
+$type = "";
+test_select_sql {
+	my $t : products;
+	if ($type) {
+		$t->type eq $type;
+	}
+} "conditional real-if, false",
+"select * from products t01",
+[];
+
+my $limit = undef;
+test_select_sql {
+	my $e : event_log;
+	$e->time < sql("localtimestamp - interval '86 days'");
+	return $e->id, $e->circuit_number, time => sql("date_trunc('second', time)"), $e->type;
+	if ($limit) {
+		last unless 0..$limit;
+	}
+} "conditional real-if with limit, false",
+"select t01.id, t01.circuit_number, date_trunc('second', time) as time, t01.type from event_log t01 where t01.time < localtimestamp - interval '86 days'",
+[];
+$limit = 5;
+test_select_sql {
+	my $e : event_log;
+	$e->time < sql("localtimestamp - interval '86 days'");
+	return $e->id, $e->circuit_number, time => sql("date_trunc('second', time)"), $e->type;
+	if ($limit) {
+		last unless 0..$limit;
+	}
+} "conditional real-if with limit, true",
+"select t01.id, t01.circuit_number, date_trunc('second', time) as time, t01.type from event_log t01 where t01.time < localtimestamp - interval '86 days' limit 6",
 [];
 
 # special handling of sysdate

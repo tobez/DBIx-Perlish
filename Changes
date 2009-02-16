@@ -1,5 +1,9 @@
 Revision history for DBIx-Perlish
 
+0.52  Mon Feb 16 13:03:17 CET 2009
+       Support parse-time conditional expressions with real
+       if statements.
+
 0.51  Fri Jan  9 16:50:15 CET 2009
        Chase another problem with multiple joins.
        Support REs as a term.

@@ -10,7 +10,7 @@ use vars qw($VERSION @EXPORT @EXPORT_OK %EXPORT_TAGS $SQL @BIND_VALUES);
 require Exporter;
 use base 'Exporter';
 
-$VERSION = '0.51';
+$VERSION = '0.52';
 @EXPORT = qw(db_fetch db_select db_update db_delete db_insert sql);
 @EXPORT_OK = qw(union intersect except);
 %EXPORT_TAGS = (all => [@EXPORT, @EXPORT_OK]);
@@ -395,7 +395,7 @@ DBIx::Perlish - a perlish interface to SQL databases
 
 =head1 VERSION
 
-This document describes DBIx::Perlish version 0.51
+This document describes DBIx::Perlish version 0.52
 
 
 =head1 SYNOPSIS
@@ -1330,6 +1330,16 @@ For example,
 will generate the equivalent to C<select * from products where type = 'ICBM'>,
 while the same code would generate just C<select * from products> if C<$type>
 were false.
+
+The same code could be written with a real C<if> statement as well:
+
+    my $type = "ICBM";
+    db_fetch {
+        my $p : products;
+        if ($type) {
+            $p->type eq $type;
+        }
+    };
 
 Similarly,
 

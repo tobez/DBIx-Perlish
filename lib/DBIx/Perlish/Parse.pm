@@ -1474,6 +1474,9 @@ sub compile_conditionally
 			# conditional returns are nice
 			parse_return($S, $op);
 			return ();
+		} elsif (is_listop($op, "leave") || is_listop($op, "scope")) {
+			parse_list($S, $op);
+			return ();
 		} else {
 			return scalar parse_term($S, $op);
 		}
@@ -1701,6 +1704,10 @@ sub parse_op
 			unless $S->{operation} eq "select";
 		$S->{limit} = 1;
 	} elsif (is_op($op, "pushmark")) {
+		# skip
+	} elsif (is_op($op, "enter")) {
+		# skip
+	} elsif (is_op($op, "null")) {
 		# skip
 	} elsif (is_cop($op, "nextstate")) {
 		$S->{file} = $op->file;

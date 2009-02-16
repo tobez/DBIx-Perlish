@@ -515,8 +515,29 @@ sub tagg1
 		$poi->circuit_number =~ /$q/;
 }
 
+my $limit = $ARGV[0] || undef;
+sub tagg2
+{
+	my $e : event_log;
+	$e->time < sql("localtimestamp - interval '86 days'");
+	return $e->id, $e->circuit_number, time => sql("date_trunc('second', time)"), $e->type;
+	if ($limit) {
+		last unless 0..$limit;
+	}
+}
+
+my $type = "ICBM";
+$type = undef;
+sub tagg3
+{
+	my $t : products;
+	if ($type) {
+		$t->type eq $type;
+	}
+}
+
 my @kf;
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&mat6, "select", flavor => 'postgresql', key_fields => \@kf);
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&tagg3, "select", flavor => 'postgresql', key_fields => \@kf);
 
 print "$sql\n";
 print "values: ", join ", ", @$v;
