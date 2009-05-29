@@ -1,5 +1,8 @@
 Revision history for DBIx-Perlish
 
+0.53  Fri May 29 20:13:34 CEST 2009
+       Support exponentiation operator with pg and pglite drivers.
+
 0.52  Mon Feb 16 13:03:17 CET 2009
        Support parse-time conditional expressions with real
        if statements.
