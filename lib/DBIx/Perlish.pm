@@ -1406,7 +1406,7 @@ will execute the equivalent of the following SQL statement:
 
   select name, type, count(age) from tab group by name, type
 
-The C<avg()>, C<count()>, C<max()>, C<min()>, and C<sub()>
+The C<avg()>, C<count()>, C<max()>, C<min()>, and C<sum()>
 functions are considered to be aggregate.
 
 Specifying label C<table:> followed by a lexical variable
