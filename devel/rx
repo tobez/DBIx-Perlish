@@ -33,7 +33,7 @@ sub rx
 	print "$_[0]: $sql\n";
 }
 
-for ( qw(postgresql mysql)) {
+for ( qw(pg mysql)) {
 	rx( $_, \&s1);
 	rx( $_, \&s2);
 	rx( $_, \&s3);

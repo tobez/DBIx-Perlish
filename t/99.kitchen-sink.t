@@ -23,7 +23,7 @@ test_select_sql {
 "select * from tbl t01 where not t01.id = 5",
 [];
 
-# simple RE (postgres)
+# simple RE (pg)
 test_select_sql {
 	tbl->id =~ /^abc/
 } "like test",
@@ -143,7 +143,7 @@ test_select_sql {
 } "Ora: tablefunc NOT IN subselect",
 "select * from tbl t01 where t01.id not in (select * from table(tablefunc(?)))",
 [42];
-$main::flavor = "postgresql";
+$main::flavor = "pg";
 test_select_sql {
 	tbl->id  <- tablefunc($someid);
 } "Pg: tablefunc IN subselect",
@@ -781,7 +781,7 @@ test_select_sql {
 "select * from tab t01 where t01.age is not null",
 [];
 
-# RE with vars (postgres)
+# RE with vars (pg)
 my $re = "abc";
 test_select_sql {
 	tbl->id =~ /^$re/

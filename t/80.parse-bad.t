@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 60;
+use Test::More tests => 64;
 use DBIx::Perlish qw/:all/;
 use t::test_utils;
 
@@ -16,6 +16,15 @@ test_select_sql { return `xyz_seq.nextval` } "select from nothing",
 $main::flavor = "oracle";
 test_select_sql { return `xyz_seq.nextval` } "select from dual",
 "select xyz_seq.nextval from dual", [];
+$main::flavor = "";
+
+$main::flavor = "foobar";
+my $two = 2;
+test_bad_select { return $two**5 } "unsupported exponent",
+qr/exponentiation is not supported/;
+$main::flavor = "pg";
+test_select_sql { return $two**5 } "supported exponent",
+"select (? ^ 5)", [2];
 $main::flavor = "";
 
 test_bad_update {} "empty update", qr/no tables specified in update/;

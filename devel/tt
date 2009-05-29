@@ -526,7 +526,7 @@ sub tagg2
 	}
 }
 
-my $type = "ICBM";
+$type = "ICBM";
 $type = undef;
 sub tagg3
 {
@@ -536,8 +536,18 @@ sub tagg3
 	}
 }
 
+my @s = qw(search string);
+sub repeat
+{
+	my $t : products;
+	for my $s (@s) { $t->descr =~ /$s/; }
+}
+
+#my $i = 2;
+sub expon { return res => 2**5 }
+
 my @kf;
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&tagg3, "select", flavor => 'postgresql', key_fields => \@kf);
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&expon, "select", flavor => 'pg', key_fields => \@kf);
 
 print "$sql\n";
 print "values: ", join ", ", @$v;

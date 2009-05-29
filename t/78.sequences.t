@@ -5,7 +5,7 @@ use Test::More tests => 25;
 use DBIx::Perlish qw/:all/;
 use t::test_utils;
 
-$main::flavor = "postgresql";
+$main::flavor = "pg";
 test_select_sql {
 	return next(hardware_id_seq);
 } "Pg: single sequence return",

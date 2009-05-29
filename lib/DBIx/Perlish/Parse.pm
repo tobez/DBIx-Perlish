@@ -584,7 +584,7 @@ sub parse_term
 		if ($flavor eq "oracle") {
 			bailout $S, "Sequence name looks wrong" unless $seq =~ /^\w+$/;
 			return "$seq.nextval";
-		} elsif ($flavor eq "postgresql" || $flavor eq "pglite") {
+		} elsif ($flavor eq "pg" || $flavor eq "pglite") {
 			bailout $S, "Sequence name looks wrong" if $seq =~ /'/; # XXX well, I am lazy
 			return "nextval('$seq')";
 		} else {
@@ -1009,6 +1009,7 @@ my %binop_map = (
 	multiply => "*",
 	divide   => "/",
 	concat   => "||",
+	pow      => "^",
 );
 my %binop2_map = (
 	add      => "+",
@@ -1016,6 +1017,7 @@ my %binop2_map = (
 	multiply => "*",
 	divide   => "/",
 	concat   => "||",
+	pow      => "^",
 );
 
 sub parse_expr
@@ -1040,6 +1042,12 @@ sub parse_expr
 			my $set = parse_term($S, $op->last);
 			push @{$S->{set_values}}, @{$S->{values}};
 			$S->{values} = $saved_values;
+			if ($op->name eq "pow") {
+				my $flavor = lc($S->{gen_args}->{flavor} || '');
+				if ($flavor ne "pg") {
+					bailout $S, "exponentiation is not supported for $flavor DB driver";
+				}
+			}
 			push @{$S->{sets}}, "$f = $f $binop2_map{$op->name} $set";
 			return ();
 		}
@@ -1052,6 +1060,12 @@ sub parse_expr
 		}
 	}
 	if ($sqlop = $binop_map{$op->name}) {
+		if ($op->name eq "pow") {
+			my $flavor = lc($S->{gen_args}->{flavor} || '');
+			if ($flavor ne "pg") {
+				bailout $S, "exponentiation is not supported for $flavor DB driver";
+			}
+		}
 		my $left = parse_term($S, $op->first);
 		my $right = parse_term($S, $op->last);
 		if ($sqlop eq "=" || $sqlop eq "<>") {
@@ -1243,7 +1257,7 @@ sub parse_regex
 			( $case ? '' : 'binary ') .
 			"'$like'"
 			;
-	} elsif ( $flavor eq 'postgresql' || $flavor eq "pglite") {
+	} elsif ( $flavor eq 'pg' || $flavor eq "pglite") {
 		# LIKE is case-sensitive
 		if ( $can_like) {
 			$what = 'ilike' if $case;
@@ -1296,7 +1310,7 @@ sub parse_regex
 			if $like =~ /(?<!\\)[\[\]\(\)\{\}\?\|]/;
 LIKE:
 		my $escape = "";
-		if ($flavor eq "postgresql" || $flavor eq "oracle") {
+		if ($flavor eq "pg" || $flavor eq "oracle") {
 			# XXX it is possible that more flavors support like...escape
 			my $need_esc = 1 if $like =~ s/!/!!/g;
 			   $need_esc = 1 if $like =~ s/%/!%/g;
