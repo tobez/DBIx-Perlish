@@ -24,7 +24,7 @@ test_bad_select { return $two**5 } "unsupported exponent",
 qr/exponentiation is not supported/;
 $main::flavor = "pg";
 test_select_sql { return $two**5 } "supported exponent",
-"select (? ^ 5)", [2];
+"select (pow(?, 5))", [2];
 $main::flavor = "";
 
 test_bad_update {} "empty update", qr/no tables specified in update/;

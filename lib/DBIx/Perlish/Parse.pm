@@ -1044,11 +1044,14 @@ sub parse_expr
 			$S->{values} = $saved_values;
 			if ($op->name eq "pow") {
 				my $flavor = lc($S->{gen_args}->{flavor} || '');
-				if ($flavor ne "pg") {
+				if ($flavor eq "pg" || $flavor eq "pglite") {
+					push @{$S->{sets}}, "$f = pow($f, $set)";
+				} else {
 					bailout $S, "exponentiation is not supported for $flavor DB driver";
 				}
+			} else {
+				push @{$S->{sets}}, "$f = $f $binop2_map{$op->name} $set";
 			}
-			push @{$S->{sets}}, "$f = $f $binop2_map{$op->name} $set";
 			return ();
 		}
 	}
@@ -1060,12 +1063,6 @@ sub parse_expr
 		}
 	}
 	if ($sqlop = $binop_map{$op->name}) {
-		if ($op->name eq "pow") {
-			my $flavor = lc($S->{gen_args}->{flavor} || '');
-			if ($flavor ne "pg") {
-				bailout $S, "exponentiation is not supported for $flavor DB driver";
-			}
-		}
 		my $left = parse_term($S, $op->first);
 		my $right = parse_term($S, $op->last);
 		if ($sqlop eq "=" || $sqlop eq "<>") {
@@ -1074,6 +1071,14 @@ sub parse_expr
 				return "$left is$not null";
 			} elsif ($left eq "null") {
 				return "$right is$not null";
+			}
+		}
+		if ($op->name eq "pow") {
+			my $flavor = lc($S->{gen_args}->{flavor} || '');
+			if ($flavor eq "pg" || $flavor eq "pglite") {
+				return "pow($left, $right)";
+			} else {
+				bailout $S, "exponentiation is not supported for $flavor DB driver";
 			}
 		}
 		return "$left $sqlop $right";

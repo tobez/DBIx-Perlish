@@ -12,7 +12,7 @@ plan skip_all => "The right version of DBD::PgLite cannot be loaded" if $@;
 eval "use PadWalker;";
 plan skip_all => "PadWalker cannot be loaded" if $@;
 
-plan tests => 57;
+plan tests => 58;
 
 my $dbh = DBI->connect("dbi:PgLite:");
 ok($dbh, "db connection");
@@ -85,6 +85,9 @@ ok($o->delete(sub { names->id == 1 }), "obj: delete one");
 is(scalar db_fetch { my $t : names; $t->id == 1; return $t->name; }, undef, "fetch deleted");
 
 ok((db_insert 'names', { id => sql 5, name => "five" }), "insert with verbatim");
+
+my $two = 2;
+is(scalar db_fetch { return $two**12 }, 4096, "exponentiation");
 
 # pglite sequences
 is(scalar db_fetch { return next names_id_seq }, 6, "next works");
