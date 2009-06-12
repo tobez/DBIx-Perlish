@@ -1841,6 +1841,14 @@ into the standard Perl distribution.
 
 =head1 INCOMPATIBILITIES
 
+Starting with version 0.54 the handling of key fields
+(return -k $t->field) has incompatibly changed.
+The previous behavior was to always return individual
+results as hash references, even when only one
+column (not counting the key fields) was specified
+in the return statement.  The current behavior is
+to return simple values in this case.
+
 If you use C<DBIx::Perlish> together with L<HTML::Mason>,
 you are likely to see warnings "Useless use of ... in void context"
 that Mason helpfully converts into fatal errors.
