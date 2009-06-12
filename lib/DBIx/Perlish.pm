@@ -706,7 +706,7 @@ in the scalar context, which always returns a single row (or a single
 value), as explained above.
 
 The individual results in such a result set will be hash references
-if the return statement specifies more than on column (not counting
+if the return statement specifies more than one column (not counting
 the key fields), or a simple value if the return statement specifies
 exactly one column in addition to the key fields.  For example,
 
