@@ -1,5 +1,8 @@
 Revision history for DBIx-Perlish
 
+0.54  Fri Jun 12 12:28:54 CEST 2009
+       Significantly improve handling of key fields.
+
 0.53  Fri May 29 20:13:34 CEST 2009
        Support exponentiation operator with pg and pglite drivers.
 

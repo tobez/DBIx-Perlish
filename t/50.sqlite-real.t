@@ -10,7 +10,7 @@ plan skip_all => "DBD::SQLite cannot be loaded" if $@;
 eval "use PadWalker;";
 plan skip_all => "PadWalker cannot be loaded" if $@;
 
-plan tests => 56;
+plan tests => 95;
 
 my $dbh = DBI->connect("dbi:SQLite:");
 ok($dbh, "db connection");
@@ -31,6 +31,7 @@ my $h = db_fetch { my $t : names; $t->id == 1; return -k $t->id, $t; };
 ok($h, "fetch all hashref");
 is($h->{1}{id},   1, "fetch all hashref key id");
 is($h->{1}{name}, "hello", "fetch all hashref key name");
+ok(!exists $h->{1}{'$kf-1'}, "fetch all hashref key kf not present");
 
 my %h = db_fetch { my $t : names; $t->id == 1; return -k $t->id, $t; };
 ok(%h, "fetch all hash");
@@ -38,6 +39,7 @@ ok($h{1},   "fetch all hash 1 present");
 ok(!$h{3},  "fetch all hash 3 not present");
 is($h{1}{id},   1, "fetch all hash key id");
 is($h{1}{name}, "hello", "fetch all hash key name");
+ok(!exists $h{1}{'$kf-1'}, "fetch all hash key kf not present");
 
 %h = db_fetch { my $t : names; return -k $t->id, $t; };
 ok(%h, "fetch all hash unfiltered");
@@ -48,6 +50,51 @@ is($h{1}{id},   1, "fetch all hash unfiltered 1 key id");
 is($h{1}{name}, "hello", "fetch all hash unfiltered 1 key name");
 is($h{3}{id},   3, "fetch all hash unfiltered 3 key id");
 is($h{3}{name}, "ehlo", "fetch all hash unfiltered 3 key name");
+ok(!exists $h{1}{'$kf-1'}, "fetch all hash unfiltered 1 kf not present");
+ok(!exists $h{3}{'$kf-1'}, "fetch all hash unfiltered 1 kf not present");
+
+%h = db_fetch { my $t : names; return -k $t->id, -k $t->name, $t; };
+ok(%h, "fetch multi-key");
+ok($h{1},   "multi-key 1 present");
+ok($h{3},   "multi-key 3 present");
+ok(!$h{2},  "multi-key 2 not present");
+ok(!$h{hello},  "multi-key hello not present");
+ok(!$h{ehlo},  "multi-key ehlo not present");
+ok($h{1}{hello},   "multi-key 1/hello present");
+ok($h{3}{ehlo},   "multi-key 3/ehlo present");
+ok(!$h{1}{ehlo},   "multi-key 1/ehlo not present");
+ok(!$h{3}{hello},   "multi-key 3/hello not present");
+is($h{1}{hello}{id},   1, "multi-key 1/hello key id");
+is($h{1}{hello}{name}, "hello", "multi-key 1/hello key name");
+is($h{3}{ehlo}{id},   3, "multi-key 3/ehlo key id");
+is($h{3}{ehlo}{name}, "ehlo", "multi-key 3/ehlo key name");
+ok(!exists $h{1}{'$kf-1'}, "multi-key no key field");
+ok(!exists $h{1}{'$kf-2'}, "multi-key no key field");
+ok(!exists $h{3}{'$kf-1'}, "multi-key no key field");
+ok(!exists $h{3}{'$kf-2'}, "multi-key no key field");
+ok(!exists $h{1}{hello}{'$kf-1'}, "multi-key no key field");
+ok(!exists $h{1}{hello}{'$kf-2'}, "multi-key no key field");
+ok(!exists $h{3}{ehlo}{'$kf-1'}, "multi-key no key field");
+ok(!exists $h{3}{ehlo}{'$kf-2'}, "multi-key no key field");
+
+%h = db_fetch { my $t : names; return -k $t->id, $t->name; };
+ok(%h, "fetch key flatten");
+is($h{1}, "hello",  "key flatten 1 value");
+is($h{3}, "ehlo",  "key flatten 3 value");
+
+%h = db_fetch { my $t : names; return -k $t->id, -k $t->name, $t->name; };
+ok(%h, "fetch multi-key flatten");
+is($h{1}{hello}, "hello",  "key flatten 1/hello value");
+is($h{3}{ehlo}, "ehlo",  "key flatten 3/ehlo value");
+
+%h = db_fetch { my $t : names; return -k $t->id, $t->name, $t->id; };
+ok(%h, "fetch key noflatten");
+ok($h{1}, "key noflatten 1 present");
+ok($h{3}, "key noflatten 3 present");
+is($h{1}{id},   1, "key noflatten 1 key id");
+is($h{1}{name}, "hello", "key noflatten 1 key name");
+is($h{3}{id},   3, "key noflatten 3 key id");
+is($h{3}{name}, "ehlo", "key noflatten 3 key name");
 
 my $r = db_fetch { my $t : names; $t->id == 1 };
 ok($r, "fetch hashref");

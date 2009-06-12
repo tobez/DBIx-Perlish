@@ -10,7 +10,7 @@ use vars qw($VERSION @EXPORT @EXPORT_OK %EXPORT_TAGS $SQL @BIND_VALUES);
 require Exporter;
 use base 'Exporter';
 
-$VERSION = '0.53';
+$VERSION = '0.54';
 @EXPORT = qw(db_fetch db_select db_update db_delete db_insert sql);
 @EXPORT_OK = qw(union intersect except);
 %EXPORT_TAGS = (all => [@EXPORT, @EXPORT_OK]);
@@ -170,6 +170,34 @@ sub fetch
 	if (@kf) {
 		my $kf = @kf == 1 ? $kf[0] : [@kf];
 		my $r = $dbh->selectall_hashref($me->{sql}, $kf, {}, @{$me->{bind_values}}) || {};
+		my $postprocess;
+		if ($nret - @kf == 1) {
+			# Only one field returned apart from the key field,
+			# change hash reference to simple values.
+			$postprocess = sub {
+				my ($h, $level) = @_;
+				if ($level <= 1) {
+					delete @$_{@kf} for values %$h;
+					$_ = (values %$_)[0] for values %$h;
+				} else {
+					for my $nh (values %$h) {
+						$postprocess->($nh, $level-1);
+					}
+				}
+			};
+		} else {
+			$postprocess = sub {
+				my ($h, $level) = @_;
+				if ($level <= 1) {
+					delete @$_{@kf} for values %$h;
+				} else {
+					for my $nh (values %$h) {
+						$postprocess->($nh, $level-1);
+					}
+				}
+			};
+		}
+		$postprocess->($r, scalar @kf);
 		return wantarray ? %$r : $r;
 	} else {
 		if ($nret > 1) {
@@ -395,7 +423,7 @@ DBIx::Perlish - a perlish interface to SQL databases
 
 =head1 VERSION
 
-This document describes DBIx::Perlish version 0.53
+This document describes DBIx::Perlish version 0.54
 
 
 =head1 SYNOPSIS
@@ -664,7 +692,7 @@ A return value is a B<key field> if it is prepended with B<-k>:
         return -k $u->name, $u;
     };
 
-This is analogous to
+This is somewhat analogous to
 
     my %data = %{$dbh->selectall_hashref(
       "select name, * from users", "name")};
@@ -672,9 +700,32 @@ This is analogous to
 If the C<db_fetch {}> containing key fields is called in the
 scalar context, it returns a hash reference instead of a hash.
 In both cases the complete result set is returned.
+
 This is different from calling the C<db_fetch {}> without key fields
 in the scalar context, which always returns a single row (or a single
 value), as explained above.
+
+The individual results in such a result set will be hash references
+if the return statement specifies more than on column (not counting
+the key fields), or a simple value if the return statement specifies
+exactly one column in addition to the key fields.  For example,
+
+   my %data = db_fetch {
+      my $u : user;
+      return -k $u->id, $u;
+   };
+   print "The name of the user with ID 42 is $data{42}{name}\n";
+
+but:
+
+   my %data = db_fetch {
+      my $u : user;
+      return -k $u->id, $u->name;
+   };
+   print "The name of the user with ID 42 is $data{42}\n";
+
+In any case, the key fields themselves are never present in the result,
+unless they were specified in the return statement independently.
 
 The C<db_fetch {}> function will throw an exception if it is unable to
 find a valid database handle to use, or if it is unable to convert its
