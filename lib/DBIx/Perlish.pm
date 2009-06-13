@@ -1827,8 +1827,10 @@ Currently, only statement and sub execution data are faked.
 =head1 DEPENDENCIES
 
 The C<DBIx::Perlish> module needs at least perl 5.8.2, quite possibly
-a somewhat higher version.  I have only tested it on
-5.8.8 and 5.8.4.
+a somewhat higher version.  I have only tested it with
+5.8.4, 5.8.8, 5.8.9, and 5.10.0, while
+the CPAN testers, http://www.cpantesters.org/distro/D/DBIx-Perlish.html ,
+provided much better coverage.
 
 This module requires C<DBI> to do anything useful.
 
@@ -1914,7 +1916,7 @@ There is also the project website at
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright (c) 2007, 2008, Anton Berezin C<< <tobez@tobez.org> >>. All rights reserved.
+Copyright (c) 2007-2009, Anton Berezin C<< <tobez@tobez.org> >>. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions
