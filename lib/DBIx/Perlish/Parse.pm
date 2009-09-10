@@ -1186,7 +1186,12 @@ sub try_special_concat
 		push @v, $str;
 		push @sql, '?';
 	}
-	my $sql = join " || ", @sql;
+	my $sql;
+	if (lc($S-> {gen_args}-> {flavor} || '') eq "mysql") {
+		$sql = "concat(" . join(", ", @sql) . ")";
+	} else {
+		$sql = join " || ", @sql;
+	}
 	return ($sql, \@v);
 }
 

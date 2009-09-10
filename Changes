@@ -1,5 +1,8 @@
 Revision history for DBIx-Perlish
 
+0.55  Thu Sep 10 21:50:03 CEST 2009
+       Fix string concatenation with MySQL driver.
+
 0.54  Fri Jun 12 12:28:54 CEST 2009
        Significantly improve handling of key fields.
        This introduces a minor incompatibility, please

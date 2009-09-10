@@ -543,11 +543,17 @@ sub repeat
 	for my $s (@s) { $t->descr =~ /$s/; }
 }
 
+sub concat
+{
+	my $t : products;
+	return "$t->id + ( a . b )";
+}
+
 #my $i = 2;
 sub expon { return res => 2**5 }
 
 my @kf;
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&expon, "select", flavor => 'pg', key_fields => \@kf);
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&concat, "select", flavor => 'mysql', key_fields => \@kf);
 
 print "$sql\n";
 print "values: ", join ", ", @$v;
