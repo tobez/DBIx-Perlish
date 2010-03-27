@@ -208,6 +208,7 @@ sub get_value
 {
 	my ($S, $op, %p) = @_;
 
+	my $opval = $op;
 	my $val;
 	if (is_op($op, "padsv")) {
 		if (find_aliased_tab($S, $op)) {
@@ -234,7 +235,7 @@ sub get_value
 				my $gv = get_gv($S, $op, bailout => 1);
 				$vv = $gv->HV->object_2svref;
 			} elsif (is_binop($op, "helem")) {
-				my ($nv, $ok) = get_value($S, $op, %p);
+				my ($nv, $ok) = get_value($S, $op, %p, recursive => 1);
 				$vv = $nv if $ok;
 			}
 		}
@@ -250,7 +251,11 @@ sub get_value
 		return () if $p{soft};
 		bailout $S, "cannot parse \"", $op->name, "\" op as a value or value reference";
 	}
-	return ($val, 1);
+	if ($p{recursive}) {
+		return ($val, 1);
+	} else {
+		return (opval($S, $opval, $val), 1);
+	}
 }
 
 sub get_var
@@ -604,6 +609,12 @@ sub placeholder_value
 	my $pos = @{$S->{values}};
 	push @{$S->{values}}, $val;
 	return DBIx::Perlish::Placeholder->new($S, $pos);
+}
+
+sub opval
+{
+	my ($S, $op, $val) = @_;
+	return DBIx::Perlish::Opval->new($S, $op, $val);
 }
 
 ## XXX above this point 80.parse_bad.t did not go
@@ -1465,7 +1476,8 @@ sub parse_or
 		$S->{limit}  = $to-$from+1;
 		return;
 	} elsif (my ($val, $ok) = get_value($S, $op->first, soft => 1)) {
-		return compile_conditionally($S, $op, !$val);
+		$val->negate;
+		return compile_conditionally($S, $op, $val);
 	} else {
 		my $left  = parse_term($S, $op->first);
 		my $right = parse_term($S, $op->first->sibling);
@@ -1488,7 +1500,8 @@ sub parse_and
 sub compile_conditionally
 {
 	my ($S, $op, $val) = @_;
-	if ($val) {
+	push @{$S->{conditionals}}, $val;
+	if ($val->condition) {
 		$op = $op->first->sibling;
 		# This strangeness is for suppressing () when parsing
 		# expr via parse_term.  There must be a better way.
@@ -1774,8 +1787,9 @@ sub parse_sub
 	if ($DEVEL) {
 		$Carp::Verbose = 1;
 		require B::Concise;
-		my $walker = B::Concise::compile('-terse', $sub);
-		print "CODE DUMP:\n";
+		#my $walker = B::Concise::compile('-terse', $sub);
+		my $walker = B::Concise::compile($sub);
+		print "CODE DUMP of ($sub):\n";
 		$walker->();
 		print "\n\n";
 	}
@@ -1803,6 +1817,7 @@ sub init
 		order_by    => [],
 		group_by    => [],
 		additions   => [],
+		conditionals=> [],
 		joins       => [],
 		key_field   => 1,
 		aggregates  => { avg => 1, count => 1, max => 1, min => 1, sum => 1 },
@@ -1848,6 +1863,39 @@ sub undo
 {
 	my $me = shift;
 	splice @{$me->{S}{values}}, $me->{position}, 1;
+}
+
+package DBIx::Perlish::Opval;
+
+use overload '""' => sub { $_[0]->getval }, eq => sub { "$_[0]{val}" eq "$_[1]{val}" };
+
+sub new
+{
+	my ($class, $S, $op, $val) = @_;
+	bless { S => $S, op => $op, val => $val }, $class;
+}
+
+sub getval  # "current" value
+{
+	my $me = shift;
+	my ($v,$ok) = DBIx::Perlish::Parse::get_value($me->{S}, $me->{op}, recursive => 1);
+	return $v;
+}
+
+sub negate
+{
+	my $me = shift;
+	$me->{negated} = 1;
+}
+
+sub condition
+{
+	my $me = shift;
+	if ($me->getval) {
+		return $me->{negated} ? 0 : 1;
+	} else {
+		return $me->{negated} ? 1 : 0;
+	}
 }
 
 "the magic stops here; welcome to the real world";

@@ -29,6 +29,7 @@ sub except (&;$) {}
 
 my $default_object;
 my $non_object_quirks = {};
+my %compile_cache;
 
 sub import
 {
@@ -282,8 +283,43 @@ sub gen_sql
 	my ($sub, $operation, %args) = @_;
 
 	$args{quirks} = $non_object_quirks unless $args{quirks};
-	my $S = DBIx::Perlish::Parse::init(%args, operation => $operation);
-	DBIx::Perlish::Parse::parse_sub($S, $sub);
+
+	my $S;
+	my $padlist;
+	my $cache_key;
+	my $cache_conditions = "";
+	unless ($args{prev_S}) {
+		my $root = B::svref_2object($sub);
+		$root = $root->ROOT;
+		$cache_key = "$$root|$operation|$args{flavor}|";
+		$S = $compile_cache{$cache_key};
+		if ($S) {
+			my $root = B::svref_2object($sub);
+			$S->{padlist} = $padlist = [$root->PADLIST->ARRAY];
+			for my $cond (@{$S->{conditionals}}) {
+				$cache_conditions .= $cond->condition;
+			}
+			$S = $compile_cache{"$cache_key$cache_conditions"};
+			$S->{padlist} = $padlist if $S;
+#print "CACHE: conditional miss for $cache_conditions\n" unless $S;
+		}
+#print "CACHE: retrieved $cache_key$cache_conditions\n" if $S;
+	}
+	unless ($S) {
+		$S = DBIx::Perlish::Parse::init(%args, operation => $operation);
+#print "CACHE: miss, parsing now\n" unless $args{prev_S};
+		DBIx::Perlish::Parse::parse_sub($S, $sub);
+		unless ($args{prev_S}) {
+			$compile_cache{$cache_key} = $S;
+			$cache_conditions = "";
+			for my $cond (@{$S->{conditionals}}) {
+				$cache_conditions .= $cond->condition;
+			}
+			$compile_cache{"$cache_key$cache_conditions"} = $S;
+#print "CACHE: storing $cache_key$cache_conditions\n";
+		}
+	}
+
 	my $sql = "";
 	my $next_bit = "";
 	my $nret = 9999;
@@ -399,10 +435,14 @@ sub gen_sql
 	if ($S->{offset}) {
 		$sql .= " offset $S->{offset}";
 	}
-	my $v = $S->{set_values};
+	my $v = [];
+	push @$v, @{$S->{set_values}};
 	push @$v, @{$S->{ret_values}};
 	push @$v, @{$S->{join_values}};
 	push @$v, @{$S->{values}};
+	for (@$v) {
+		$_ = "$_";
+	}
 
 	for my $add (@{$S->{additions}}) {
 		$sql .= " $add->{type} $add->{sql}";

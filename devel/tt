@@ -549,11 +549,45 @@ sub concat
 	return "$t->id + ( a . b )";
 }
 
+my @words = qw(hello world);
+sub words
+{
+	my $t : data;
+	$t->age >= 42;
+	$t->email eq $id || $t->address eq $id || $t->name eq $id;
+	for my $x (@words) {
+		$t->email eq $x || $t->address eq $x || $t->name eq $x;
+	}
+}
+
 #my $i = 2;
 sub expon { return res => 2**5 }
 
+my $name = "hello";
+sub loop_test
+{
+	my ($val, $check) = @_;
+	my ($sql, $v) = DBIx::Perlish::gen_sql(sub {
+		my $p : products;
+		my $xx : services;
+		$xx->product_id == $p->id;
+		$p->id == $val if $check;
+		$p->name == $name;
+		$p->val == 42;
+	}, "select", flavor => 'mysql');
+	print "$sql\n";
+	print "values: ", join ", ", @$v;
+	print "\n";
+}
+
+$DBIx::Perlish::Parse::DEVEL = 0;
+loop_test(10, 1);
+loop_test("help", 0);
+loop_test(42, 1);
+exit;
+
 my @kf;
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&concat, "select", flavor => 'mysql', key_fields => \@kf);
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&words, "select", flavor => 'mysql', key_fields => \@kf);
 
 print "$sql\n";
 print "values: ", join ", ", @$v;
