@@ -1,5 +1,4 @@
 package DBIx::Perlish::Parse;
-# $Id$
 use 5.008;
 use warnings;
 use strict;
@@ -238,7 +237,6 @@ sub get_value
 				$vv = $nv if $ok;
 			}
 		}
-		bailout $S, "unable to extract a value from a hash(ref)" unless $vv;
 		$val = $vv->{$key};
 	} elsif (is_svop($op, "gvsv") || is_padop($op, "gvsv")) {
 		my $gv = get_gv($S, $op, bailout => 1);

@@ -549,11 +549,18 @@ sub concat
 	return "$t->id + ( a . b )";
 }
 
+my %not_a_hash;
+sub not_a_hash
+{
+	my $t : products;
+	$t->id == $not_a_hash{level1}{level2};
+}
+
 #my $i = 2;
 sub expon { return res => 2**5 }
 
 my @kf;
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&concat, "select", flavor => 'mysql', key_fields => \@kf);
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&not_a_hash, "select", flavor => 'mysql', key_fields => \@kf);
 
 print "$sql\n";
 print "values: ", join ", ", @$v;

@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 413;
+use Test::More tests => 419;
 use DBIx::Perlish qw/:all/;
 use t::test_utils;
 
@@ -1135,3 +1135,21 @@ test_select_sql {
 "select extract(t01.f1, t01.f2) from tab t01",
 [];
 
+# regression, $not_a_hash->{blah}, $not_a_hash->{blah}{bluh}
+my $not_a_hash = undef;
+my %not_a_hash;
+test_select_sql {
+	return $not_a_hash->{blah};
+} "not a hash 1",
+"select null",
+[];
+test_select_sql {
+	return $not_a_hash->{blah}{bluh};
+} "not a hash 2",
+"select null",
+[];
+test_select_sql {
+	return $not_a_hash{blah}{bluh};
+} "not a hash 3",
+"select null",
+[];
