@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 419;
+use Test::More tests => 427;
 use DBIx::Perlish qw/:all/;
 use t::test_utils;
 
@@ -574,6 +574,21 @@ test_select_sql {
 } "simple union",
 "select t01.name from t1 t01 union select t01.name from t2 t01",
 [];
+
+my @uids = (1,2,3);
+test_select_sql {
+	{
+		my $t : tab1;
+		$t->id <- @uids;
+	} union {
+		my $t : tab2;
+		my $tt : tab2;
+		$t->id == $tt->id;
+		$t->id <- @uids;
+	}
+} "union bugfix",
+"select * from tab1 t01 where t01.id in (?,?,?) union select * from tab2 t01, tab2 t02 where t01.id = t02.id and t01.id in (?,?,?)",
+[1,2,3,1,2,3];
 
 test_select_sql {
 	{ return t1->name } intersect { return t2->name }

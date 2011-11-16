@@ -169,6 +169,7 @@ sub get_padlist_scalar_by_name
 	my @n = $padlist->[0]->ARRAY;
 	for (my $k = 0; $k < @n; $k++) {
 		next if $n[$k]->isa("B::SPECIAL");
+		next if $n[$k]->isa("B::NULL");
 		if ($n[$k]->PVX eq $n) {
 			my $v = $padlist->[1]->ARRAYelt($k);
 			if (!$v->isa("B::SPECIAL")) {
@@ -187,7 +188,7 @@ sub get_padlist_scalar_by_name
 
 sub get_padlist_scalar
 {
-	my ($S, $i) = @_;
+	my ($S, $i, $ref_only) = @_;
 	my $padlist = $S->{padlist};
 	my $v = $padlist->[1]->ARRAYelt($i);
 	bailout $S, "internal error: no such pad element" unless $v;
@@ -200,6 +201,7 @@ sub get_padlist_scalar
 		}
 	}
 	$v = $v->object_2svref;
+	return $v if $ref_only;
 	return $$v;
 }
 
@@ -683,12 +685,14 @@ sub try_parse_subselect
 	my $sub = $sop->last->first;
 
 	if (is_op($sub, "padav")) {
-		my $ary = $S->{padlist}->[1]->ARRAYelt($sub->targ)->object_2svref;
+		my $ary = get_padlist_scalar($S, $sub->targ, "ref only");
+		#my $ary = $S->{padlist}->[1]->ARRAYelt($sub->targ)->object_2svref;
 		bailout $S, "empty array in not valid in \"<-\"" unless @$ary;
 		$sql = join ",", ("?") x @$ary;
 		@vals = @$ary;
 	} elsif (is_unop($sub, "rv2av") && is_op($sub->first, "padsv")) {
-		my $ary = $S->{padlist}->[1]->ARRAYelt($sub->first->targ)->object_2svref;
+		my $ary = get_padlist_scalar($S, $sub->first->targ, "ref only");
+		#my $ary = $S->{padlist}->[1]->ARRAYelt($sub->first->targ)->object_2svref;
 		bailout $S, "empty array in not valid in \"<-\"" unless @$$ary;
 		$sql = join ",", ("?") x @$$ary;
 		@vals = @$$ary;

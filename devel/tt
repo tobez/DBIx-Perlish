@@ -2,7 +2,7 @@
 use strict;
 use warnings;
 use lib qw(lib);
-use DBIx::Perlish;
+use DBIx::Perlish ':all';
 $DBIx::Perlish::Parse::DEVEL = 1;
 
 sub s1 {
@@ -556,11 +556,32 @@ sub not_a_hash
 	$t->id == $not_a_hash{level1}{level2};
 }
 
+sub selfc
+{
+	my $u : selfcare_user;
+	$u->user_name =~ /^perl-test/;
+	return $u->id;
+}
+
+my @ids = (1,2,3);
+sub unionbug
+{
+	{
+		my $t : tab1;
+		$t->id <- @ids;
+	} union {
+		my $t : tab2;
+		my $tt : tab2;
+		$t->id == $tt->id;
+		$t->id <- @ids;
+	}
+}
+
 #my $i = 2;
 sub expon { return res => 2**5 }
 
 my @kf;
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&not_a_hash, "select", flavor => 'mysql', key_fields => \@kf);
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&unionbug, "select", flavor => 'oracle', key_fields => \@kf);
 
 print "$sql\n";
 print "values: ", join ", ", @$v;

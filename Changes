@@ -1,5 +1,8 @@
 Revision history for DBIx-Perlish
 
+0.57  Wed Nov 16 13:41:31 CET 2011
+       Fix a bug with arrays within compound queries.
+
 0.56  Thu Jul 14 10:41:45 CEST 2011
        Relax hash reference extraction.
 
