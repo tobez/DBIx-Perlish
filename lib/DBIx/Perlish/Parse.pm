@@ -222,15 +222,14 @@ sub get_value
 		my $vv;
 
 		if (is_op($op, "padhv")) {
-			$vv = $S->{padlist}->[1]->ARRAYelt($op->targ)->object_2svref;
+			$vv = get_padlist_scalar($S, $op->targ, "ref only");
 		} elsif (is_unop($op, "rv2hv")) {
 			$op = $op->first;
 			if (is_op($op, "padsv")) {
 				if (find_aliased_tab($S, $op)) {
 					bailout $S, "cannot use a table variable as a value";
 				}
-				$vv = $S->{padlist}->[1]->ARRAYelt($op->targ)->object_2svref;
-				$vv = $$vv;
+				$vv = get_padlist_scalar($S, $op->targ);
 			} elsif (is_svop($op, "gv") || is_padop($op, "gv")) {
 				my $gv = get_gv($S, $op, bailout => 1);
 				$vv = $gv->HV->object_2svref;
