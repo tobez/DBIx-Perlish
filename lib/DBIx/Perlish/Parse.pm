@@ -314,7 +314,7 @@ sub get_tab_field
 	$op = $op->sibling;
 	my $field = want_method($S, $op);
 	$op = $op->sibling;
-	if ($p{lvalue}) {
+	if ($p{lvalue} && is_unop($op, "rv2cv")) {
 		want_unop($S, $op, "rv2cv");
 		$op = $op->sibling;
 	}
