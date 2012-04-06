@@ -5,6 +5,8 @@
 \.bak$
 ^MANIFEST\.SKIP$
 CVS
+.git
+.gitignore
 ^cover_db/.*$
 ^devel/.*$
 ^tags$

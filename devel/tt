@@ -580,14 +580,16 @@ sub loop_test
 	print "\n";
 }
 
-$DBIx::Perlish::Parse::DEVEL = 0;
-loop_test(10, 1);
-loop_test("help", 0);
-loop_test(42, 1);
-exit;
+sub unfilt { tbl->id = 42 }
+
+#$DBIx::Perlish::Parse::DEVEL = 0;
+#loop_test(10, 1);
+#loop_test("help", 0);
+#loop_test(42, 1);
+#exit;
 
 my @kf;
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&words, "select", flavor => 'mysql', key_fields => \@kf);
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&unfilt, "update", flavor => 'mysql', key_fields => \@kf);
 
 print "$sql\n";
 print "values: ", join ", ", @$v;
