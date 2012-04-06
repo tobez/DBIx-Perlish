@@ -597,8 +597,10 @@ sub unionbug2
 #my $i = 2;
 sub expon { return res => 2**5 }
 
+sub selfmod { tbl->id += 2; }
+
 my @kf;
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&unionbug2, "select", flavor => 'oracle', key_fields => \@kf);
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&selfmod, "select", flavor => 'oracle', key_fields => \@kf);
 
 print "$sql\n";
 print "values: ", join ", ", @$v;

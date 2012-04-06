@@ -1030,9 +1030,17 @@ sub parse_expr
 		$binop2_map{$op->name} &&
 		is_unop($op->first, "entersub"))
 	{
-		my $lc = $op->first->first;
-		$lc = $lc->sibling until is_null($lc->sibling);
-		if (is_unop($lc, "rv2cv")) {
+#printf STDERR "entersub flags: %08x\n", $op->first->flags;
+#printf STDERR "entersub private flags: %08x\n", $op->first->private;
+		my $is_lvalue;
+		if ($op->first->private & 128) {
+			$is_lvalue = 1;
+		} else {
+			my $lc = $op->first->first;
+			$lc = $lc->sibling until is_null($lc->sibling);
+			$is_lvalue = is_unop($lc, "rv2cv");
+		}
+		if ($is_lvalue) {
 			my ($tab, $f) = get_tab_field($S, $op->first, lvalue => 1);
 			bailout $S, "self-modifications are not understood in $S->{operation}'s query sub"
 				unless $S->{operation} eq "update";
@@ -1775,7 +1783,8 @@ sub parse_sub
 	if ($DEVEL) {
 		$Carp::Verbose = 1;
 		require B::Concise;
-		my $walker = B::Concise::compile('-terse', $sub);
+		#my $walker = B::Concise::compile('-terse', $sub);
+		my $walker = B::Concise::compile('-concise', $sub);
 		print "CODE DUMP:\n";
 		$walker->();
 		print "\n\n";
