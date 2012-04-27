@@ -1340,7 +1340,8 @@ LIKE:
 			$like =~ s/_/\\_/g;
 		}
 		$like =~ s/\.\*/%/g;
-		$like =~ s/\./_/g;
+		$like =~ s/(?<!\\)\./_/g;
+		$like =~ s/\\\././g;
 		$like = "%$like" unless $like =~ s|^\^||;
 		$like = "$like%" unless $like =~ s|\$$||;
 		return "$lhs " . 
