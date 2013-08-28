@@ -18,7 +18,7 @@ sub test_sql
 				is($sql, $variant->{sql}, "$tname: SQL");
 				is(+@$v, @{$variant->{values}}, "$tname: number of bound values");
 				for (my $i = 0; $i < @$v; $i++) {
-					my $bv = format_value($exp_v->[$i]);
+					my $bv = format_value($variant->{values}[$i]);
 					is($v->[$i], $variant->{values}[$i], "$tname: bound value is '$bv'");
 				}
 			}
