@@ -600,13 +600,19 @@ sub oracle_regex_bug
 	$t->field =~ /\.30$/;
 }
 
+sub t518_1 {     my $t : tbl; return $t, value => "Value"; }
+my $someid = 42;
+sub t518_2 { tbl->id  <- tablefunc($someid); }
+my $re = "abc";
+sub t518_3 {  tbl->id =~ /^$re/ }
+
 #my $i = 2;
 sub expon { return res => 2**5 }
 
 sub selfmod { tbl->id += 2; }
 
 my @kf;
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&oracle_regex_bug, "select", flavor => 'oracle', key_fields => \@kf);
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&t518_3, "select", flavor => 'oracle', key_fields => \@kf);
 
 print "$sql\n";
 print "values: ", join ", ", @$v;

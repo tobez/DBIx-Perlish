@@ -98,6 +98,20 @@ gen_want("listop", 'get_all_children($op)');
 gen_want("svop", "sv");
 gen_want("null");
 
+sub is_pushmark_or_padrange
+{
+	my $op = shift;
+	return is_op($op, "pushmark") || is_op($op, "padrange");
+}
+
+sub want_pushmark_or_padrange
+{
+	my ($S, $op) = @_;
+	unless (is_pushmark_or_padrange($op)) {
+		bailout $S, "want op pushmark or op padrange";
+	}
+}
+
 sub want_const
 {
 	my ($S, $op) = @_;
@@ -294,7 +308,7 @@ sub get_tab_field
 {
 	my ($S, $unop, %p) = @_;
 	my $op = want_unop($S, $unop, "entersub");
-	want_op($S, $op, "pushmark");
+	want_pushmark_or_padrange($S, $op);
 	$op = $op->sibling;
 	my $tab = is_const($S, $op);
 	if ($tab) {
@@ -370,7 +384,7 @@ sub try_parse_attr_assignment
 	my ($S, $op, $realname) = @_;
 	return unless is_unop($op, "entersub");
 	$op = want_unop($S, $op);
-	return unless is_op($op, "pushmark");
+	return unless is_pushmark_or_padrange($op);
 	$op = $op->sibling;
 	my $c = is_const($S, $op);
 	return unless $c && $c eq "attributes";
@@ -472,7 +486,7 @@ sub parse_return_value
 		return table => find_aliased_tab($S, $op);
 	} elsif (my $const = is_const($S, $op)) {
 		return alias => $const;
-	} elsif (is_op($op, "pushmark")) {
+	} elsif (is_pushmark_or_padrange($op)) {
 		return ();
 	} elsif (is_unop($op, "ftsvtx")) {
 		my %r = parse_return_value($S, $op->first);
@@ -652,7 +666,7 @@ sub try_get_dbfetch
 		
 	return unless is_unop($sub, "entersub");
 	$sub = $sub->first if is_unop($sub->first, "null");
-	return unless is_op($sub->first, "pushmark");
+	return unless is_pushmark_or_padrange($sub->first);
 
 	my $rg = $sub->first->sibling;
 	return if is_null($rg);
@@ -662,7 +676,7 @@ sub try_get_dbfetch
 
 	return unless is_unop($rg, "refgen");
 	$rg = $rg->first if is_unop($rg->first, "null");
-	return unless is_op($rg->first, "pushmark");
+	return unless is_pushmark_or_padrange($rg->first);
 	my $codeop = $rg->first->sibling;
 	return unless is_svop($codeop, "anoncode");
 
@@ -703,7 +717,7 @@ sub try_parse_subselect
 		my @what;
 		my $alist = is_listop($sub, "anonlist") ? $sub : $sub->first->first;
 		for my $v (get_all_children($alist)) {
-			next if is_op($v, "pushmark");
+			next if is_pushmark_or_padrange($v);
 			if (my ($const,$sv) = is_const($S, $v)) {
 				if (($sv->isa("B::IV") && !$sv->isa("B::PVIV")) ||
 					($sv->isa("B::NV") && !$sv->isa("B::PVNV")))
@@ -780,7 +794,7 @@ sub parse_assign
 	my ($S, $op) = @_;
 
 	if (is_listop($op->last, "list") &&
-		is_op($op->last->first, "pushmark") &&
+		is_pushmark_or_padrange($op->last->first) &&
 		is_unop($op->last->first->sibling, "entersub"))
 	{
 		my ($val, $ok) = get_value($S, $op->first, soft => 1);
@@ -825,7 +839,7 @@ sub callarg
 {
 	my ($S, $op) = @_;
 	$op = $op->first if is_unop($op, "null");
-	return () if is_op($op, "pushmark");
+	return () if is_pushmark_or_padrange($op);
 	return $op;
 }
 
@@ -854,7 +868,7 @@ sub try_funcall
 			my $rg = $args[0];
 			return unless is_unop($rg, "refgen");
 			$rg = $rg->first if is_unop($rg->first, "null");
-			return unless is_op($rg->first, "pushmark");
+			return unless is_pushmark_or_padrange($rg->first);
 			my $codeop = $rg->first->sibling;
 			return unless is_svop($codeop, "anoncode");
 			return unless $S->{operation} eq "select";
@@ -890,7 +904,7 @@ sub try_funcall
 			my $rg = $args[0];
 			return unless is_unop($rg, "refgen");
 			$rg = $rg->first if is_unop($rg->first, "null");
-			return unless is_op($rg->first, "pushmark");
+			return unless is_pushmark_or_padrange($rg->first);
 			my $codeop = $rg->first->sibling;
 			return unless is_svop($codeop, "anoncode");
 			my $sql = handle_subselect($S, $codeop, returns_dont_care => 1);
@@ -945,7 +959,7 @@ sub parse_multi_assign
 	my $want_const = 1;
 	my $field;
 	for my $c (get_all_children($hashop)) {
-		next if is_op($c, "pushmark");
+		next if is_pushmark_or_padrange($c);
 
 		if ($want_const) {
 			my $hash;
@@ -985,7 +999,7 @@ sub parse_multi_assign
 	} elsif (is_unop($op, "entersub")) {
 		$op = $op->first;
 		$op = $op->first if is_unop($op, "null");
-		$op = $op->sibling if is_op($op, "pushmark");
+		$op = $op->sibling if is_pushmark_or_padrange($op);
 		$op = $op->first if is_unop($op, "rv2cv");
 		my $gv = get_gv($S, $op);
 		$tab = $gv->NAME if $gv;
@@ -1222,7 +1236,7 @@ sub parse_complex_regex
 			my $rxop = $op->first->first;
 			while (!is_null($rxop)) {
 				$rx .= parse_complex_regex($S, $rxop)
-					unless is_op($rxop, "pushmark");
+					unless is_pushmark_or_padrange($rxop);
 				$rxop = $rxop->sibling;
 			}
 			return $rx;
@@ -1239,6 +1253,15 @@ sub parse_complex_regex
 		return want_const( $S, $op);
 	} elsif (my ($rx, $ok) = get_value($S, $op, soft => 1)) {
 		$rx =~ s/^\(\?\-\w*\:(.*)\)$/$1/; # (?-xism:moo) -> moo
+		return $rx;
+	} elsif (is_unop($op, "null")) {
+		my $rx = "";
+		my $rxop = $op->first;
+		while (!is_null($rxop)) {
+			$rx .= parse_complex_regex($S, $rxop)
+				unless is_pushmark_or_padrange($rxop);
+			$rxop = $rxop->sibling;
+		}
 		return $rx;
 	} else {
 		bailout $S, "unsupported op " . ref($op) . '/' . $op->name; 
@@ -1373,7 +1396,7 @@ sub parse_join
 	#    join $a * $b => db_fetch { ... }
 	bailout $S, "not a valid join() syntax"
 		unless 2 <= @op and 3 >= @op and
-			$op[0]-> name eq 'pushmark' and 
+			is_pushmark_or_padrange($op[0]) and 
 			is_binop( $op[1]);
 	my $jointype;
 		
@@ -1530,7 +1553,7 @@ sub parse_fieldlist_label
 		push @op, $op;
 	}
 	for $op (@op) {
-		next if is_op($op, "pushmark");
+		next if is_pushmark_or_padrange($op);
 		my ($t, $f) = get_tab_field($S, $op);
 		push @{$S->{$label->{key}}},
 			($S->{operation} eq "delete" || $S->{operation} eq "update") ?
@@ -1560,7 +1583,7 @@ sub parse_orderby_label
 	}
 	my $order = "";
 	for $op (@op) {
-		next if is_op($op, "pushmark");
+		next if is_pushmark_or_padrange($op);
 		# XXX next if is_op($op, "null");
 		my $term;
 		$term = parse_term($S, $op)
@@ -1737,7 +1760,7 @@ sub parse_op
 		bailout $S, "there should be no \"last\" statements in $S->{operation}'s query sub"
 			unless $S->{operation} eq "select";
 		$S->{limit} = 1;
-	} elsif (is_op($op, "pushmark")) {
+	} elsif (is_pushmark_or_padrange($op)) {
 		# skip
 	} elsif (is_op($op, "enter")) {
 		# skip

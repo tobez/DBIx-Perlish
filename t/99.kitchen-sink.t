@@ -984,29 +984,37 @@ test_update_sql {
  	$t = {%h};
 	exec;
 } "hash assignment 1",
-"update tab set col1 = ?, col2 = ?",
-[42,666];
+[{sql => "update tab set col1 = ?, col2 = ?", values => [42,666]},
+ {sql => "update tab set col2 = ?, col1 = ?", values => [666,42]}];
 test_update_sql {
 	my $t : tab;
  	$t = {%$h};
 	exec;
 } "hashref assignment 1",
-"update tab set col1 = ?, col2 = ?",
-[42,666];
+[{sql => "update tab set col1 = ?, col2 = ?", values => [42,666]},
+ {sql => "update tab set col2 = ?, col1 = ?", values => [666,42]}];
 test_update_sql {
 	my $t : tab;
  	$t = {%h, foobar => 2};
 	exec;
 } "hash assignment 2",
-"update tab set col1 = ?, col2 = ?, foobar = 2",
-[42,666];
+[{sql => "update tab set col1 = ?, col2 = ?, foobar = 2", values => [42,666]},
+ {sql => "update tab set col1 = ?, foobar = 2, col2 = ?", values => [42,666]},
+ {sql => "update tab set col2 = ?, col1 = ?, foobar = 2", values => [666,42]},
+ {sql => "update tab set col2 = ?, foobar = 2, col1 = ?", values => [666,42]},
+ {sql => "update tab set foobar = 2, col1 = ?, col2 = ?", values => [42,666]},
+ {sql => "update tab set foobar = 2, col2 = ?, col1 = ?", values => [666,42]}];
 test_update_sql {
 	my $t : tab;
  	$t = {%$h, foobar => 2};
 	exec;
 } "hashref assignment 2",
-"update tab set col1 = ?, col2 = ?, foobar = 2",
-[42,666];
+[{sql => "update tab set col1 = ?, col2 = ?, foobar = 2", values => [42,666]},
+ {sql => "update tab set col1 = ?, foobar = 2, col2 = ?", values => [42,666]},
+ {sql => "update tab set col2 = ?, col1 = ?, foobar = 2", values => [666,42]},
+ {sql => "update tab set col2 = ?, foobar = 2, col1 = ?", values => [666,42]},
+ {sql => "update tab set foobar = 2, col1 = ?, col2 = ?", values => [42,666]},
+ {sql => "update tab set foobar = 2, col2 = ?, col1 = ?", values => [666,42]}];
 
 package DBI::db;
 package good_dbh;
