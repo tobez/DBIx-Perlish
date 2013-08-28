@@ -1,5 +1,8 @@
 Revision history for DBIx-Perlish
 
+0.60 Wed Aug 28 13:35:17 CEST 2013
+       Fixes for perl 5.18.
+
 0.59  Fri Apr  6 19:35:38 CEST 2012
        Fixes for perl 5.15.
 
