@@ -1916,7 +1916,7 @@ There is also the project website at
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright (c) 2007-2009, Anton Berezin C<< <tobez@tobez.org> >>. All rights reserved.
+Copyright (c) 2007-2013, Anton Berezin C<< <tobez@tobez.org> >>. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions
