@@ -10,7 +10,7 @@ use vars qw($VERSION @EXPORT @EXPORT_OK %EXPORT_TAGS $SQL @BIND_VALUES);
 require Exporter;
 use base 'Exporter';
 
-$VERSION = '0.60';
+$VERSION = '0.61';
 @EXPORT = qw(db_fetch db_select db_update db_delete db_insert sql);
 @EXPORT_OK = qw(union intersect except);
 %EXPORT_TAGS = (all => [@EXPORT, @EXPORT_OK]);
@@ -374,6 +374,7 @@ sub gen_sql
 
 	my @sets     = grep { $_ ne "" } @{$S->{sets}};
 	my @where    = grep { $_ ne "" } @{$S->{where}};
+	my @having   = grep { $_ ne "" } @{$S->{having}};
 	my @group_by = grep { $_ ne "" } @{$S->{group_by}};
 	my @order_by = grep { $_ ne "" } @{$S->{order_by}};
 
@@ -387,6 +388,7 @@ sub gen_sql
 	$sql .= " set "      . join ", ",    @sets     if @sets;
 	$sql .= " where "    . join " and ", @where    if @where;
 	$sql .= " group by " . join ", ",    @group_by if @group_by;
+	$sql .= " having "   . join " and ", @having   if @having;
 	$sql .= " order by " . join ", ",    @order_by if @order_by;
 
 	if ($dangerous && !@where && !$S->{seen_exec}) {
@@ -423,7 +425,7 @@ DBIx::Perlish - a perlish interface to SQL databases
 
 =head1 VERSION
 
-This document describes DBIx::Perlish version 0.60
+This document describes DBIx::Perlish version 0.61
 
 
 =head1 SYNOPSIS
@@ -1459,6 +1461,19 @@ will execute the equivalent of the following SQL statement:
 
 The C<avg()>, C<count()>, C<max()>, C<min()>, and C<sum()>
 functions are considered to be aggregate.
+
+Similarly, using an aggregate function in a filtering expression
+will lead to automatic introduction of a HAVING clause:
+
+    db_fetch {
+        my $w : weather;
+        max($w->temp_lo) < 40;
+        return $w->city;
+    };
+
+will translate into an equivalent of
+
+    select city from weather group by city having max(temp_lo) < 40
 
 Specifying label C<table:> followed by a lexical variable
 declaration, followed by an assignment introduces an alternative

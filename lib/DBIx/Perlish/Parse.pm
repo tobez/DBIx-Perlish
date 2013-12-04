@@ -921,6 +921,10 @@ sub try_funcall
 			$S->{autogroup_needed} = 1;
 			$S->{inside_aggregate} = 1;
 		}
+		if (!$S->{parsing_return} && $S->{aggregates}{lc $func}) {
+			$S->{this_is_having} = 1;
+			$S->{autogroup_needed} = 1;
+		}
 
 		my @terms = map { scalar parse_term($S, $_) } @args;
 
@@ -1717,6 +1721,13 @@ sub parse_selfmod
 	return "$f = $f $oper";
 }
 
+sub where_or_having
+{
+	my ($S, @what) = @_;
+	push @{$S->{$S->{this_is_having} ? "having" : "where"}}, @what;
+	$S->{this_is_having} = 0;
+}
+
 sub parse_op
 {
 	my ($S, $op) = @_;
@@ -1737,21 +1748,23 @@ sub parse_op
 	} elsif (is_listop($op, "return")) {
 		parse_return($S, $op);
 	} elsif (is_binop($op)) {
-		push @{$S->{where}}, parse_expr($S, $op);
+		where_or_having($S, parse_expr($S, $op));
 	} elsif (is_unop($op, "not")) {
-		push @{$S->{where}}, scalar parse_term($S, $op);
+		where_or_having($S, scalar parse_term($S, $op));
 	} elsif (is_logop($op, "or")) {
 		my $or = parse_or($S, $op);
-		push @{$S->{where}}, "($or)" if $or;
+		where_or_having($S, "($or)") if $or;
+		$S->{this_is_having} = 0;
 	} elsif (is_logop($op, "and")) {
 		my $and = parse_and($S, $op);
-		push @{$S->{where}}, $and if $and;
+		where_or_having($S, $and) if $and;
+		$S->{this_is_having} = 0;
 	} elsif (is_unop($op, "leavesub")) {
 		parse_op($S, $op->first);
 	} elsif (is_unop($op, "null")) {
 		parse_op($S, $op->first);
 	} elsif (is_unop($op, "defined")) {
-		push @{$S->{where}}, scalar parse_term($S, $op);
+		where_or_having($S, scalar parse_term($S, $op));
 	} elsif (is_op($op, "padsv")) {
 		# XXX Skip for now, it is either a variable
 		# that does not represent a table, or else
@@ -1779,9 +1792,9 @@ sub parse_op
 		$S->{line} = $op->line;
 		# skip
 	} elsif (is_unop($op, "entersub")) {
-		push @{$S->{where}}, parse_entersub($S, $op);
+		where_or_having($S, parse_entersub($S, $op));
 	} elsif (is_pmop($op, "match")) {
-		push @{$S->{where}}, parse_regex($S, $op, 0);
+		where_or_having($S, parse_regex($S, $op, 0));
 	} elsif ( $op->name eq 'join') {
 		push @{$S->{joins}}, parse_join($S, $op);
 	} elsif ($op->name eq 'sort') {

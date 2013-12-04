@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 437;
+use Test::More tests => 439;
 use DBIx::Perlish qw/:all/;
 use t::test_utils;
 
@@ -1195,4 +1195,13 @@ test_select_sql {
 	return $not_a_hash{blah}{bluh};
 } "not a hash 3",
 "select null",
+[];
+
+# having
+test_select_sql {
+	my $w : weather;
+	max($w->temp_lo) < 40;
+	return $w->city;
+} "simple having",
+"select t01.city from weather t01 group by t01.city having max(t01.temp_lo) < 40",
 [];

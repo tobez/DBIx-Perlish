@@ -611,8 +611,14 @@ sub expon { return res => 2**5 }
 
 sub selfmod { tbl->id += 2; }
 
+sub having {
+	my $w : weather;
+	max($w->temp_lo) < 40;
+	return $w->city;
+}
+
 my @kf;
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&t518_3, "select", flavor => 'oracle', key_fields => \@kf);
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&having, "select", flavor => 'oracle', key_fields => \@kf);
 
 print "$sql\n";
 print "values: ", join ", ", @$v;
