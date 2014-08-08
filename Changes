@@ -1,5 +1,8 @@
 Revision history for DBIx-Perlish
 
+0.62 Fri Aug  8 13:37:34 CEST 2014
+       Work around DBD::Pg NAME_uc/NAME_lc quoted fields bug
+
 0.61 Wed Dec  4 12:50:25 CET 2013
        Initial support for HAVING.
 

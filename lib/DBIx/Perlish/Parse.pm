@@ -451,6 +451,9 @@ sub parse_return
 			} else {
 				if ($rv{key_field}) {
 					my $kf = '$kf-' . $S->{key_field};
+					if ($S->{gen_args}{kf_convert}) {
+						$kf = $S->{gen_args}{kf_convert}->($kf);
+					}
 					$S->{key_field}++;
 					push @{$S->{returns}}, "$rv{field} as \"$kf\"";
 					push @{$S->{key_fields}}, $kf;

@@ -1,5 +1,4 @@
 package DBIx::Perlish;
-# $Id$
 
 use 5.008;
 use warnings;
@@ -10,7 +9,7 @@ use vars qw($VERSION @EXPORT @EXPORT_OK %EXPORT_TAGS $SQL @BIND_VALUES);
 require Exporter;
 use base 'Exporter';
 
-$VERSION = '0.61';
+$VERSION = '0.62';
 @EXPORT = qw(db_fetch db_select db_update db_delete db_insert sql);
 @EXPORT_OK = qw(union intersect except);
 %EXPORT_TAGS = (all => [@EXPORT, @EXPORT_OK]);
@@ -160,11 +159,21 @@ sub fetch
 	my $nret;
 	my $dbh = $me->{dbh} || get_dbh(3);
 	my @kf;
+	my $flavor = _get_flavor($dbh);
+	my $kf_convert = sub { return $_[0] };
+	if ($flavor eq "pg" && $dbh->{FetchHashKeyName}) {
+		if ($dbh->{FetchHashKeyName} eq "NAME_uc") {
+			$kf_convert = sub { return uc $_[0] };
+		} elsif ($dbh->{FetchHashKeyName} eq "NAME_lc") {
+			$kf_convert = sub { return lc $_[0] };
+		}
+	}
 	($me->{sql}, $me->{bind_values}, $nret) = gen_sql($sub, "select", 
-		flavor     => _get_flavor($dbh),
+		flavor     => $flavor,
 		dbh        => $dbh,
 		quirks     => $me->{quirks} || $non_object_quirks,
 		key_fields => \@kf,
+		kf_convert => $kf_convert,
 	);
 	$SQL = $me->{sql}; @BIND_VALUES = @{$me->{bind_values}};
 	if (@kf) {
@@ -425,7 +434,7 @@ DBIx::Perlish - a perlish interface to SQL databases
 
 =head1 VERSION
 
-This document describes DBIx::Perlish version 0.61
+This document describes DBIx::Perlish version 0.62
 
 
 =head1 SYNOPSIS
