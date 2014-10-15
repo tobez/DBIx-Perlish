@@ -1,5 +1,8 @@
 Revision history for DBIx-Perlish
 
+0.63 Wed Oct 15 15:30:09 CEST 2014
+       From szabgab: add GitHub link to META files and thus to MetaCPAN.org
+
 0.62 Fri Aug  8 13:37:34 CEST 2014
        Work around DBD::Pg NAME_uc/NAME_lc quoted fields bug
 
