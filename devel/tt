@@ -617,8 +617,36 @@ sub having {
 	return $w->city;
 }
 
+sub union_distinct
+{
+	my $tt : table = db_fetch {
+		{
+			my $t : tab1;
+			$t->id == 42;
+
+			return $t->f1, $t->f2;
+		} union {
+			my $t : tab2;
+			$t->id == 666;
+
+			return $t->f3, $t->f4;
+		}
+	};
+	return distinct => $tt;
+}
+
+sub subselect
+{
+	my $tt : table = db_fetch {
+		my $t : tab1;
+		$t->id == 42;
+
+		return $t->f1, $t->f2;
+	};
+}
+
 my @kf;
-my ($sql, $v) = DBIx::Perlish::gen_sql(\&having, "select", flavor => 'oracle', key_fields => \@kf);
+my ($sql, $v) = DBIx::Perlish::gen_sql(\&union_distinct, "select", flavor => 'oracle', key_fields => \@kf);
 
 print "$sql\n";
 print "values: ", join ", ", @$v;
