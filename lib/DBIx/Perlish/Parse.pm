@@ -717,7 +717,7 @@ sub try_parse_subselect
 		@vals = @$ary;
 	} elsif (is_unop($sub, "rv2av") && is_op($sub->first, "padsv")) {
 		my $ary = try_parse_array($S, $sub->first->targ);
-		return '1=0' unless @$$ary;
+		return '1=0' unless $ary && $$ary && @$$ary;
 		$sql = join ",", ("?") x @$$ary;
 		@vals = @$$ary;
 	} elsif (is_listop($sub, "anonlist") or
