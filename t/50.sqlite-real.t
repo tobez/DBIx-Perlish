@@ -10,7 +10,7 @@ plan skip_all => "DBD::SQLite cannot be loaded" if $@;
 eval "use PadWalker;";
 plan skip_all => "PadWalker cannot be loaded" if $@;
 
-plan tests => 95;
+plan tests => 99;
 
 my $dbh = DBI->connect("dbi:SQLite:");
 ok($dbh, "db connection");
@@ -130,6 +130,13 @@ ok($o->delete(sub { names->id == 1 }), "obj: delete one");
 is(scalar db_fetch { my $t : names; $t->id == 1; return $t->name; }, undef, "fetch deleted");
 
 ok((db_insert 'names', { id => sql 5, name => "five" }), "insert with verbatim");
+
+@n = ();
+$r = [];
+is( scalar db_fetch { my $t : names; $t->id < -@n }, undef, "empty in 1");
+is( scalar db_fetch { my $t : names; $t->id < -@$r }, undef, "empty in 2");
+is( scalar db_fetch { my $union:table = db_fetch { my $t : names; $t->id < -@n } }, undef, "empty in 3");
+is( scalar db_fetch { my $union:table = db_fetch { my $t : names; $t->id < -@$r } }, undef, "empty in 4");
 
 # just to bump up coverage - those red things annoy me
 union     {}; pass("coverage: union");

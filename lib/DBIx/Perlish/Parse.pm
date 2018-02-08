@@ -687,6 +687,21 @@ sub try_get_dbfetch
 	return $codeop;
 }
 
+sub try_parse_array
+{
+	my ( $S, $idx) = @_;
+	my $v = $S->{padlist}->[1]->ARRAYelt($idx);
+	if ($v->isa("B::SPECIAL")) {
+		my $n = $S->{padlist}->[0]->ARRAYelt($idx);
+		if ($n->FLAGS & B::SVf_FAKE) {
+			$v = get_padlist_scalar_by_name($S, $n->PVX);
+		} else {
+			bailout $S, "internal error: cannot retrieve in-scope SPECIAL";
+		}
+	}
+	return $v->object_2svref;
+}
+
 sub try_parse_subselect
 {
 	my ($S, $sop) = @_;
@@ -696,13 +711,13 @@ sub try_parse_subselect
 	my $sub = $sop->last->first;
 
 	if (is_op($sub, "padav")) {
-		my $ary = $S->{padlist}->[1]->ARRAYelt($sub->targ)->object_2svref;
-		bailout $S, "empty array in not valid in \"<-\"" unless @$ary;
+		my $ary = try_parse_array($S, $sub->targ);
+		return '1=0' unless @$ary;
 		$sql = join ",", ("?") x @$ary;
 		@vals = @$ary;
 	} elsif (is_unop($sub, "rv2av") && is_op($sub->first, "padsv")) {
-		my $ary = $S->{padlist}->[1]->ARRAYelt($sub->first->targ)->object_2svref;
-		bailout $S, "empty array in not valid in \"<-\"" unless @$$ary;
+		my $ary = try_parse_array($S, $sub->first->targ);
+		return '1=0' unless @$$ary;
 		$sql = join ",", ("?") x @$$ary;
 		@vals = @$$ary;
 	} elsif (is_listop($sub, "anonlist") or
@@ -729,7 +744,7 @@ sub try_parse_subselect
 				push @vals, $val;
 			}
 		}
-		bailout $S, "empty list in not valid in \"<-\"" unless @what;
+		return '1=0' unless @what;
 		$sql = join ",", @what;
 	} else {
 		my $codeop = try_get_dbfetch( $S, $sub);
