@@ -702,14 +702,12 @@ sub try_parse_subselect
 
 	if (is_op($sub, "padav")) {
 		my $ary = get_padlist_scalar($S, $sub->targ, "ref only");
-		#my $ary = $S->{padlist}->[1]->ARRAYelt($sub->targ)->object_2svref;
-		bailout $S, "empty array in not valid in \"<-\"" unless @$ary;
+		return '1=0' unless $ary && @$ary;
 		$sql = join ",", ("?") x @$ary;
 		@vals = @$ary;
 	} elsif (is_unop($sub, "rv2av") && is_op($sub->first, "padsv")) {
 		my $ary = get_padlist_scalar($S, $sub->first->targ, "ref only");
-		#my $ary = $S->{padlist}->[1]->ARRAYelt($sub->first->targ)->object_2svref;
-		bailout $S, "empty array in not valid in \"<-\"" unless @$$ary;
+		return '1=0' unless $ary && $$ary && @$$ary;
 		$sql = join ",", ("?") x @$$ary;
 		@vals = @$$ary;
 	} elsif (is_listop($sub, "anonlist") or
