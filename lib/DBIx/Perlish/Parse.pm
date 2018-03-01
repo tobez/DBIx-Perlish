@@ -54,6 +54,7 @@ gen_is("padop");
 gen_is("svop");
 gen_is("unop");
 gen_is("pmop");
+gen_is("methop");
 
 sub is_const
 {
@@ -136,12 +137,16 @@ sub want_variable_method
 sub want_method
 {
 	my ($S, $op) = @_;
-	unless (is_svop($op, "method_named")) {
+	my $sv;
+	if ( is_methop($op, "method_named")) {
+		$sv = $op->meth_sv;
+	} elsif ( is_svop($op, "method_named")) {
+		$sv = $op->sv;
+	} else {
 		my $r = want_variable_method($S, $op);
 		bailout $S, "method call syntax expected" unless $r;
 		return $r;
 	}
-	my $sv = $op->sv;
 	if (!$$sv) {
 		$sv = $S->{padlist}->[1]->ARRAYelt($op->targ);
 	}
@@ -402,7 +407,7 @@ sub try_parse_attr_assignment
 	my @attr = grep { length($_) } split /(?:[\(\)])/, $attr;
 	return unless @attr;
 	$op = $op->sibling;
-	return unless is_svop($op, "method_named");
+	return unless is_methop($op, "method_named") || is_svop($op, "method_named");
 	return unless want_method($S, $op, "import");
 	if ($realname) {
 		if (lc $attr[0] eq "table") {
@@ -1431,9 +1436,9 @@ sub parse_join
 	# table names
 	my @tab;
 	$tab[0] = find_aliased_tab($S, $op[1]-> first) or 
-		bailout $S, "first argument join() is not a table";
+		bailout $S, "first argument of join() is not a table";
 	$tab[1] = find_aliased_tab($S, $op[1]-> last) or 
-		bailout $S, "second argument join() is not a table";
+		bailout $S, "second argument of join() is not a table";
 	
 	# db_fetch
 	my ( $condition, $codeop);
