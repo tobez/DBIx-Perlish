@@ -872,10 +872,11 @@ sub try_funcall
 			return if $p{only_normal_funcs};
 			return unless @args == 1 || @args == 2;
 			my $rg = $args[0];
-			return unless is_unop($rg, "refgen");
+			return unless is_unop($rg, "refgen") || is_unop($rg, "srefgen");
 			$rg = $rg->first if is_unop($rg->first, "null");
+			my $codeop = $rg->first;
+			$codeop = $codeop->sibling if is_pushmark_or_padrange($codeop);
 			return unless is_pushmark_or_padrange($rg->first);
-			my $codeop = $rg->first->sibling;
 			return unless is_svop($codeop, "anoncode");
 			return unless $S->{operation} eq "select";
 			my $cv = $codeop->sv;
@@ -908,10 +909,10 @@ sub try_funcall
 			return if $p{only_normal_funcs};
 			return unless @args == 1;
 			my $rg = $args[0];
-			return unless is_unop($rg, "refgen");
+			return unless is_unop($rg, "refgen") || is_unop($rg, "srefgen");
 			$rg = $rg->first if is_unop($rg->first, "null");
-			return unless is_pushmark_or_padrange($rg->first);
-			my $codeop = $rg->first->sibling;
+			my $codeop = $rg->first;
+			$codeop = $codeop->sibling if is_pushmark_or_padrange($codeop);
 			return unless is_svop($codeop, "anoncode");
 			my $sql = handle_subselect($S, $codeop, returns_dont_care => 1);
 			return "exists ($sql)";
