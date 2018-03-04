@@ -1738,6 +1738,8 @@ sub parse_op
 {
 	my ($S, $op) = @_;
 
+	return if $S->{seen}->{$$op}++;
+
 	if ($S->{skipnext}) {
 		delete $S->{skipnext};
 		return;
@@ -1785,6 +1787,7 @@ sub parse_op
 		# skip
 	} elsif (is_op($op, "null")) {
 		# skip
+		parse_op($S, $op->sibling);
 	} elsif (is_cop($op, "nextstate")) {
 		$S->{file} = $op->file;
 		$S->{line} = $op->line;
@@ -1861,6 +1864,7 @@ sub init
 		aggregates  => { avg => 1, count => 1, max => 1, min => 1, sum => 1 },
 		autogroup_by     => [],
 		autogroup_fields => {},
+		seen        => {},
 	};
 	$S->{alias} = $args{prefix} ? "$args{prefix}_t01" : "t01";
 	$S;
