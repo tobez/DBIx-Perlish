@@ -125,8 +125,8 @@ test_bad_select { join 1,2,3; } "bad join 3", qr/not a valid join/;
 test_bad_select { join $testmy - 2; } "bad join 4", qr/not a valid join.*x is expected/;
 test_bad_select { join $testmy - 2, 1; } "bad join 5", qr/not a valid join.*> is expected/;
 test_bad_select { join $testmy + 2, 1; } "bad join 6", qr/not a valid join/;
-test_bad_select { join 2 * $testmy; } "bad join 7", qr/first argument join/;
-test_bad_select { my $t : tab; join $t * 2; } "bad join 8", qr/second argument join/;
+test_bad_select { join 2 * $testmy; } "bad join 7", qr/first argument of join/;
+test_bad_select { my $t : tab; join $t * 2; } "bad join 8", qr/second argument of join/;
 test_bad_select { my $t1 : t1; my $t2 : t2; join $t1 * $t2, xx(); } "bad join 9", qr/not a db_fetch/;
 test_bad_select { my $t1 : t1; my $t2 : t2;
 	join $t1 * $t2 => db_fetch { my $t3 : t3 }
