@@ -682,10 +682,10 @@ sub try_get_dbfetch
 	return if is_null($dbfetch);
 	return unless is_null($dbfetch->sibling);
 
-	return unless is_unop($rg, "refgen");
+	return unless is_unop($rg, "refgen") || is_unop($rg, "srefgen");
 	$rg = $rg->first if is_unop($rg->first, "null");
-	return unless is_pushmark_or_padrange($rg->first);
-	my $codeop = $rg->first->sibling;
+	my $codeop = $rg->first;
+	$codeop = $codeop->sibling if is_pushmark_or_padrange($codeop);
 	return unless is_svop($codeop, "anoncode");
 
 	$dbfetch = $dbfetch->first if is_unop($dbfetch->first, "null");
