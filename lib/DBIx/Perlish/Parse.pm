@@ -55,6 +55,7 @@ gen_is("svop");
 gen_is("unop");
 gen_is("pmop");
 gen_is("methop");
+gen_is("unop_aux");
 
 sub is_const
 {
@@ -224,6 +225,99 @@ sub get_padlist_scalar
 	return $$v;
 }
 
+use constant MDEREF_ACTION_MASK => 0xf;
+use constant MDEREF_reload                      =>  0;
+use constant MDEREF_AV_pop_rv2av_aelem          =>  1;
+use constant MDEREF_AV_gvsv_vivify_rv2av_aelem  =>  2;
+use constant MDEREF_AV_padsv_vivify_rv2av_aelem =>  3;
+use constant MDEREF_AV_vivify_rv2av_aelem       =>  4;
+use constant MDEREF_AV_padav_aelem              =>  5;
+use constant MDEREF_AV_gvav_aelem               =>  6;
+use constant MDEREF_HV_pop_rv2hv_helem          =>  8;
+use constant MDEREF_HV_gvsv_vivify_rv2hv_helem  =>  9;
+use constant MDEREF_HV_padsv_vivify_rv2hv_helem => 10;
+use constant MDEREF_HV_vivify_rv2hv_helem       => 11;
+use constant MDEREF_HV_padhv_helem              => 12;
+use constant MDEREF_HV_gvhv_helem               => 13;
+use constant MDEREF_INDEX_none    => 0x00;
+use constant MDEREF_INDEX_const   => 0x10;
+use constant MDEREF_INDEX_padsv   => 0x20;
+use constant MDEREF_INDEX_gvsv    => 0x30;
+use constant MDEREF_INDEX_MASK    => 0x30;
+use constant MDEREF_FLAG_last     => 0x40;
+use constant MDEREF_MASK          => 0x7F;
+use constant MDEREF_SHIFT         =>    7;
+
+sub parse_multideref
+{
+	my ( $S, $aux ) = @_;
+ 	my @items = $aux->aux_list($S->{curr_cv});
+	my @ret;
+
+ 	while ( @items ) {
+ 		my $actions = shift @items;
+
+		my $ref;
+		my $sv = shift(@items) or bailout $S, "unexpected empty multideref";
+
+		while ( my $ptr = shift @items ) {
+ 			my $access  = $actions & MDEREF_ACTION_MASK;
+			unless ($ref) {
+ 				if (
+ 					$access == MDEREF_HV_padhv_helem ||
+ 					$access == MDEREF_AV_padav_aelem ||
+ 					$access == MDEREF_HV_padsv_vivify_rv2hv_helem ||
+ 					$access == MDEREF_AV_padsv_vivify_rv2av_aelem
+ 				) {
+ 					$ref  = $S->{padlist}->[1]->ARRAYelt($sv)->object_2svref;
+				} elsif (
+                		        $access == MDEREF_HV_pop_rv2hv_helem ||
+                		        $access == MDEREF_HV_vivify_rv2hv_helem ||
+					$access == MDEREF_HV_gvhv_helem
+				) {
+					$ref = $sv->HV->object_2svref;
+				} elsif (
+                		        $access == MDEREF_AV_pop_rv2av_aelem ||
+                		        $access == MDEREF_AV_vivify_rv2av_aelem ||
+					$access == MDEREF_AV_gvav_aelem
+				) {
+					$ref = $sv->AV->object_2svref;
+				} else {
+					bailout $S, "don't quite know what to do with multideref access=$access";
+					next;
+ 				}
+			}
+ 			
+			my $key;
+			my $index = $actions & MDEREF_INDEX_MASK;
+
+			if ( $index != MDEREF_INDEX_none ) {
+				if ( $index == MDEREF_INDEX_const ) {
+					$key = ${$ptr->object_2svref};
+				} elsif ( $index == MDEREF_INDEX_padsv ) {
+ 					$key  = $S->{padlist}->[1]->ARRAYelt($ptr)->object_2svref;
+				} elsif ( $index == MDEREF_INDEX_gvsv ) {
+					$key = ${$ptr->object_2svref};
+				}
+ 				$ref = $$ref if ref($ref) =~ /REF|SCALAR/;
+ 				$ref = (ref($ref) eq 'HASH') ? 
+ 					$ref->{$key} : $ref->[$key];
+			}
+			if ($index == MDEREF_INDEX_none || $index & MDEREF_FLAG_last) {
+				push @ret, $ref;
+				last;
+			}
+			$actions >>= MDEREF_SHIFT;
+ 		}
+
+		push @ret, $ref unless @ret;
+	}
+
+	bailout $S, "cannot infer single multideref value" unless 1 == @ret;
+
+	return $ret[0];
+}
+
 sub get_value
 {
 	my ($S, $op, %p) = @_;
@@ -264,7 +358,10 @@ sub get_value
 	} elsif (is_unop($op, "null") && (is_svop($op->first, "gvsv") || is_padop($op->first, "gvsv"))) {
 		my $gv = get_gv($S, $op->first, bailout => 1);
 		$val = ${$gv->SV->object_2svref};
+	} elsif (is_unop($op, "null") && is_unop_aux($op->first, "multideref")) {
+		$val = parse_multideref($S, $op->first);
 	} else {
+	BAILOUT:
 		return () if $p{soft};
 		bailout $S, "cannot parse \"", $op->name, "\" op as a value or value reference";
 	}
@@ -613,7 +710,12 @@ sub parse_term
 		}
 	} elsif (is_pmop($op, "match")) {
 		return parse_regex($S, $op, 0);
+	} elsif (is_unop_aux($op, "multideref")) {
+		my $val = parse_multideref($S, $op);
+		return placeholder_value($S, $val);
+		
 	} else {
+	BAILOUT:
 		bailout $S, "cannot reconstruct term from operation \"",
 				$op->name, '"';
 	}
@@ -1837,6 +1939,7 @@ sub parse_sub
 	}
 	my $root = B::svref_2object($sub);
 	$S->{padlist} = [$root->PADLIST->ARRAY];
+	$S->{curr_cv} = $root;
 	$root = $root->ROOT;
 	parse_op($S, $root);
 }
