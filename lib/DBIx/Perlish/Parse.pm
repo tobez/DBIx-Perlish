@@ -876,7 +876,6 @@ sub try_funcall
 			$rg = $rg->first if is_unop($rg->first, "null");
 			my $codeop = $rg->first;
 			$codeop = $codeop->sibling if is_pushmark_or_padrange($codeop);
-			return unless is_pushmark_or_padrange($rg->first);
 			return unless is_svop($codeop, "anoncode");
 			return unless $S->{operation} eq "select";
 			my $cv = $codeop->sv;
