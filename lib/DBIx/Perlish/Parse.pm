@@ -190,7 +190,7 @@ sub get_padlist_scalar_by_name
 	for (my $k = 0; $k < @n; $k++) {
 		next if $n[$k]->isa("B::SPECIAL");
 		next if $n[$k]->isa("B::NULL");
-		if ($n[$k]->PVX eq $n) {
+		if (($n[$k]->PVX // '') eq $n) {
 			my $v = $padlist->[1]->ARRAYelt($k);
 			if (!$v->isa("B::SPECIAL")) {
 				return $v;
