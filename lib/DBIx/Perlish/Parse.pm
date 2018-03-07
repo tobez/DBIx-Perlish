@@ -226,29 +226,6 @@ sub get_padlist_scalar
 	return $$v;
 }
 
-use constant MDEREF_ACTION_MASK => 0xf;
-use constant MDEREF_reload                      =>  0;
-use constant MDEREF_AV_pop_rv2av_aelem          =>  1;
-use constant MDEREF_AV_gvsv_vivify_rv2av_aelem  =>  2;
-use constant MDEREF_AV_padsv_vivify_rv2av_aelem =>  3;
-use constant MDEREF_AV_vivify_rv2av_aelem       =>  4;
-use constant MDEREF_AV_padav_aelem              =>  5;
-use constant MDEREF_AV_gvav_aelem               =>  6;
-use constant MDEREF_HV_pop_rv2hv_helem          =>  8;
-use constant MDEREF_HV_gvsv_vivify_rv2hv_helem  =>  9;
-use constant MDEREF_HV_padsv_vivify_rv2hv_helem => 10;
-use constant MDEREF_HV_vivify_rv2hv_helem       => 11;
-use constant MDEREF_HV_padhv_helem              => 12;
-use constant MDEREF_HV_gvhv_helem               => 13;
-use constant MDEREF_INDEX_none    => 0x00;
-use constant MDEREF_INDEX_const   => 0x10;
-use constant MDEREF_INDEX_padsv   => 0x20;
-use constant MDEREF_INDEX_gvsv    => 0x30;
-use constant MDEREF_INDEX_MASK    => 0x30;
-use constant MDEREF_FLAG_last     => 0x40;
-use constant MDEREF_MASK          => 0x7F;
-use constant MDEREF_SHIFT         =>    7;
-
 sub bailout_multiref_vivify($)
 {
 	my $S = shift;
@@ -287,35 +264,35 @@ sub parse_multideref
 		return $padlist[$index];
 	};
 
- 	while ( @items ) {
+ 	ITEMS: while ( @items ) {
  		my $actions = shift @items;
 
 		my $ref;
 		my $sv = shift(@items) or bailout $S, "unexpected empty multideref";
 
 		while ( my $ptr = shift @items ) {
- 			my $access  = $actions & MDEREF_ACTION_MASK;
+ 			my $access  = $actions & B::MDEREF_ACTION_MASK();
 			unless ($ref) {
  				if (
- 					$access == MDEREF_HV_padhv_helem ||
- 					$access == MDEREF_AV_padav_aelem ||
- 					$access == MDEREF_HV_padsv_vivify_rv2hv_helem ||
- 					$access == MDEREF_AV_padsv_vivify_rv2av_aelem
+ 					$access == B::MDEREF_HV_padhv_helem() ||
+ 					$access == B::MDEREF_AV_padav_aelem() ||
+ 					$access == B::MDEREF_HV_padsv_vivify_rv2hv_helem() ||
+ 					$access == B::MDEREF_AV_padsv_vivify_rv2av_aelem()
  				) {
  					$ref  = $get_padsv->($sv)->object_2svref;
 					bailout_multiref_vivify $S
 						if !$ref || ((ref($ref) eq 'SCALAR') && !$$ref);
 				} elsif (
-                		        $access == MDEREF_HV_pop_rv2hv_helem ||
-                		        $access == MDEREF_HV_vivify_rv2hv_helem ||
-					$access == MDEREF_HV_gvhv_helem
+                		        $access == B::MDEREF_HV_pop_rv2hv_helem() ||
+                		        $access == B::MDEREF_HV_vivify_rv2hv_helem() ||
+					$access == B::MDEREF_HV_gvhv_helem()
 				) {
 					bailout_multiref_vivify $S unless ref($sv);
 					$ref = $sv->HV->object_2svref;
 				} elsif (
-                		        $access == MDEREF_AV_pop_rv2av_aelem ||
-                		        $access == MDEREF_AV_vivify_rv2av_aelem ||
-					$access == MDEREF_AV_gvav_aelem
+                		        $access == B::MDEREF_AV_pop_rv2av_aelem() ||
+                		        $access == B::MDEREF_AV_vivify_rv2av_aelem() ||
+					$access == B::MDEREF_AV_gvav_aelem()
 				) {
 					bailout_multiref_vivify $S unless ref($sv);
 					$ref = $sv->AV->object_2svref;
@@ -325,25 +302,36 @@ sub parse_multideref
 			}
  			
 			my $key;
-			my $index = $actions & MDEREF_INDEX_MASK;
+			my $index = $actions & B::MDEREF_INDEX_MASK();
 
-			if ( $index != MDEREF_INDEX_none ) {
-				if ( $index == MDEREF_INDEX_const ) {
+			if ( $index != B::MDEREF_INDEX_none() ) {
+				if ( $index == B::MDEREF_INDEX_const() ) {
 					$key = ${$ptr->object_2svref};
-				} elsif ( $index == MDEREF_INDEX_padsv ) {
+				} elsif ( $index == B::MDEREF_INDEX_padsv() ) {
  					$key  = $get_padsv->($ptr)->object_2svref;
-				} elsif ( $index == MDEREF_INDEX_gvsv ) {
+				} elsif ( $index == B::MDEREF_INDEX_gvsv() ) {
 					$key = ${$ptr->object_2svref};
 				}
  				$ref = $$ref if ref($ref) =~ /REF|SCALAR/;
  				$ref = (ref($ref) eq 'HASH') ? 
  					$ref->{$key} : $ref->[$key];
+				if (!$ref && (
+					$access == B::MDEREF_AV_gvsv_vivify_rv2av_aelem () ||  
+					$access == B::MDEREF_AV_padsv_vivify_rv2av_aelem() || 
+					$access == B::MDEREF_AV_vivify_rv2av_aelem      () || 
+					$access == B::MDEREF_HV_gvsv_vivify_rv2hv_helem () || 
+					$access == B::MDEREF_HV_padsv_vivify_rv2hv_helem() || 
+					$access == B::MDEREF_HV_vivify_rv2hv_helem      ()
+				)) {
+					push @ret, undef;
+					last ITEMS;
+				}
 			}
-			if ($index == MDEREF_INDEX_none || $index & MDEREF_FLAG_last) {
+			if ($index == B::MDEREF_INDEX_none() || $index & B::MDEREF_FLAG_last()) {
 				push @ret, $ref;
 				last;
 			}
-			$actions >>= MDEREF_SHIFT;
+			$actions >>= B::MDEREF_SHIFT();
  		}
 
 		push @ret, $ref unless @ret;
