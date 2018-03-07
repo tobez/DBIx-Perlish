@@ -225,6 +225,8 @@ sub get_padlist_scalar
 	return $$v;
 }
 
+use constant SVf_FAKE   => 0x01000000;
+
 use constant MDEREF_ACTION_MASK => 0xf;
 use constant MDEREF_reload                      =>  0;
 use constant MDEREF_AV_pop_rv2av_aelem          =>  1;
@@ -254,6 +256,31 @@ sub parse_multideref
  	my @items = $aux->aux_list($S->{curr_cv});
 	my @ret;
 
+	my @padlist;
+ 	my $inner      = $S->{curr_cv}->PADLIST;
+	my $orig_pads  = [ $inner->ARRAY ]->[1];
+	my @names      = $inner->NAMES->ARRAY;
+	my ($outer_padlist, @outer_padlist);
+	my $get_padsv = sub {
+		my $index = shift;
+
+		unless ( defined $padlist[$index] ) {
+			my $padname = $names[$index];
+			if ( $padname->FLAGS & SVf_FAKE && $inner->outid > 1) {
+				unless ($outer_padlist) {
+					$outer_padlist = $S->{padlists}->{$inner->outid} or 
+						bailout $S, "cannot refer to an outer padlist ".$inner->outid;
+					@outer_padlist = $outer_padlist->[1]->ARRAY;
+				}
+				$padlist[$index] = $outer_padlist[ $padname->PARENT_PAD_INDEX ];
+			} else {
+				$padlist[$index] = $orig_pads->ARRAYelt($index);
+			}
+		}
+
+		return $padlist[$index];
+	};
+
  	while ( @items ) {
  		my $actions = shift @items;
 
@@ -269,7 +296,7 @@ sub parse_multideref
  					$access == MDEREF_HV_padsv_vivify_rv2hv_helem ||
  					$access == MDEREF_AV_padsv_vivify_rv2av_aelem
  				) {
- 					$ref  = $S->{padlist}->[1]->ARRAYelt($sv)->object_2svref;
+ 					$ref  = $get_padsv->($sv)->object_2svref;
 				} elsif (
                 		        $access == MDEREF_HV_pop_rv2hv_helem ||
                 		        $access == MDEREF_HV_vivify_rv2hv_helem ||
@@ -284,7 +311,6 @@ sub parse_multideref
 					$ref = $sv->AV->object_2svref;
 				} else {
 					bailout $S, "don't quite know what to do with multideref access=$access";
-					next;
  				}
 			}
  			
@@ -295,7 +321,7 @@ sub parse_multideref
 				if ( $index == MDEREF_INDEX_const ) {
 					$key = ${$ptr->object_2svref};
 				} elsif ( $index == MDEREF_INDEX_padsv ) {
- 					$key  = $S->{padlist}->[1]->ARRAYelt($ptr)->object_2svref;
+ 					$key  = $get_padsv->($ptr)->object_2svref;
 				} elsif ( $index == MDEREF_INDEX_gvsv ) {
 					$key = ${$ptr->object_2svref};
 				}
@@ -1940,6 +1966,7 @@ sub parse_sub
 	my $root = B::svref_2object($sub);
 	$S->{padlist} = [$root->PADLIST->ARRAY];
 	$S->{curr_cv} = $root;
+	$S->{padlists}->{ $root->PADLIST->id } = $S->{padlist};
 	$root = $root->ROOT;
 	parse_op($S, $root);
 }
@@ -1968,6 +1995,7 @@ sub init
 		autogroup_by     => [],
 		autogroup_fields => {},
 		seen        => {},
+		padlists    => $args{prev_S} ? $args{prev_S}->{padlists} : {},
 	};
 	$S->{alias} = $args{prefix} ? "$args{prefix}_t01" : "t01";
 	$S;
