@@ -1,7 +1,7 @@
 use warnings;
 use strict;
-use Test::More tests => 439;
 use DBIx::Perlish qw/:all/;
+use Test::More tests => 430 + ((DBIx::Perlish->optree_version == 1) ? 9 : 0);
 use t::test_utils;
 
 # lone [boolean] tests
@@ -657,12 +657,19 @@ test_select_sql {
 "select (? || t01.firstname || ? || t01.lastname || ?) from tab t01",
 ["foo-", " ", "-moo"];
 
-test_select_sql {
-	my $t : tab;
-	return "abc$t->{name}xyz";
-} "concat, interp, hash syntax",
-"select (? || t01.name || ?) from tab t01",
-["abc", "xyz"];
+if ( DBIx::Perlish->optree_version == 1 ) {
+	test_select_sql {
+	       my $t : tab;
+	       return "abc$t->{name}xyz";
+	} "concat, interp, hash syntax",
+	"select (? || t01.name || ?) from tab t01",
+	["abc", "xyz"];
+} else {
+	test_bad_select {
+		my $t : tab;
+		return "abc$t->{name}xyz";
+	} "concat, interp, hash syntax", qr/not supported anymore/;
+}
 
 # mysql string concatentation really is different
 $main::flavor = "mysql";
@@ -700,12 +707,20 @@ test_select_sql {
 "select (concat(?, t01.firstname, ?, t01.lastname, ?)) from tab t01",
 ["foo-", " ", "-moo"];
 
-test_select_sql {
-	my $t : tab;
-	return "abc$t->{name}xyz";
-} "mysql: concat, interp, hash syntax",
-"select (concat(?, t01.name, ?)) from tab t01",
-["abc", "xyz"];
+if ( DBIx::Perlish->optree_version == 1 ) {
+	test_select_sql {
+	       my $t : tab;
+	       return "abc$t->{name}xyz";
+	} "mysql: concat, interp, hash syntax",
+	"select (concat(?, t01.name, ?)) from tab t01",
+	["abc", "xyz"];
+} else {
+	test_bad_select {
+		my $t : tab;
+		return "abc$t->{name}xyz";
+	} "mysql: concat, interp, hash syntax", qr/not supported anymore/;
+}
+
 $main::flavor = "";
 
 # defined
@@ -1181,21 +1196,35 @@ test_select_sql {
 # regression, $not_a_hash->{blah}, $not_a_hash->{blah}{bluh}
 my $not_a_hash = undef;
 my %not_a_hash;
-test_select_sql {
-	return $not_a_hash->{blah};
-} "not a hash 1",
-"select null",
-[];
-test_select_sql {
-	return $not_a_hash->{blah}{bluh};
-} "not a hash 2",
-"select null",
-[];
-test_select_sql {
-	return $not_a_hash{blah}{bluh};
-} "not a hash 3",
-"select null",
-[];
+if ( DBIx::Perlish->optree_version == 1 ) {
+	test_select_sql {
+		return $not_a_hash->{blah};
+	} "not a hash 1",
+	"select null",
+	[];
+	
+	test_select_sql {
+		return $not_a_hash->{blah}{bluh};
+	} "not a hash 2",
+	"select null",
+	[];
+	test_select_sql {
+		return $not_a_hash{blah}{bluh};
+	} "not a hash 3",
+	"select null",
+	[];
+} else {
+	test_bad_select {
+		return $not_a_hash->{blah};
+	} "undefined hashref", qr/not supported/;
+	test_bad_select {
+		return $not_a_hash->{blah}{bluh};
+	} "undefined hashref 2", qr/not supported/;
+	test_bad_select {
+		return $not_a_hash{blah}{bluh};
+	} "undefined hashref 3", qr/not supported/;
+}
+
 
 # having
 test_select_sql {

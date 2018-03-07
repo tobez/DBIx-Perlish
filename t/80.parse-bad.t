@@ -119,9 +119,15 @@ test_bad_select {
 	last unless 3..($testmy * $testour);
 } "bad simple term 3", qr/cannot reconstruct simple term from operation/;
 
-test_bad_select { join 1,2,3,4; } "bad join 1", qr/not a valid join/;
-test_bad_select { join 1,2; } "bad join 2", qr/not a valid join/;
-test_bad_select { join 1,2,3; } "bad join 3", qr/not a valid join/;
+if ( DBIx::Perlish->optree_version == 1 ) {
+	test_bad_select { join 1,2; } "bad join 1", qr/not a valid join/;
+	test_bad_select { join 1,2,3; } "bad join 2", qr/not a valid join/;
+	test_bad_select { join 1,2,3,4; } "bad join 3", qr/not a valid join/;
+} else {
+	test_bad_select { join $1,2,3; } "bad join 1", qr/not a valid join/;
+	test_bad_select { join $1,2,3,4; } "bad join 2", qr/not a valid join/;
+	test_bad_select { join $1,$2,$3,4,5; } "bad join 3", qr/not a valid join/;
+}
 test_bad_select { join $testmy - 2; } "bad join 4", qr/not a valid join.*x is expected/;
 test_bad_select { join $testmy - 2, 1; } "bad join 5", qr/not a valid join.*> is expected/;
 test_bad_select { join $testmy + 2, 1; } "bad join 6", qr/not a valid join/;

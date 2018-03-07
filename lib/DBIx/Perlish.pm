@@ -29,6 +29,12 @@ sub except (&;$) {}
 my $default_object;
 my $non_object_quirks = {};
 
+sub optree_version
+{
+	return 1 if $^V lt 5.22.0;
+	return 2;
+}
+
 sub import
 {
 	my $pkg = caller;
@@ -1703,6 +1709,11 @@ Example:
 
 An object-oriented version of L</quirk()>.
 
+=head3 optree_version
+
+Returns 1 if perl version is prior 5.22, where there are no optimizations on the optree.
+Returns 2 otherwise, when perl introduced changes to optree, that caused certain uncompatibilities.
+See more in C<BACKWARD COMPATIBILITY>
 
 =head2 Working with multiple database handles
 
@@ -1899,6 +1910,14 @@ class.
 Mason is to blame for this, since it disregards
 warnings' handlers installed by other modules.
 
+=head1 BACKWARD COMPATIBILITY
+
+Perl 5.22 introduced certain changes to the way optree is constructed.
+Some of these cannot be adequately treated, because whole constructs might be
+simply optimized away before even they hit the parser (example: C<join(1,2)> gets translated into constant C<2>).
+
+Known cases are not documented so far, but look in the tests for I<optree_version> invocations
+to see where these are found.
 
 =head1 BUGS AND LIMITATIONS
 

@@ -127,7 +127,7 @@ sub want_const
 sub want_variable_method
 {
 	my ($S, $op) = @_;
-	return unless is_unop($op, "method");
+	return unless is_unop($op, "method") || is_methop($op, "method");
 	$op = $op->first;
 	return unless is_null($op->sibling);
 	my ($name, $ok) = get_value($S, $op, soft => 1);
@@ -176,6 +176,7 @@ sub padname
 	my $padname = $S->{padlist}->[0]->ARRAYelt($op->targ);
 	if ($padname && !$padname->isa("B::SPECIAL")) {
 		return if $p{no_fakes} && $padname->FLAGS & B::SVf_FAKE;
+		return unless defined $padname->PVX;
 		return "my " . $padname->PVX;
 	} else {
 		return "my #" . $op->targ;
@@ -225,8 +226,6 @@ sub get_padlist_scalar
 	return $$v;
 }
 
-use constant SVf_FAKE   => 0x01000000;
-
 use constant MDEREF_ACTION_MASK => 0xf;
 use constant MDEREF_reload                      =>  0;
 use constant MDEREF_AV_pop_rv2av_aelem          =>  1;
@@ -250,6 +249,14 @@ use constant MDEREF_FLAG_last     => 0x40;
 use constant MDEREF_MASK          => 0x7F;
 use constant MDEREF_SHIFT         =>    7;
 
+sub bailout_multiref_vivify($)
+{
+	my $S = shift;
+	bailout $S, 
+		"accessing fields syntax is not supported anymore; for tables use methods instead, ".
+		"for arrayrefs and hashrefs don't leave them unassigned"
+}						
+
 sub parse_multideref
 {
 	my ( $S, $aux ) = @_;
@@ -263,10 +270,9 @@ sub parse_multideref
 	my ($outer_padlist, @outer_padlist);
 	my $get_padsv = sub {
 		my $index = shift;
-
 		unless ( defined $padlist[$index] ) {
 			my $padname = $names[$index];
-			if ( $padname->FLAGS & SVf_FAKE && $inner->outid > 1) {
+			if ( $padname->FLAGS & B::SVf_FAKE && $inner->outid > 1) {
 				unless ($outer_padlist) {
 					$outer_padlist = $S->{padlists}->{$inner->outid} or 
 						bailout $S, "cannot refer to an outer padlist ".$inner->outid;
@@ -297,17 +303,21 @@ sub parse_multideref
  					$access == MDEREF_AV_padsv_vivify_rv2av_aelem
  				) {
  					$ref  = $get_padsv->($sv)->object_2svref;
+					bailout_multiref_vivify $S
+						if !$ref || ((ref($ref) eq 'SCALAR') && !$$ref);
 				} elsif (
                 		        $access == MDEREF_HV_pop_rv2hv_helem ||
                 		        $access == MDEREF_HV_vivify_rv2hv_helem ||
 					$access == MDEREF_HV_gvhv_helem
 				) {
+					bailout_multiref_vivify $S unless ref($sv);
 					$ref = $sv->HV->object_2svref;
 				} elsif (
                 		        $access == MDEREF_AV_pop_rv2av_aelem ||
                 		        $access == MDEREF_AV_vivify_rv2av_aelem ||
 					$access == MDEREF_AV_gvav_aelem
 				) {
+					bailout_multiref_vivify $S unless ref($sv);
 					$ref = $sv->AV->object_2svref;
 				} else {
 					bailout $S, "don't quite know what to do with multideref access=$access";
@@ -418,6 +428,8 @@ sub find_aliased_tab
 {
 	my ($S, $op) = @_;
 	my $var = padname($S, $op);
+	return "" unless defined $var;
+
 	my $ss = $S;
 	while ($ss) {
 		my $tab;
@@ -1966,7 +1978,7 @@ sub parse_sub
 	my $root = B::svref_2object($sub);
 	$S->{padlist} = [$root->PADLIST->ARRAY];
 	$S->{curr_cv} = $root;
-	$S->{padlists}->{ $root->PADLIST->id } = $S->{padlist};
+	$S->{padlists}->{ $root->PADLIST->id } = $S->{padlist} if $root->PADLIST->can('id');
 	$root = $root->ROOT;
 	parse_op($S, $root);
 }
