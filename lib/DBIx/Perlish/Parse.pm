@@ -1426,9 +1426,9 @@ sub parse_regex
 	my $can_like = $like =~ /^\^?[-!%\s\w]*\$?$/; # like that begins with non-% can use indexes
 	
 	if ( $flavor eq 'mysql') {
-	
 		# mysql LIKE is case-insensitive
 		goto LIKE if not $case and $can_like;
+		$like =~ s/'/''/g;
 
 		return 
 			"$lhs ".
@@ -1443,6 +1443,7 @@ sub parse_regex
 			$what = 'ilike' if $case;
 			goto LIKE;
 		} 
+		$like =~ s/'/''/g;
 		return 
 			"$lhs ".
 			( $neg ? '!' : '') . 
@@ -1481,6 +1482,7 @@ sub parse_regex
 		# return "$lhs $what ?";
 		return ($neg ? "not " : "") . "$what(?, $lhs)";
 	} else {
+		$like =~ s/'/''/g;
 		# XXX is SQL-standard LIKE case-sensitive or not?
 		if ($case) {
 			$lhs = "lower($lhs)";
