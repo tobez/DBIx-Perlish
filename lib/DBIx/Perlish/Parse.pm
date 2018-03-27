@@ -1488,6 +1488,8 @@ sub parse_regex
 			$lhs = "lower($lhs)";
 			$like = lc $like;
 		}
+		bailout $S, "Regex too complex for implementation using LIKE keyword: $like"
+			if $like =~ /(?<!\\)[\[\]\(\)\{\}\?\|]/;
 LIKE:
 		my $escape = "";
 		if ($flavor eq "pg" || $flavor eq "oracle") {
