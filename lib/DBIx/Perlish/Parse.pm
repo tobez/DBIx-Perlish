@@ -265,6 +265,8 @@ sub parse_multideref
 							last;
 						}
 					}
+					bailout $S, "cannot refer to an outer padlist ".$inner->outid
+						unless $outer_padlist;
 					@outer_padlist = $outer_padlist->[1]->ARRAY;
 				}
 				$padlist[$index] = $outer_padlist[ $padname->PARENT_PAD_INDEX ];
