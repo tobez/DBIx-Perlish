@@ -8,6 +8,7 @@ our $_cover;
 
 use B;
 use Carp;
+use Devel::Caller qw(caller_cv);
 
 sub bailout
 {
@@ -251,8 +252,19 @@ sub parse_multideref
 			my $padname = $names[$index];
 			if ( $padname->FLAGS & B::SVf_FAKE && $inner->outid > 1) {
 				unless ($outer_padlist) {
-					$outer_padlist = $S->{padlists}->{$inner->outid} or 
-						bailout $S, "cannot refer to an outer padlist ".$inner->outid;
+					$outer_padlist = $S->{padlists}->{$inner->outid};
+					unless ($outer_padlist) {
+						# hacky hacky - look up the caller stack to get their padlists, maybe?
+						my $id = 0;
+						while ( 1 ) {
+							my $sub  = caller_cv($id++) or last;
+							my $padlist = B::svref_2object($sub)->PADLIST;
+							$S->{padlists}->{$padlist->id} //= [$padlist->ARRAY];
+							next unless $padlist->id == $inner->outid;
+							$outer_padlist = $S->{padlists}->{$inner->outid};
+							last;
+						}
+					}
 					@outer_padlist = $outer_padlist->[1]->ARRAY;
 				}
 				$padlist[$index] = $outer_padlist[ $padname->PARENT_PAD_INDEX ];

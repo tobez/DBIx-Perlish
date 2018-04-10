@@ -1,7 +1,7 @@
 use warnings;
 use strict;
 use DBIx::Perlish qw/:all/;
-use Test::More tests => 430 + ((DBIx::Perlish->optree_version == 1) ? 9 : 0);
+use Test::More tests => 432 + ((DBIx::Perlish->optree_version == 1) ? 9 : 0);
 use t::test_utils;
 
 # lone [boolean] tests
@@ -1225,6 +1225,16 @@ if ( DBIx::Perlish->optree_version == 1 ) {
 	} "undefined hashref 3", qr/not supported/;
 }
 
+# nonlocal padlists
+sub foo
+{
+	my $me = shift;
+	test_select_sql {
+		my $t : table = $me->{table};
+		!$t->id == 5;
+	} "nonlocal padlist", "select * from tbl t01 where not t01.id = 5", [];
+}
+foo({ table => 'tbl' });
 
 # having
 test_select_sql {
