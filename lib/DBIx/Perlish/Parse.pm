@@ -327,8 +327,14 @@ sub parse_multideref
 					$key = ${$ptr->object_2svref};
 				}
  				$ref = $$ref if ref($ref) =~ /REF|SCALAR/;
- 				$ref = (ref($ref) eq 'HASH') ? 
- 					$ref->{$key} : $ref->[$key];
+ 				$ref = (
+ 					$access == B::MDEREF_HV_padhv_helem() ||
+ 					$access == B::MDEREF_HV_padsv_vivify_rv2hv_helem() ||
+                		        $access == B::MDEREF_HV_pop_rv2hv_helem() ||
+                		        $access == B::MDEREF_HV_vivify_rv2hv_helem() ||
+					$access == B::MDEREF_HV_gvhv_helem()
+				) ? $ref->{$key} : $ref->[$key];
+
 				if (!$ref && (
 					$access == B::MDEREF_AV_gvsv_vivify_rv2av_aelem () ||  
 					$access == B::MDEREF_AV_padsv_vivify_rv2av_aelem() || 
