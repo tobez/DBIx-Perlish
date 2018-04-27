@@ -14,6 +14,8 @@ $VERSION = '0.63';
 @EXPORT_OK = qw(union intersect except);
 %EXPORT_TAGS = (all => [@EXPORT, @EXPORT_OK]);
 
+our %connections;
+
 use DBIx::Perlish::Parse;
 
 sub db_fetch  (&) { DBIx::Perlish->fetch ($_[0]) }
@@ -74,6 +76,9 @@ sub get_dbh
 	if ($default_object) {
 		$dbh = $default_object->{dbh};
 	}
+	my ($pkg) = caller($lvl-1);
+	$dbh = $connections{$pkg}->() if $connections{$pkg};
+
 	eval { require PadWalker; };
 	unless ($@) {
 		unless ($dbh) {
@@ -85,7 +90,6 @@ sub get_dbh
 			$dbh = ${$vars->{'$dbh'}} if $vars->{'$dbh'};
 		}
 		unless ($dbh) {
-			my ($pkg) = caller($lvl-1);
 			no strict 'refs';
 			$dbh = ${"${pkg}::dbh"};
 		}
@@ -440,6 +444,14 @@ sub gen_sql
 	return ($sql, $v, $nret);
 }
 
+sub connection
+{
+	shift if $_[0] eq __PACKAGE__;
+	my $conn = shift;
+	my ($pkg) = $_[0] ? ($_[0]) : caller;
+	$connections{ $pkg } = $conn;
+}
+
 
 1;
 __END__
@@ -610,6 +622,16 @@ Examples:
     my $dbh = DBH->connect(...);
     DBIx::Perlish::init($dbh);
 
+
+=head3 connection($callback, [$package])
+
+Alternative interface for registering dbh handle for the whole package at once.
+
+Example:
+    
+    DBIx::Perlish->connection( sub { DBI->connect(...) } );
+    DBIx::Perlish->connection( sub { DBI->connect(...) }, 'Other::Package' );
+
 =head3 Special treatment of the C<$dbh> variable
 
 If the user did not
@@ -628,22 +650,13 @@ module to do the right thing:
     my $dbh = DBI->connect(...);
     my @r = db_fetch { users->name !~ /\@/ };
 
-Initially, the author did not recommend relying on this feature in the
+The author does not recommend relying on this feature in the
 production code on a theory that it is `magical' and makes assumptions
-about names used outside of the module itself.
-The author recommended to always use the C<init()> subroutine.
+about names used outside of the module itself. Also, starting from perl v20,
+the optimizer can silently eat away a variable it deems unused, which makes
+this feature even more brittle.
 
-However, the experience of using the C<DBIx::Perlish> module
-in production environment
-has shown that the assumption about the name of the database handle
-is true in almost all cases
-in practice
-(but see L</Working with multiple database handles> below),
-and that the magical nature of the feature does not hinder,
-indeed helps writing code in a style that is easy to maintain.
-In fact, there is often B<less> of an action-at-a-distance effect when
-relying on the implicit C<$dbh> instead of using the C<init()> sub.
-
+The author recommended to always use either the C<init()> or C<connection()> subroutine.
 
 =head3 db_fetch {}
 
