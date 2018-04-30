@@ -8,23 +8,20 @@ use Carp;
 use vars qw($VERSION @EXPORT @EXPORT_OK %EXPORT_TAGS $SQL @BIND_VALUES);
 require Exporter;
 use base 'Exporter';
+use Devel::Declare;
 
-$VERSION = '0.63';
-@EXPORT = qw(db_fetch db_select db_update db_delete db_insert sql);
-@EXPORT_OK = qw(union intersect except);
+$VERSION = '1.00';
+@EXPORT = qw(sql);
+@EXPORT_OK = qw(union intersect except subselect);
 %EXPORT_TAGS = (all => [@EXPORT, @EXPORT_OK]);
 
 use DBIx::Perlish::Parse;
 
-sub db_fetch  (&) { DBIx::Perlish->fetch ($_[0]) }
-sub db_select (&) { DBIx::Perlish->fetch ($_[0]) }
-sub db_update (&) { DBIx::Perlish->update($_[0]) }
-sub db_delete (&) { DBIx::Perlish->delete($_[0]) }
-sub db_insert { DBIx::Perlish->insert(@_) }
 
 sub union (&;$) {}
 sub intersect (&;$) {}
 sub except (&;$) {}
+sub subselect (&) {}
 
 my $default_object;
 my $non_object_quirks = {};
@@ -33,6 +30,24 @@ sub optree_version
 {
 	return 1 if $^V lt 5.22.0;
 	return 2;
+}
+
+sub parser_sub
+{
+	my ( $dbh, $decl, $offset) = @_;
+
+	my $l = Devel::Declare::get_linestr();
+	substr($l, $offset + length($decl), 0) = ' ' . $dbh . ', sub';
+	Devel::Declare::set_linestr($l);
+}
+
+sub parser_insert
+{
+	my ( $dbh, $decl, $offset) = @_;
+
+	my $l = Devel::Declare::get_linestr();
+	substr($l, $offset + length($decl), 0) = ' ' . $dbh . ',';
+	Devel::Declare::set_linestr($l);
 }
 
 sub import
@@ -45,13 +60,13 @@ sub import
 		pop @EXPORT_OK;
 		%EXPORT_TAGS = (all => [@EXPORT, @EXPORT_OK]);
 	}
-	if (@_ == 5) {
-		my %p = @_[1..4];
-		if ($p{prefix} && $p{prefix} =~ /^[a-zA-Z_]\w*$/ &&
-			$p{dbh} && ref $p{dbh} && (ref $p{dbh} eq "SCALAR" || ref $p{dbh} eq "REF"))
-		{
+	my @shift;
+	@shift = (shift()) if @_ % 2;
+	my %p = @_;
+	if ($p{prefix} && $p{prefix} =~ /^[a-zA-Z_]\w*$/) {
+		no strict 'refs';
+		if ( $p{dbh} && ref $p{dbh} && (ref $p{dbh} eq "SCALAR" || ref $p{dbh} eq "REF")) {
 			my $dbhref = $p{dbh};
-			no strict 'refs';
 			*{$pkg."::$p{prefix}_fetch"} =
 			*{$pkg."::$p{prefix}_select"} =
 				sub (&) { my $o = DBIx::Perlish->new(dbh => $$dbhref); $o->fetch(@_) };
@@ -64,45 +79,27 @@ sub import
 			return;
 		}
 	}
-	DBIx::Perlish->export_to_level(1, @_);
-}
 
-my $has_padwalker;
-sub get_dbh
-{
-	my ($lvl) = @_;
-	my $dbh;
-	if ($default_object) {
-		$dbh = $default_object->{dbh};
-	}
-	my ($pkg) = caller($lvl-1);
-
-	unless ( defined $has_padwalker ) {
-		eval { require PadWalker; };
-		$has_padwalker = $@ ? 0 : 1;
-	}
-	if ( $has_padwalker ) {
-		unless ($dbh) {
-			my $vars = PadWalker::peek_my($lvl);
-			$dbh = ${$vars->{'$dbh'}} if $vars->{'$dbh'};
-		}
-		unless ($dbh) {
-			my $vars = PadWalker::peek_our($lvl);
-			$dbh = ${$vars->{'$dbh'}} if $vars->{'$dbh'};
-		}
-	}
-	unless ($dbh) {
-		$dbh = $pkg->dbh() if $pkg->can('dbh');
-	}
-	unless ($dbh) {
+	my $prefix = delete($p{prefix}) // 'db';
+	my $dbh    = delete($p{dbh}) // '$dbh';
+	my $parser = sub { parser_sub( $dbh, @_ ) };
+	Devel::Declare->setup_for( $pkg, {
+		$prefix . '_insert' => { const => sub { parser_insert($dbh,@_) }},
+		map { $prefix . '_' . $_ => { const => $parser }} qw(fetch select update delete)
+	});
+	{
 		no strict 'refs';
-		$dbh = ${"${pkg}::dbh"};
+		*{$pkg."::${prefix}_fetch"} =
+		*{$pkg."::${prefix}_select"} =
+			sub ($&) { my $o = DBIx::Perlish->new(dbh => shift); $o->fetch(@_) };
+		*{$pkg."::${prefix}_update"} =
+			sub ($&) { my $o = DBIx::Perlish->new(dbh => shift); $o->update(@_) };
+		*{$pkg."::${prefix}_delete"} =
+			sub ($&) { my $o = DBIx::Perlish->new(dbh => shift); $o->delete(@_) };
+		*{$pkg."::${prefix}_insert"} =
+			sub { my $o = DBIx::Perlish->new(dbh => shift); $o->insert(@_) };
 	}
-	die "Database handle not set.  Maybe you forgot to call DBIx::Perlish::init()?\n" unless $dbh;
-	unless (UNIVERSAL::isa($dbh, "DBI::db")) { # XXX maybe relax for other things?
-		die "Invalid database handle found.\n";
-	}
-	$dbh;
+	DBIx::Perlish->export_to_level(1, @shift, %p);
 }
 
 sub init
@@ -171,7 +168,7 @@ sub fetch
 	my $me = ref $moi ? $moi : {};
 
 	my $nret;
-	my $dbh = $me->{dbh} || get_dbh(3);
+	my $dbh = $me->{dbh};
 	my @kf;
 	my $flavor = _get_flavor($dbh);
 	my $kf_convert = sub { return $_[0] };
@@ -239,7 +236,7 @@ sub update
 	my ($moi, $sub) = @_;
 	my $me = ref $moi ? $moi : {};
 
-	my $dbh = $me->{dbh} || get_dbh(3);
+	my $dbh = $me->{dbh};
 	($me->{sql}, $me->{bind_values}) = gen_sql($sub, "update",
 		flavor => _get_flavor($dbh),
 		dbh    => $dbh,
@@ -254,7 +251,7 @@ sub delete
 	my ($moi, $sub) = @_;
 	my $me = ref $moi ? $moi : {};
 
-	my $dbh = $me->{dbh} || get_dbh(3);
+	my $dbh = $me->{dbh};
 	($me->{sql}, $me->{bind_values}) = gen_sql($sub, "delete",
 		flavor => _get_flavor($dbh),
 		dbh    => $dbh,
@@ -269,7 +266,7 @@ sub insert
 	my ($moi, $table, @rows) = @_;
 	my $me = ref $moi ? $moi : {};
 
-	my $dbh = $me->{dbh} || get_dbh(3);
+	my $dbh = $me->{dbh};
 	my %sth;
 	for my $row (@rows) {
 		my @keys = sort keys %$row;
@@ -479,7 +476,7 @@ This document describes DBIx::Perlish version 0.63
     # sub-queries:
     my @rows = db_fetch {
         my $x : users;
-        $x->id <- db_fetch {
+        $x->id <- subselect {
             my $t2 : table1;
             $t2->col == 2 || $t2->col == 3;
             return $t2->user_id;
@@ -883,7 +880,7 @@ Examples:
     # delete with a subquery
     db_delete {
         my $u : users;
-        $u->name <- db_fetch {
+        $u->name <- subselect {
             visitors->origin eq "Uranus";
             return visitors->name;
         }
@@ -931,6 +928,10 @@ the function might throw any of the exceptions thrown by DBI.
 
 The C<db_insert {}> function is exported by default.
 
+=head3 subselect()
+
+This call, formerly known as as internal form of C<db_fetch>, 
+is basically an SQL SELECT statement. See L</Subqueries>.
 
 =head3 union()
 
@@ -1099,12 +1100,12 @@ several different ways:
 =back
 
 Last, but not least, a combination of verbatim "table" attribute
-with a nested L</db_fetch {}> can be used to implement I<inline views>:
+with a nested L</subselect {}> can be used to implement I<inline views>:
 
-    my $var : table = db_fetch { ... };
+    my $var : table = subselect { ... };
 
 In this case a B<select> statement corresponding to
-the nested L</db_fetch {}> will represent the table.
+the nested L</subselect {}> will represent the table.
 Please note that not all database drivers support
 this, although at present the C<DBIx::Perlish> module
 does not care and will generate SQL which will subsequently
@@ -1558,7 +1559,7 @@ construct, for example:
 
     db_delete {
         my $t : table1;
-        db_fetch {
+        subselect {
             $t->id == table2->table1_id;
         };
     };
@@ -1572,7 +1573,7 @@ the right:
 
     db_delete {
         my $t : table1;
-        $t->id  <-  db_fetch {
+        $t->id  <-  subselect {
             return table2->table1_id;
         };
     };
@@ -1599,8 +1600,8 @@ specify a join condition. The join syntax is one of (the last two are
 equivalent):
 
     join $t1 BINARY_OP $t2;
-    join $t1 BINARY_OP $t2 => db_fetch { CONDITION };
-    join $t1 BINARY_OP $t2 <= db_fetch { CONDITION };
+    join $t1 BINARY_OP $t2 => subselect { CONDITION };
+    join $t1 BINARY_OP $t2 <= subselect { CONDITION };
 
 where CONDITION is an arbitrary expression using fields from C<$t1> and C<$t2>
 , and BINARY_OP is one of C<*>,C<+>,C<x>,C<&>,C<|>,C<< < >>,C<< > >> operators,
@@ -1611,7 +1612,7 @@ which correspond to the following standard join types:
 =item Inner join
 
 This corresponds to either of C<*>, C<&>, and C<x> operators.
-The C<db_fetch {}> condition for inner join may be omitted,
+The C<subselect {}> condition for inner join may be omitted,
 in which case it degenerates into a I<cross join>.
 
 =item Full outer join
@@ -1635,7 +1636,7 @@ Example:
 
     my $x : x;
     my $y : y;
-    join $y * $x => db_fetch { $y-> id == $x-> id };
+    join $y * $x => subselect { $y-> id == $x-> id };
 
 =head2 Object-oriented interface
 

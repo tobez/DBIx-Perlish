@@ -840,7 +840,7 @@ sub try_get_dbfetch
 	$dbfetch = $dbfetch->first;
 	my $gv = get_gv($S, $dbfetch);
 	return unless $gv;
-	return unless $gv->NAME =~ /^(db_fetch|db_select)$/;
+	return unless $gv->NAME eq 'subselect';
 
 	return $codeop;
 }
@@ -1052,7 +1052,7 @@ sub try_funcall
 		if ($p{union_or_friends}) {
 			bailout $S, "missing semicolon after $p{union_or_friends} sub";
 		}
-		if ($func =~ /^(db_fetch|db_select)$/) {
+		if ($func eq 'subselect') {
 			return if $p{only_normal_funcs};
 			return unless @args == 1;
 			my $rg = $args[0];
@@ -1553,7 +1553,7 @@ sub parse_join
 	# allow 2-arg syntax for cross joins:
 	#    join $a * $b
 	# and 3-arg syntax for all other joins:
-	#    join $a * $b => db_fetch { ... }
+	#    join $a * $b => subselect { ... }
 	bailout $S, "not a valid join() syntax"
 		unless 2 <= @op and 3 >= @op and
 			is_pushmark_or_padrange($op[0]) and 
@@ -1590,11 +1590,11 @@ sub parse_join
 	$tab[1] = find_aliased_tab($S, $op[1]-> last) or 
 		bailout $S, "second argument of join() is not a table";
 	
-	# db_fetch
+	# subselect
 	my ( $condition, $codeop);
 	if ( $op[2]) {
 		$codeop = try_get_dbfetch( $S, $op[2]);
-		bailout $S, "third argument to join is not a db_fetch expression"
+		bailout $S, "third argument to join is not a subselect expression"
 			unless $codeop;
 
 		my $cv = $codeop->sv;
@@ -1612,7 +1612,7 @@ sub parse_join
 		$S2-> {alias} = $S-> {alias};
 		parse_sub($S2, $subref);
 		bailout $S, 
-			"join() db_fetch expression cannot contain anything ".
+			"join() subselect expression cannot contain anything ".
 			"but conditional expressions on already declared tables"
 				if scalar( grep { @{ $S2-> {$_} } } qw(
 					group_by order_by autogroup_by ret_values joins
@@ -1620,7 +1620,7 @@ sub parse_join
 
 		unless ( @{ $S2->{where}||[] }) {
 			bailout $S, 
-				"join() db_fetch expression must contain ".
+				"join() subselect expression must contain ".
 				"at least one conditional expression"
 					unless $jointype eq 'inner';
 			$jointype = 'cross';

@@ -5,9 +5,9 @@ name			'DBIx-Perlish';
 license			'bsd';
 all_from		'lib/DBIx/Perlish.pm';
 
-requires		perl => '5.8.2';
+requires		perl => '5.14.1';
 requires		'DBI';
-requires		'PadWalker';
+requires		'Devel::Declare';
 requires		'Devel::Caller';
 build_requires	'Test::More' => '0.42';
 

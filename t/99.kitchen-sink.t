@@ -121,12 +121,12 @@ test_select_sql {
 
 # subselects
 test_select_sql {
-	tbl->id  <-  db_fetch { return t2->some_id };
+	tbl->id  <-  subselect { return t2->some_id };
 } "simple IN subselect",
 "select * from tbl t01 where t01.id in (select s01_t01.some_id from t2 s01_t01)",
 [];
 test_select_sql {
-	!tbl->id  <-  db_fetch { return t2->some_id };
+	!tbl->id  <-  subselect { return t2->some_id };
 } "simple NOT IN subselect",
 "select * from tbl t01 where t01.id not in (select s01_t01.some_id from t2 s01_t01)",
 [];
@@ -158,13 +158,13 @@ $main::flavor = "";
 
 test_select_sql {
 	my $t : tbl;
-	db_fetch { $t->id == t2->some_id };
+	subselect { $t->id == t2->some_id };
 } "simple EXISTS subselect",
 "select * from tbl t01 where exists (select * from t2 s01_t01 where t01.id = s01_t01.some_id)",
 [];
 test_select_sql {
 	my $t : tbl;
-	!db_fetch { $t->id == t2->some_id };
+	!subselect { $t->id == t2->some_id };
 } "simple NOT EXISTS subselect",
 "select * from tbl t01 where not exists (select * from t2 s01_t01 where t01.id = s01_t01.some_id)",
 [];
