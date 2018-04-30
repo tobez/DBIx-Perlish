@@ -1,26 +1,41 @@
 use warnings;
 use strict;
-use DBIx::Perlish qw/:all/;
+
+package A;
+
 use Test::More;
 use t::test_utils;
+use DBIx::Perlish qw/:all/;
+sub fetch { db_fetch { my $t : table } }
 
 sub check
 {
-	my ( $err, $descr ) = @_;
+	my ( $pkg, $err, $descr ) = @_;
 	eval { 
-		db_fetch { my $t : table }; 
+		$pkg->fetch;
 	};
 	like( $@, $err, $descr);
 }
 
-check( qr/Database handle not set/, "plain call");
-DBIx::Perlish->connection( sub { 1 } );
-check( qr/Invalid database handle/, "connection");
-DBIx::Perlish->connection( undef );
-check( qr/Database handle not set/, "call after undef");
-DBIx::Perlish->connection( sub { 1 }, 'wrong' );
-check( qr/Database handle not set/, "wrong connection");
-DBIx::Perlish->connection( sub { 1 }, 'main' );
-check( qr/Invalid database handle/, "connection again");
+package B;
+our @ISA;
+@ISA = qw(A);
+use DBIx::Perlish qw/:all/;
+sub dbh { 1 }
+sub fetch { db_fetch { my $t : table } }
+
+package C;
+our @ISA;
+@ISA = qw(B);
+use DBIx::Perlish qw/:all/;
+sub fetch { db_fetch { my $t : table } }
+
+package main;
+
+use Test::More;
+
+A->check( qr/Database handle not set/, "plain call");
+B->check( qr/Invalid database handle/, "connection direct");
+C->check( qr/Invalid database handle/, "connection inherited");
 
 done_testing;

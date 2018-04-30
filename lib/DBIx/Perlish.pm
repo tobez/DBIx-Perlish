@@ -14,8 +14,6 @@ $VERSION = '0.63';
 @EXPORT_OK = qw(union intersect except);
 %EXPORT_TAGS = (all => [@EXPORT, @EXPORT_OK]);
 
-our %connections;
-
 use DBIx::Perlish::Parse;
 
 sub db_fetch  (&) { DBIx::Perlish->fetch ($_[0]) }
@@ -69,6 +67,7 @@ sub import
 	DBIx::Perlish->export_to_level(1, @_);
 }
 
+my $has_padwalker;
 sub get_dbh
 {
 	my ($lvl) = @_;
@@ -77,10 +76,12 @@ sub get_dbh
 		$dbh = $default_object->{dbh};
 	}
 	my ($pkg) = caller($lvl-1);
-	$dbh = $connections{$pkg}->() if $connections{$pkg};
 
-	eval { require PadWalker; };
-	unless ($@) {
+	unless ( defined $has_padwalker ) {
+		eval { require PadWalker; };
+		$has_padwalker = $@ ? 0 : 1;
+	}
+	if ( $has_padwalker ) {
 		unless ($dbh) {
 			my $vars = PadWalker::peek_my($lvl);
 			$dbh = ${$vars->{'$dbh'}} if $vars->{'$dbh'};
@@ -89,10 +90,13 @@ sub get_dbh
 			my $vars = PadWalker::peek_our($lvl);
 			$dbh = ${$vars->{'$dbh'}} if $vars->{'$dbh'};
 		}
-		unless ($dbh) {
-			no strict 'refs';
-			$dbh = ${"${pkg}::dbh"};
-		}
+	}
+	unless ($dbh) {
+		$dbh = $pkg->dbh() if $pkg->can('dbh');
+	}
+	unless ($dbh) {
+		no strict 'refs';
+		$dbh = ${"${pkg}::dbh"};
 	}
 	die "Database handle not set.  Maybe you forgot to call DBIx::Perlish::init()?\n" unless $dbh;
 	unless (UNIVERSAL::isa($dbh, "DBI::db")) { # XXX maybe relax for other things?
@@ -444,14 +448,6 @@ sub gen_sql
 	return ($sql, $v, $nret);
 }
 
-sub connection
-{
-	shift if $_[0] eq __PACKAGE__;
-	my $conn = shift;
-	my ($pkg) = $_[0] ? ($_[0]) : caller;
-	$connections{ $pkg } = $conn;
-}
-
 
 1;
 __END__
@@ -623,24 +619,14 @@ Examples:
     DBIx::Perlish::init($dbh);
 
 
-=head3 connection($callback, [$package])
-
-Alternative interface for registering dbh handle for the whole package at once.
-
-Example:
-    
-    DBIx::Perlish->connection( sub { DBI->connect(...) } );
-    DBIx::Perlish->connection( sub { DBI->connect(...) }, 'Other::Package' );
-
 =head3 Special treatment of the C<$dbh> variable
 
-If the user did not
-call C<init()> before issuing any of the C<db_fetch {}>,
-C<db_update {}>, C<db_delete {}> or C<db_insert {}>, those
-functions look for one special case before bailing out.
+If the user did not call C<init()> before issuing any of the C<db_fetch {}>,
+C<db_update {}>, C<db_delete {}> or C<db_insert {}>, those functions look for
+one special case before bailing out.
 
 Namely, they try to locate a variable C<my $dbh>, C<our $dbh>,
-or caller's package global C<$dbh>,
+caller's package C<sub dbh()>, and finally caller's package global C<$dbh>,
 in that order, in the scope in which they are used.  If such
 variable is found, and if it contains a valid C<DBI> database
 handler, they will use it for performing the actual query.
@@ -650,13 +636,13 @@ module to do the right thing:
     my $dbh = DBI->connect(...);
     my @r = db_fetch { users->name !~ /\@/ };
 
-The author does not recommend relying on this feature in the
-production code on a theory that it is `magical' and makes assumptions
-about names used outside of the module itself. Also, starting from perl v20,
-the optimizer can silently eat away a variable it deems unused, which makes
-this feature even more brittle.
+The author does not recommend relying on automatic discovery of C<my $dbh>
+feature in the production code on a theory that it is `magical' and makes
+assumptions about names used outside of the module itself. Also, starting from
+perl v20, the optimizer can silently eat away a variable it deems unused, which
+makes this feature even more brittle.
 
-The author recommended to always use either the C<init()> or C<connection()> subroutine.
+The author recommended to always use either the C<init()>, C<sub __PACKAGE__::dbh()>, or C<$__PACKAGE__::dbh>
 
 =head3 db_fetch {}
 
