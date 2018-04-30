@@ -455,7 +455,7 @@ DBIx::Perlish - a perlish interface to SQL databases
 
 =head1 VERSION
 
-This document describes DBIx::Perlish version 0.63
+This document describes DBIx::Perlish version 1.00
 
 
 =head1 SYNOPSIS
