@@ -840,7 +840,7 @@ sub try_get_dbfetch
 	$dbfetch = $dbfetch->first;
 	my $gv = get_gv($S, $dbfetch);
 	return unless $gv;
-	return unless $gv->NAME =~ /^(db_fetch|db_select)$/;
+	return unless $gv->NAME =~ /^(db_fetch|db_select|subselect)$/;
 
 	return $codeop;
 }
@@ -1052,7 +1052,7 @@ sub try_funcall
 		if ($p{union_or_friends}) {
 			bailout $S, "missing semicolon after $p{union_or_friends} sub";
 		}
-		if ($func =~ /^(db_fetch|db_select)$/) {
+		if ($func =~ /^(db_fetch|db_select|subselect)$/) {
 			return if $p{only_normal_funcs};
 			return unless @args == 1;
 			my $rg = $args[0];

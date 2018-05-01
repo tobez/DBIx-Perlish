@@ -11,7 +11,7 @@ use base 'Exporter';
 
 $VERSION = '0.63';
 @EXPORT = qw(db_fetch db_select db_update db_delete db_insert sql);
-@EXPORT_OK = qw(union intersect except);
+@EXPORT_OK = qw(union intersect except subselect);
 %EXPORT_TAGS = (all => [@EXPORT, @EXPORT_OK]);
 
 use DBIx::Perlish::Parse;
@@ -25,6 +25,7 @@ sub db_insert { DBIx::Perlish->insert(@_) }
 sub union (&;$) {}
 sub intersect (&;$) {}
 sub except (&;$) {}
+sub subselect (&;$) {}
 
 my $default_object;
 my $non_object_quirks = {};
@@ -952,6 +953,11 @@ This is a helper sub which is meant to be used inside
 query subs.  Please see L</Compound queries' statements>
 for details.  The C<except()> can be exported via C<:all>
 import declaration.
+
+=head3 subselect()
+
+Same as db_fetch() inside another query. Please use it if 
+migration towards v1.00 is planned.
 
 =head3 quirk()
 
