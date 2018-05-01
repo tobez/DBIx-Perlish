@@ -102,20 +102,7 @@ sub import
 	DBIx::Perlish->export_to_level(1, @shift, %p);
 }
 
-sub init
-{
-	my %p;
-	if (@_ == 1) {
-		$p{dbh} = $_[0];
-	} else {
-		%p = @_;
-	}
-	die "The \"dbh\" parameter is required\n" unless $p{dbh};
-	unless (UNIVERSAL::isa($p{dbh}, "DBI::db")) { # XXX maybe relax for other things?
-		die "Invalid database handle supplied in the \"dbh\" parameter.\n";
-	}
-	$default_object = DBIx::Perlish->new(dbh => $p{dbh});
-}
+sub init { warn "DBIx::Perlish::init is deprecated" }
 
 sub new
 {
@@ -464,7 +451,6 @@ This document describes DBIx::Perlish version 1.00
     use DBIx::Perlish;
 
     my $dbh = DBI->connect(...);
-    DBIx::Perlish::init($dbh);
 
     # selects:
     my @rows = db_fetch {
@@ -587,59 +573,6 @@ of the "SQL sprinkling" style of database interaction.
 It is also fully compatible with the "clean and tidy" method.
 
 =head2 Procedural interface
-
-=head3 init()
-
-The C<init()> sub initializes procedural interface
-to the module.
-
-It accepts named parameters.
-One parameter, C<dbh>, is required and must be a valid DBI database handler.
-
-All other parameters are silently ignored.
-
-Alternatively, C<init()> can be called with a single
-positional parameter, in which case it is assumed to
-be the DBI database handler.
-
-If the supplied database handler is not valid, an
-exception is thrown.
-
-This procedure does not return anything meaningful.
-
-Examples:
-
-    my $dbh = DBH->connect(...);
-    DBIx::Perlish::init(dbh => $dbh);
-
-    my $dbh = DBH->connect(...);
-    DBIx::Perlish::init($dbh);
-
-
-=head3 Special treatment of the C<$dbh> variable
-
-If the user did not call C<init()> before issuing any of the C<db_fetch {}>,
-C<db_update {}>, C<db_delete {}> or C<db_insert {}>, those functions look for
-one special case before bailing out.
-
-Namely, they try to locate a variable C<my $dbh>, C<our $dbh>,
-caller's package C<sub dbh()>, and finally caller's package global C<$dbh>,
-in that order, in the scope in which they are used.  If such
-variable is found, and if it contains a valid C<DBI> database
-handler, they will use it for performing the actual query.
-This allows one to write something like that, and expect the
-module to do the right thing:
-
-    my $dbh = DBI->connect(...);
-    my @r = db_fetch { users->name !~ /\@/ };
-
-The author does not recommend relying on automatic discovery of C<my $dbh>
-feature in the production code on a theory that it is `magical' and makes
-assumptions about names used outside of the module itself. Also, starting from
-perl v20, the optimizer can silently eat away a variable it deems unused, which
-makes this feature even more brittle.
-
-The author recommended to always use either the C<init()>, C<sub __PACKAGE__::dbh()>, or C<$__PACKAGE__::dbh>
 
 =head3 db_fetch {}
 
@@ -1731,17 +1664,6 @@ to L</new()>.
 
 The obvious disadvantage is that one has to explicitly use "sub"
 when specifying a query sub, so the syntax is unwieldy.
-
-=item Switching handles with L</init()>
-
-This will work, but it will add quite a bit of clutter to the
-code, especially if queries to multiple databases are intermixed
-with each other.
-
-=item Switching handles via manipulation of the C<$dbh> variable
-
-This has the same disadvantage as the previous method.  Besides,
-it looks like vodoo.
 
 =item Using special import syntax
 

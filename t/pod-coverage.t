@@ -9,5 +9,5 @@ if ($@) {
 }
 pod_coverage_ok(
 	"DBIx::Perlish",
-	{ also_private => [ qr/^(parser_insert|parser_sub)$/, qr/^gen_sql$/ ] },
+	{ also_private => [ qr/^(init|parser_insert|parser_sub)$/, qr/^gen_sql$/ ] },
 );

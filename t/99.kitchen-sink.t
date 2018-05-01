@@ -1,7 +1,7 @@
 use warnings;
 use strict;
 use DBIx::Perlish qw/:all/;
-use Test::More tests => 432 + ((DBIx::Perlish->optree_version == 1) ? 9 : 0);
+use Test::More;
 use t::test_utils;
 
 # lone [boolean] tests
@@ -1038,14 +1038,10 @@ use vars '@ISA';
 package main;
 
 my $bad_dbh = bless {}, 'something';
-eval { DBIx::Perlish::init($bad_dbh) };
-like($@||"", qr/Invalid database handle supplied/, "init with bad dbh");
 eval { DBIx::Perlish->new(dbh => $bad_dbh) };
 like($@||"", qr/Invalid database handle supplied/, "new with bad dbh");
 
 my $good_dbh = bless {}, 'good_dbh';
-eval { DBIx::Perlish::init($good_dbh) };
-is($@||"", "", "init with inherited dbh");
 eval { DBIx::Perlish->new(dbh => $good_dbh) };
 is($@||"", "", "new with inherited dbh");
 
@@ -1244,3 +1240,5 @@ test_select_sql {
 } "simple having",
 "select t01.city from weather t01 group by t01.city having max(t01.temp_lo) < 40",
 [];
+
+done_testing;

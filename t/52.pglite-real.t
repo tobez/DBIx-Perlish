@@ -147,5 +147,4 @@ intersect {}; pass("coverage: intersect");
 except    {}; pass("coverage: except");
 sql "haha"  ; pass("coverage: sql");
 
-DBIx::Perlish::init($dbh);
 is(scalar (db_fetch { my $t : names; $t->id == 1; return $t->name; }), undef, "one more fetch deleted");

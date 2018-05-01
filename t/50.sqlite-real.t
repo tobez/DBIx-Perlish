@@ -153,7 +153,6 @@ is(scalar (db_fetch { my $t : names; $t->id == 701; return $t->name; }), "wxyz",
 is(scalar (db_fetch { my $t : names; $t->id == 702; return $t->name; }), "me'me", "fetch multi-inserted 702");
 
 
-DBIx::Perlish::init($dbh);
 is(scalar (db_fetch { my $t : names; $t->id == 1; return $t->name; }), undef, "one more fetch deleted");
 
 my $q = "'";
