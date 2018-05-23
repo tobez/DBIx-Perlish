@@ -1037,7 +1037,8 @@ sub try_funcall
 				%gen_args);
 			# XXX maybe check for nret validity
 			push @{$S->{additions}}, {
-				type => $func,
+				type => ((($S->{gen_args}->{flavor}||"") eq "oracle" && $func eq 'except') ? 
+					'minus' : $func),
 				sql  => $sql,
 				vals => $vals,
 			};
