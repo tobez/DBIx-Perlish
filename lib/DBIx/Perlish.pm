@@ -306,6 +306,7 @@ sub gen_sql
 	my $nret = 9999;
 	my $no_aliases;
 	my $dangerous;
+	my %flags;
 	if ($operation eq "select") {
 		my $nkf = 0;
 		if ($S->{key_fields}) {
@@ -320,6 +321,11 @@ sub gen_sql
 			for my $ret (@{$S->{returns}}) {
 				$nret = 9999 if $ret =~ /\*/;
 			}
+			$flags{returns_dont_care} = 1 if
+				1 == @{$S->{returns}} && 
+				$S->{returns}->[0] =~ /^(.*)\.\*/ &&
+				$S->{returns_dont_care}->{$1}
+			;
 		} else {
 			$sql .= "*";
 		}
@@ -429,7 +435,7 @@ sub gen_sql
 	}
 	$sql =~ s/\s+$//;
 
-	return ($sql, $v, $nret);
+	return ($sql, $v, $nret, %flags);
 }
 
 

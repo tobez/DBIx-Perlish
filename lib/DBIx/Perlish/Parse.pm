@@ -529,7 +529,7 @@ sub new_var
 
 sub try_parse_attr_assignment
 {
-	my ($S, $op, $realname) = @_;
+	my ($S, $op, $realname, %opt) = @_;
 	return unless is_unop($op, "entersub");
 	$op = want_unop($S, $op);
 	return unless is_pushmark_or_padrange($op);
@@ -563,7 +563,7 @@ sub try_parse_attr_assignment
 	}
 	$attr = join ".", @attr;
 	new_var($S, $varn, $attr);
-	return $attr;
+	return $varn;
 }
 
 sub parse_list
@@ -942,9 +942,9 @@ sub handle_subselect
 		$gen_args{prefix} = $S->{subselect};
 	}
 	$S->{subselect}++;
-	my ($sql, $vals, $nret) = DBIx::Perlish::gen_sql($subref, "select",
+	my ($sql, $vals, $nret, %flags) = DBIx::Perlish::gen_sql($subref, "select",
 		%gen_args);
-	if ($nret != 1 && !$p{returns_dont_care}) {
+	if ($nret != 1 && !$p{returns_dont_care} && !$flags{returns_dont_care}) {
 		bailout $S, "subselect query sub must return exactly one value\n";
 	}
 
@@ -980,7 +980,11 @@ sub parse_assign
 			# my $p : table = function(1,2,3);
 			my $tab = try_parse_attr_assignment($S,
 				$op->last->first->sibling, $sql);
-			return if $tab;
+			if ( $tab ) {
+				my $alias = $S->{var_alias}->{$tab};
+				$S->{returns_dont_care}->{$alias} = 1;
+				return;
+			}
 		}
 	}
 	bailout $S, "assignments are not understood in $S->{operation}'s query sub"
