@@ -143,6 +143,12 @@ test_select_sql {
 } "Ora: tablefunc NOT IN subselect",
 "select * from tbl t01 where t01.id not in (select * from table(tablefunc(?)))",
 [42];
+test_select_sql {
+	my $p : table = tablefunc($someid);
+	return $p;
+} "ora: tableop",
+"select t01.* from table(tablefunc(?)) t01",
+[42];
 $main::flavor = "pg";
 test_select_sql {
 	tbl->id  <- tablefunc($someid);
@@ -153,6 +159,12 @@ test_select_sql {
 	!tbl->id  <- tablefunc($someid);
 } "Pg: tablefunc NOT IN subselect",
 "select * from tbl t01 where t01.id not in (select tablefunc(?))",
+[42];
+test_select_sql {
+	my $p : table = tablefunc($someid);
+	return $p;
+} "Pg: tableop",
+"select t01.* from tablefunc(?) t01",
 [42];
 $main::flavor = "";
 

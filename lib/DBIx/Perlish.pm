@@ -1525,6 +1525,19 @@ the table function:
         tbl->id  <-  tablefunc($id);
     };
 
+Where result of a subquery comes from a function, the following syntax can be
+also used:
+    
+    db_fetch {
+        my $t : table = tablefunc($id);
+	return $t;
+    };
+
+This allows for SQL syntax like
+
+   SELECT t.* FROM tablefunc(?) t, other_table
+
+where joins of subselects are not enough.
 
 =head3 Joins
 

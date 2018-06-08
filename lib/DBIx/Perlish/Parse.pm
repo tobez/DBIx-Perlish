@@ -845,6 +845,27 @@ sub try_get_dbfetch
 	return $codeop;
 }
 
+sub try_parse_funcall
+{
+	my ($S, $sub, %opt) = @_;
+	$opt{select} //= 1;
+	my $fn;
+	my $sql = try_funcall($S, $sub, only_normal_funcs => 1, func_name_return => \$fn);
+	return unless $sql;
+	if (($S->{gen_args}->{flavor}||"") eq "oracle") {
+		my $cast;
+		if ($cast = $S->{gen_args}{quirks}{oracle_table_func_cast}{$fn}) {
+			$sql = "cast($sql as $cast)";
+		}
+		$sql = "table($sql)";
+		$sql = "select * from $sql" if $opt{select};
+	} elsif ($opt{select})  {
+		# XXX we know this works in postgres, what about the rest?
+		$sql = "select $sql";
+	}
+	return $sql;
+}
+
 sub try_parse_subselect
 {
 	my ($S, $sop) = @_;
@@ -894,19 +915,7 @@ sub try_parse_subselect
 		if ($codeop) {
 			$sql = handle_subselect($S, $codeop);
 		} else {
-			my $fn;
-			$sql = try_funcall($S, $sub, only_normal_funcs => 1, func_name_return => \$fn);
-			return unless $sql;
-			if (($S->{gen_args}->{flavor}||"") eq "oracle") {
-				my $cast;
-				if ($cast = $S->{gen_args}{quirks}{oracle_table_func_cast}{$fn}) {
-					$sql = "cast($sql as $cast)";
-				}
-				$sql = "select * from table($sql)";
-			} else {
-				# XXX we know this works in postgres, what about the rest?
-				$sql = "select $sql";
-			}
+			$sql = try_parse_funcall($S, $sub);
 		}
 	}
 
@@ -946,7 +955,6 @@ sub handle_subselect
 sub parse_assign
 {
 	my ($S, $op) = @_;
-
 	if (is_listop($op->last, "list") &&
 		is_pushmark_or_padrange($op->last->first) &&
 		is_unop($op->last->first->sibling, "entersub"))
@@ -964,6 +972,14 @@ sub parse_assign
 			my $sql = handle_subselect($S, $codeop, returns_dont_care => 1);
 			my $tab = try_parse_attr_assignment($S,
 				$op->last->first->sibling, "($sql)");
+			return if $tab;
+		} elsif ( 
+			is_unop( $op->first, "entersub") 
+			&& ( my $sql = try_parse_funcall($S, $op->first, select => 0))
+		) {
+			# my $p : table = function(1,2,3);
+			my $tab = try_parse_attr_assignment($S,
+				$op->last->first->sibling, $sql);
 			return if $tab;
 		}
 	}
