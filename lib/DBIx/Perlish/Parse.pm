@@ -917,6 +917,7 @@ sub try_parse_subselect
 		} else {
 			$sql = try_parse_funcall($S, $sub);
 		}
+		bailout $S, "unsupported syntax in subselect" unless $sql;
 	}
 
 	my $left = parse_term($S, $sop->first, not_after => 1);
