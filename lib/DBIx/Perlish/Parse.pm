@@ -1766,6 +1766,12 @@ sub parse_orderby_label
 	my @op;
 	if (is_listop($op, "list") || is_listop($op, "sort")) {
 		@op = get_all_children($op);
+	} elsif ( is_unop($op, "null")) {
+		$op = $op->first;
+		while ( $op && !is_null($op)) {
+			push @op, $op;
+			$op = $op->sibling;
+		}
 	} else {
 		push @op, $op;
 	}

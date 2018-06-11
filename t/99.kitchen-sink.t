@@ -268,9 +268,18 @@ my $order_by = 'desc';
 my $order_col = 'name';
 test_select_sql {
 	my $t : tbl;
+	order_by: $order_by, $t->name;
+	return $t;
+} "inline order by, custom order",
+"select t01.* from tbl t01 order by t01.name desc",
+[];
+
+test_select_sql {
+	my $t : tbl;
 	order_by: $order_by, $order_col;
-} "simple order by, descending",
+} "inline order by, both custom",
 "select * from tbl t01 order by name desc",
+[];
 
 # order by several
 test_select_sql {
