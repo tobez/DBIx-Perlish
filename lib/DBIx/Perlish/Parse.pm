@@ -661,6 +661,7 @@ sub parse_term
 {
 	my ($S, $op, %p) = @_;
 
+	my $placeholder;
 	local $S->{in_term} = 1;
 	if (is_unop($op, "entersub")) {
 		my $funcall = try_funcall($S, $op);
@@ -705,12 +706,9 @@ sub parse_term
 		return wantarray ?
 			("$term is not null", "$term is null") :
 			"$term is not null";
-	} elsif (my ($val, $ok) = get_value($S, $op, soft => 1)) {
-		if (defined $val) {
-			return placeholder_value($S, $val);
-		} else {
-			return "null";
-		}
+	} elsif (($placeholder) = get_value($S, $op, soft => 1)) {
+		return 'null' unless defined $placeholder;
+		goto PLACEHOLDER;
 	} elsif (is_unop($op, "backtick")) {
 		my $fop = $op->first;
 		$fop = $fop->sibling while is_op($fop, "null");
@@ -740,7 +738,8 @@ sub parse_term
 			# This will probably be represented by a string,
 			# we'll let DBI to handle the quoting of a bound
 			# value.
-			return placeholder_value($S, $const);
+			$placeholder = $const;
+			goto PLACEHOLDER;
 		}
 	} elsif (is_pvop($op, "next")) {
 		my $seq = $op->pv;
@@ -757,13 +756,20 @@ sub parse_term
 	} elsif (is_pmop($op, "match")) {
 		return parse_regex($S, $op, 0);
 	} elsif (is_unop_aux($op, "multideref")) {
-		my $val = parse_multideref($S, $op);
-		return placeholder_value($S, $val);
-		
+		$placeholder = parse_multideref($S, $op);
+		goto PLACEHOLDER;
 	} else {
 	BAILOUT:
 		bailout $S, "cannot reconstruct term from operation \"",
 				$op->name, '"';
+	}
+
+	PLACEHOLDER:
+	if ( $p{inline_placeholder}) {
+		bailout $S, "cannot inline undefined value" unless defined $placeholder;
+		return $placeholder;
+	} else {
+		return placeholder_value($S, $placeholder);
 	}
 }
 
@@ -1768,7 +1774,7 @@ sub parse_orderby_label
 		next if is_pushmark_or_padrange($op);
 		# XXX next if is_op($op, "null");
 		my $term;
-		$term = parse_term($S, $op)
+		$term = parse_term($S, $op, inline_placeholder => 1)
 			unless $term = is_const($S, $op);
 		if ($term =~ /^asc/i) {
 			next;  # skip "ascending"

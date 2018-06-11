@@ -263,6 +263,15 @@ test_select_sql {
 "select * from tbl t01 order by t01.name desc",
 [];
 
+# order by desc
+my $order_by = 'desc';
+my $order_col = 'name';
+test_select_sql {
+	my $t : tbl;
+	order_by: $order_by, $order_col;
+} "simple order by, descending",
+"select * from tbl t01 order by name desc",
+
 # order by several
 test_select_sql {
 	my $t : tbl;

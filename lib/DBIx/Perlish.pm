@@ -1393,11 +1393,11 @@ For details about the sorting criteria see the documentation
 for C<ORDER BY> clause in your SQL dialect reference manual.
 Before a sorting expression in a list one may specify one of the
 string constants "asc", "ascending", "desc", "descending" to
-alter the sorting order, for example:
+alter the sorting order, or even generic direction and column, for example:
 
     db_fetch {
         my $t : tbl;
-        order_by: asc => $t->name, desc => $t->age;
+        order_by: asc => $t->name, desc => $t->age, $direction, $column;
     };
 
 Specifying label C<group:>, C<groupby:>, or C<group_by:>,
