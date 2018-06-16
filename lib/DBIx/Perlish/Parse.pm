@@ -1,5 +1,5 @@
 package DBIx::Perlish::Parse;
-use 5.008;
+use 5.014;
 use warnings;
 use strict;
 

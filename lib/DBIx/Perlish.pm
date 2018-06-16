@@ -1,6 +1,6 @@
 package DBIx::Perlish;
 
-use 5.008;
+use 5.014;
 use warnings;
 use strict;
 use Carp;
