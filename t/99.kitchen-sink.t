@@ -495,9 +495,10 @@ test_select_sql {
 [];
 
 my $limit = undef;
+my $days = 86;
 test_select_sql {
 	my $e : event_log;
-	$e->time < sql("localtimestamp - interval '86 days'");
+	$e->time < sql("localtimestamp - interval '$days days'");
 	return $e->id, $e->circuit_number, time => sql("date_trunc('second', time)"), $e->type;
 	if ($limit) {
 		last unless 0..$limit;
@@ -505,6 +506,7 @@ test_select_sql {
 } "conditional real-if with limit, false",
 "select t01.id, t01.circuit_number, date_trunc('second', time) as time, t01.type from event_log t01 where t01.time < localtimestamp - interval '86 days'",
 [];
+
 $limit = 5;
 test_select_sql {
 	my $e : event_log;
