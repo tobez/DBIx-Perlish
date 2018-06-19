@@ -362,6 +362,22 @@ sub parse_multideref
 	return $ret[0];
 }
 
+sub get_concat_value
+{
+	my ( $S, @args) = @_;
+	my $val = '';
+	for my $op ( @args ) {
+		my ($rv, $ok);
+		if ( $rv = is_const($S, $op)) {
+		} else {
+			($rv, $ok) = get_value($S, $op, soft => 1, eval => 1);
+			bailout $S, "cannot parse expression (near $val)" unless $ok;
+		}
+		$val .= $rv;
+	}
+	return $val;
+}
+
 sub get_value
 {
 	my ($S, $op, %p) = @_;
@@ -404,6 +420,10 @@ sub get_value
 		$val = ${$gv->SV->object_2svref};
 	} elsif (is_unop($op, "null") && is_unop_aux($op->first, "multideref")) {
 		$val = parse_multideref($S, $op->first);
+	} elsif ( $p{eval} && is_binop($op, "concat")) {
+		my @args = ($op->first);
+		push @args, $args[-1]->sibling while !is_null($args[-1]) && !is_null($args[-1]->sibling);
+		$val = get_concat_value($S, @args);
 	} else {
 	BAILOUT:
 		return () if $p{soft};
@@ -796,6 +816,19 @@ sub parse_simple_term
 	}
 }
 
+sub parse_simple_eval
+{
+	my ($S, $op) = @_;
+	if (my ($const,$sv) = is_const($S, $op)) {
+		return $const;
+	} elsif (my ($val, $ok) = get_value($S, $op, eval => 1)) {
+		return $val;
+	} else {
+		bailout $S, "cannot reconstruct simple term from operation \"",
+				$op->name, '"';
+	}
+}
+
 sub get_gv
 {
 	my ($S, $op, %p) = @_;
@@ -1019,7 +1052,8 @@ sub parse_simple_assign
 sub callarg
 {
 	my ($S, $op) = @_;
-	$op = $op->first if is_unop($op, "null");
+	$op = $op->first   if is_unop($op, "null");
+	$op = $op->sibling if !is_null($op) && is_op($op, "null");
 	return () if is_pushmark_or_padrange($op);
 	return $op;
 }
@@ -1096,7 +1130,7 @@ sub try_funcall
 			return unless @args == 1;
 			# XXX understand more complex expressions here
 			my $sql;
-			return unless $sql = is_const($S, $args[0]);
+			return unless $sql = parse_simple_eval($S, $args[0]);
 			return $sql;
 		}
 		if ($S->{parsing_return} && $S->{aggregates}{lc $func}) {
