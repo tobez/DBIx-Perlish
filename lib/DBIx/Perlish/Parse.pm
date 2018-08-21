@@ -1451,7 +1451,7 @@ sub try_special_concat
 		my @subterms = parse_multiconcat($S, $op, %{ $opt{multiconcat} // {}});
 		return () unless @subterms;
 		for my $st (@subterms) {
-			if ( $st->{str} ) {
+			if ( defined $st->{str} ) {
 				push @terms, $st;
 			} else {
 				my @t = try_special_concat($S, $st->{op}, terms_only => 1);
