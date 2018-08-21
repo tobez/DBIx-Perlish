@@ -233,7 +233,57 @@ sub bailout_multiref_vivify($)
 	bailout $S, 
 		"accessing fields syntax is not supported anymore; for tables use methods instead, ".
 		"for arrayrefs and hashrefs don't leave them unassigned"
-}						
+}
+
+sub aux_init_padsv
+{
+	my ( $S ) = @_;
+
+ 	my $inner = $S->{curr_cv}->PADLIST;
+	return {
+		S                   => $S,
+		inner               => $inner,
+		orig_pads           => [ $inner->ARRAY ]->[1],
+		names               => [ $inner->NAMES->ARRAY ],
+		outer_padlist       => undef,
+		outer_padlist_array => undef,
+		padlist             => [],
+	};
+}
+
+sub aux_get_padsv
+{
+	my ( $store, $index ) = @_;
+
+	unless ( defined $store->{padlist}->[$index] ) {
+		my $padname = $store->{names}->[$index];
+		if ( $padname->FLAGS & B::SVf_FAKE && $store->{inner}->outid > 1) {
+			unless ($store->{outer_padlist}) {
+				$store->{outer_padlist} = $store->{S}->{padlists}->{$store->{inner}->outid};
+				unless ($store->{outer_padlist}) {
+					# hacky hacky - look up the caller stack to get their padlists, maybe?
+					my $id = 0;
+					while ( 1 ) {
+						my $sub  = caller_cv($id++) or last;
+						my $padlist = B::svref_2object($sub)->PADLIST;
+						$store->{S}->{padlists}->{$padlist->id} //= [$padlist->ARRAY];
+						next unless $padlist->id == $store->{inner}->outid;
+						$store->{outer_padlist} = $store->{S}->{padlists}->{$store->{inner}->outid};
+						last;
+					}
+				}
+				bailout $store->{S}, "cannot refer to an outer padlist ".$store->{inner}->outid
+					unless $store->{outer_padlist};
+				$store->{outer_padlist_array} = [$store->{outer_padlist}->[1]->ARRAY];
+			}
+			$store->{padlist}->[$index] = $store->{outer_padlist_array}->[ $padname->PARENT_PAD_INDEX ];
+		} else {
+			$store->{padlist}->[$index] = $store->{orig_pads}->ARRAYelt($index);
+		}
+	}
+
+	return $store->{padlist}->[$index];
+}
 
 sub parse_multideref
 {
@@ -241,42 +291,7 @@ sub parse_multideref
  	my @items = $aux->aux_list($S->{curr_cv});
 	my @ret;
 
-	my @padlist;
- 	my $inner      = $S->{curr_cv}->PADLIST;
-	my $orig_pads  = [ $inner->ARRAY ]->[1];
-	my @names      = $inner->NAMES->ARRAY;
-	my ($outer_padlist, @outer_padlist);
-	my $get_padsv = sub {
-		my $index = shift;
-		unless ( defined $padlist[$index] ) {
-			my $padname = $names[$index];
-			if ( $padname->FLAGS & B::SVf_FAKE && $inner->outid > 1) {
-				unless ($outer_padlist) {
-					$outer_padlist = $S->{padlists}->{$inner->outid};
-					unless ($outer_padlist) {
-						# hacky hacky - look up the caller stack to get their padlists, maybe?
-						my $id = 0;
-						while ( 1 ) {
-							my $sub  = caller_cv($id++) or last;
-							my $padlist = B::svref_2object($sub)->PADLIST;
-							$S->{padlists}->{$padlist->id} //= [$padlist->ARRAY];
-							next unless $padlist->id == $inner->outid;
-							$outer_padlist = $S->{padlists}->{$inner->outid};
-							last;
-						}
-					}
-					bailout $S, "cannot refer to an outer padlist ".$inner->outid
-						unless $outer_padlist;
-					@outer_padlist = $outer_padlist->[1]->ARRAY;
-				}
-				$padlist[$index] = $outer_padlist[ $padname->PARENT_PAD_INDEX ];
-			} else {
-				$padlist[$index] = $orig_pads->ARRAYelt($index);
-			}
-		}
-
-		return $padlist[$index];
-	};
+	my $AUX = aux_init_padsv($S);
 
  	ITEMS: while ( @items ) {
  		my $actions = shift @items;
@@ -293,7 +308,7 @@ sub parse_multideref
  					$access == B::MDEREF_HV_padsv_vivify_rv2hv_helem() ||
  					$access == B::MDEREF_AV_padsv_vivify_rv2av_aelem()
  				) {
- 					$ref  = $get_padsv->($sv)->object_2svref;
+ 					$ref  = aux_get_padsv($AUX, $sv)->object_2svref;
 					bailout_multiref_vivify $S
 						if !$ref || ((ref($ref) eq 'SCALAR') && !$$ref);
 				} elsif (
@@ -314,7 +329,7 @@ sub parse_multideref
 					bailout $S, "don't quite know what to do with multideref access=$access";
  				}
 			}
- 			
+ 
 			my $key;
 			my $index = $actions & B::MDEREF_INDEX_MASK();
 
@@ -322,7 +337,7 @@ sub parse_multideref
 				if ( $index == B::MDEREF_INDEX_const() ) {
 					$key = ${$ptr->object_2svref};
 				} elsif ( $index == B::MDEREF_INDEX_padsv() ) {
- 					$key  = $get_padsv->($ptr)->object_2svref;
+ 					$key  = aux_get_padsv($AUX, $ptr)->object_2svref;
 				} elsif ( $index == B::MDEREF_INDEX_gvsv() ) {
 					$key = ${$ptr->object_2svref};
 				}
@@ -336,11 +351,11 @@ sub parse_multideref
 				) ? $ref->{$key} : $ref->[$key];
 
 				if (!$ref && (
-					$access == B::MDEREF_AV_gvsv_vivify_rv2av_aelem () ||  
-					$access == B::MDEREF_AV_padsv_vivify_rv2av_aelem() || 
-					$access == B::MDEREF_AV_vivify_rv2av_aelem      () || 
-					$access == B::MDEREF_HV_gvsv_vivify_rv2hv_helem () || 
-					$access == B::MDEREF_HV_padsv_vivify_rv2hv_helem() || 
+					$access == B::MDEREF_AV_gvsv_vivify_rv2av_aelem () ||
+					$access == B::MDEREF_AV_padsv_vivify_rv2av_aelem() ||
+					$access == B::MDEREF_AV_vivify_rv2av_aelem      () ||
+					$access == B::MDEREF_HV_gvsv_vivify_rv2hv_helem () ||
+					$access == B::MDEREF_HV_padsv_vivify_rv2hv_helem() ||
 					$access == B::MDEREF_HV_vivify_rv2hv_helem      ()
 				)) {
 					push @ret, undef;
@@ -424,6 +439,9 @@ sub get_value
 		my @args = ($op->first);
 		push @args, $args[-1]->sibling while !is_null($args[-1]) && !is_null($args[-1]->sibling);
 		$val = get_concat_value($S, @args);
+	} elsif ( $p{eval} && is_unop_aux($op, "multiconcat")) {
+		my @terms = parse_multiconcat($S, $op, eval => 1) or goto BAILOUT;
+		$val = join('', map { $_->{str} } @terms);
 	} else {
 	BAILOUT:
 		return () if $p{soft};
@@ -778,6 +796,13 @@ sub parse_term
 	} elsif (is_unop_aux($op, "multideref")) {
 		$placeholder = parse_multideref($S, $op);
 		goto PLACEHOLDER;
+	} elsif (is_unop_aux($op, "multiconcat")) {
+		my ($c, $v) = try_special_concat($S, $op);
+		if ($c) {
+			push @{$S->{values}}, @$v;
+			return "($c)";
+		}
+		bailout $S, "unsupported multiconcat";
 	} else {
 	BAILOUT:
 		bailout $S, "cannot reconstruct term from operation \"",
@@ -1252,6 +1277,7 @@ my %binop2_map = (
 	multiply => "*",
 	divide   => "/",
 	concat   => "||",
+	multiconcat   => "||",
 	pow      => "^",
 );
 
@@ -1282,7 +1308,15 @@ sub parse_expr
 				if $S->{in_term};
 			my $saved_values = $S->{values};
 			$S->{values} = [];
-			my $set = parse_term($S, $op->last);
+			my $set;
+			if ( is_unop_aux($op, 'multiconcat')) {
+				my $v;
+				($set, $v) = try_special_concat($S, $op, multiconcat => { skip_first => 1 });
+				bailout $S, "unsupported multiconcat" unless $set;
+				push @{$S->{values}}, @$v;
+			} else {
+				$set = parse_term($S, $op->last);
+			}
 			push @{$S->{set_values}}, @{$S->{values}};
 			$S->{values} = $saved_values;
 			if ($op->name eq "pow") {
@@ -1298,7 +1332,7 @@ sub parse_expr
 			return ();
 		}
 	}
-	if (is_binop($op, "concat")) {
+	if (is_binop($op, "concat") || is_unop_aux($op, "multiconcat")) {
 		my ($c, $v) = try_special_concat($S, $op);
 		if ($c) {
 			push @{$S->{values}}, @$v;
@@ -1342,16 +1376,45 @@ sub parse_expr
 	}
 }
 
+sub parse_multiconcat
+{
+	my ( $S, $aux, %opt) = @_;
+	my @concats;
+
+	my @args = ($aux->first);
+	push @args, $args[-1]->sibling while !is_null($args[-1]) && !is_null($args[-1]->sibling);
+	shift @args while @args && is_op($args[0], 'null');
+	shift @args if $opt{skip_first};
+
+	my ($nargs, $pv, @lengths) = $aux->aux_list($S->{curr_cv});
+	while ( defined (my $l = shift @lengths )) {
+		if ( $l >= 0 ) {
+			my $str = substr( $pv, 0, $l, '');
+			push @concats, { str => $str };
+		} 
+		my $op = shift(@args) or last;
+		if ( $opt{eval}) {
+			my ($rv, $ok) = get_value($S, $op, soft => 1, eval => 1);
+			bailout $S, "cannot parse expression (near $pv)" unless $ok;
+			push @concats, { str => $rv };
+		} else {
+			push @concats, { op => $op };
+		}
+	}
+
+	return @concats;
+}
+
 sub try_special_concat
 {
-	my ($S, $op, $no_processing) = @_;
+	my ($S, $op, %opt) = @_;
 	my @terms;
 	my $str;
 	if (is_binop($op, "concat")) {
-		my @t = try_special_concat($S, $op->first, "don't process");
+		my @t = try_special_concat($S, $op->first, terms_only => 1);
 		return () unless @t;
 		push @terms, @t;
-		@t = try_special_concat($S, $op->last, "don't process");
+		@t = try_special_concat($S, $op->last, terms_only => 1);
 		return () unless @t;
 		push @terms, @t;
 	} elsif (($str = is_const($S, $op))) {
@@ -1359,7 +1422,7 @@ sub try_special_concat
 	} elsif (is_unop($op, "null")) {
 		$op = $op->first;
 		while (!is_null($op)) {
-			my @t = try_special_concat($S, $op, "don't process");
+			my @t = try_special_concat($S, $op, terms_only => 1);
 			return () unless @t;
 			push @terms, @t;
 			$op = $op->sibling;
@@ -1384,10 +1447,24 @@ sub try_special_concat
 		my $tab = find_aliased_tab($S, $op);
 		return () unless $tab;
 		push @terms, {tab => $tab};
+	} elsif (is_unop_aux($op, "multiconcat")) {
+		my @subterms = parse_multiconcat($S, $op, %{ $opt{multiconcat} // {}});
+		return () unless @subterms;
+		for my $st (@subterms) {
+			if ( $st->{str} ) {
+				push @terms, $st;
+			} else {
+				my @t = try_special_concat($S, $st->{op}, terms_only => 1);
+				return () unless @t;
+				push @terms, @t;
+			}
+		}
+	} elsif (is_unop_aux($op, "multideref")) {
+		push @terms, { str => parse_multideref($S, $op ) };
 	} else {
 		return ();
 	}
-	return @terms if $no_processing;
+	return @terms if $opt{terms_only};
 	$str = "";
 	my @sql;
 	my @v;
@@ -2036,6 +2113,8 @@ sub parse_op
 		push @{$S->{sets}}, parse_selfmod($S, $op->first, "- 1");
 	} elsif (is_listop($op, "exec")) {
 		$S->{seen_exec}++;
+	} elsif (is_unop_aux($op, "multiconcat")) {
+		where_or_having($S, parse_expr($S, $op));
 	} else {
 		bailout $S, "don't quite know what to do with op \"" . $op->name . "\"";
 	}
