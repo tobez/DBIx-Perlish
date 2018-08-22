@@ -8,7 +8,7 @@ use Carp;
 use vars qw($VERSION @EXPORT @EXPORT_OK %EXPORT_TAGS $SQL @BIND_VALUES);
 require Exporter;
 use base 'Exporter';
-use Devel::Declare;
+use Keyword::Pluggable;
 
 $VERSION = '1.00';
 @EXPORT = qw(sql);
@@ -16,7 +16,6 @@ $VERSION = '1.00';
 %EXPORT_TAGS = (all => [@EXPORT, @EXPORT_OK]);
 
 use DBIx::Perlish::Parse;
-
 
 sub union (&;$) {}
 sub intersect (&;$) {}
@@ -30,24 +29,6 @@ sub optree_version
 {
 	return 1 if $^V lt 5.22.0;
 	return 2;
-}
-
-sub parser_sub
-{
-	my ( $dbh, $decl, $offset) = @_;
-
-	my $l = Devel::Declare::get_linestr();
-	substr($l, $offset + length($decl), 0) = ' ' . $dbh . ', sub';
-	Devel::Declare::set_linestr($l);
-}
-
-sub parser_insert
-{
-	my ( $dbh, $decl, $offset) = @_;
-
-	my $l = Devel::Declare::get_linestr();
-	substr($l, $offset + length($decl), 0) = ' ' . $dbh . ',';
-	Devel::Declare::set_linestr($l);
 }
 
 sub import
@@ -82,22 +63,31 @@ sub import
 
 	my $prefix = delete($p{prefix}) // 'db';
 	my $dbh    = delete($p{dbh}) // '$dbh';
-	my $parser = sub { parser_sub( $dbh, @_ ) };
-	Devel::Declare->setup_for( $pkg, {
-		$prefix . '_insert' => { const => sub { parser_insert($dbh,@_) }},
-		map { $prefix . '_' . $_ => { const => $parser }} qw(fetch select update delete)
-	});
+	my $iprefix = '__' . $dbh . '_execute_perlish';
+	$iprefix =~ s/\W//g;
+
+	for my $keyword ( qw(fetch update delete)) {
+		Keyword::Pluggable::define( $prefix . '_' . $keyword, sub {
+			substr(${$_[0]},0,0,"$iprefix $dbh, q($keyword), sub ");
+		}, 1);
+	}
+	Keyword::Pluggable::define( $prefix . '_select', sub {
+		substr(${$_[0]},0,0,"$iprefix $dbh, q(fetch), sub ");
+	}, 1);
+	Keyword::Pluggable::define( $prefix . '_insert', sub {
+		substr(${$_[0]},0,0,"${iprefix}_insert $dbh, ");
+	}, 1);
 	{
 		no strict 'refs';
-		*{$pkg."::${prefix}_fetch"} =
-		*{$pkg."::${prefix}_select"} =
-			sub ($&) { my $o = DBIx::Perlish->new(dbh => shift); $o->fetch(@_) };
-		*{$pkg."::${prefix}_update"} =
-			sub ($&) { my $o = DBIx::Perlish->new(dbh => shift); $o->update(@_) };
-		*{$pkg."::${prefix}_delete"} =
-			sub ($&) { my $o = DBIx::Perlish->new(dbh => shift); $o->delete(@_) };
-		*{$pkg."::${prefix}_insert"} =
-			sub { my $o = DBIx::Perlish->new(dbh => shift); $o->insert(@_) };
+		*{$pkg."::${iprefix}"} = sub ($$&) { 
+			my ( $dbh, $method, $sub ) = @_;
+			my $o = DBIx::Perlish->new(dbh => $dbh); 
+			$o->$method($sub);
+		};
+		*{$pkg."::${iprefix}_insert"} = sub { 
+			my $o = DBIx::Perlish->new(dbh => shift);
+			$o->insert(@_)
+		};
 	}
 	DBIx::Perlish->export_to_level(1, @shift, %p);
 }
