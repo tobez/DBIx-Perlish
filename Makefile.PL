@@ -2,6 +2,16 @@ use strict;
 use warnings;
 use ExtUtils::MakeMaker;
 
+sub MY::postamble
+{
+return <<'POST'
+pure_all :: README.md
+
+README.md : lib/$(subst ::,/,$(NAME)).pm
+	pod2markdown < '$<' > '$@.~tmp~' && $(MV) -- '$@.~tmp~' '$@'
+POST
+}
+
 WriteMakefile(
 	NAME	          => 'DBIx::Perlish',
 	AUTHOR	          => q{Dmitry Karasik <dmitry@karasik.eu.org>},
@@ -12,6 +22,7 @@ WriteMakefile(
 		'Keyword::Pluggable' => 0,
 		'DBI'                => 0,
 		'Devel::Caller'      => 0,
+		'Pod::Markdown'      => 3.1,
 	},
 	META_MERGE        => {
 		resources => {
