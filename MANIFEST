@@ -24,7 +24,6 @@ t/50.sqlite-real.t
 t/52.pglite-real.t
 t/78.sequences.t
 t/80.parse-bad.t
-t/85.usage-bad.t
 t/99.kitchen-sink.t
 t/pod-coverage.t
 t/pod.t
