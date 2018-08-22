@@ -1827,20 +1827,17 @@ Currently, only statement and sub execution data are faked.
 
 =head1 DEPENDENCIES
 
-The C<DBIx::Perlish> module needs at least perl 5.8.2, quite possibly
-a somewhat higher version.  I have only tested it with
-5.8.4, 5.8.8, 5.8.9, and 5.10.0, while
-the CPAN testers, http://www.cpantesters.org/distro/D/DBIx-Perlish.html ,
-provided much better coverage.
+The C<DBIx::Perlish> module needs at least perl 5.14.
 
 This module requires C<DBI> to do anything useful.
 
 In order to support the special handling of the C<$dbh> variable,
-C<PadWalker> needs to be installed.
+C<Keyword::Pluggable> needs to be installed. C<Devel::Caller> is 
+needed for some magic, and C<Pod::Markdown> is a developer dependency
+for auto-generating README.md.
 
 Other modules used used by C<DBIx::Perlish> are included
 into the standard Perl distribution.
-
 
 =head1 INCOMPATIBILITIES
 
