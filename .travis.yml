@@ -13,3 +13,7 @@ perl:
     - "5.24-shrplib"
     - "5.26"
     - "5.28"
+notifications:
+    on_success: never
+    on_failure: always
+
