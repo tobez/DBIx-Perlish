@@ -1303,16 +1303,14 @@ Currently, only statement and sub execution data are faked.
 
 # DEPENDENCIES
 
-The `DBIx::Perlish` module needs at least perl 5.8.2, quite possibly
-a somewhat higher version.  I have only tested it with
-5.8.4, 5.8.8, 5.8.9, and 5.10.0, while
-the CPAN testers, http://www.cpantesters.org/distro/D/DBIx-Perlish.html ,
-provided much better coverage.
+The `DBIx::Perlish` module needs at least perl 5.14.
 
 This module requires `DBI` to do anything useful.
 
 In order to support the special handling of the `$dbh` variable,
-`PadWalker` needs to be installed.
+`Keyword::Pluggable` needs to be installed. `Devel::Caller` is 
+needed for some magic, and `Pod::Markdown` is a developer dependency
+for auto-generating README.md.
 
 Other modules used used by `DBIx::Perlish` are included
 into the standard Perl distribution.

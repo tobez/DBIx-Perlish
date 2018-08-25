@@ -19,7 +19,7 @@ WriteMakefile(
 	MIN_PERL_VERSION  => '5.14.1',
 	LICENSE           => 'bsd',
 	PREREQ_PM         => {
-		'Keyword::Pluggable' => 0,
+		'Keyword::Pluggable' => 1.01,
 		'DBI'                => 0,
 		'Devel::Caller'      => 0,
 		'Pod::Markdown'      => 3.1,

@@ -66,17 +66,19 @@ sub import
 	my $iprefix = '__' . $dbh . '_execute_perlish';
 	$iprefix =~ s/\W//g;
 
-	for my $keyword ( qw(fetch update delete)) {
-		Keyword::Pluggable::define( $prefix . '_' . $keyword, sub {
-			substr(${$_[0]},0,0,"$iprefix $dbh, q($keyword), sub ");
-		}, 1);
-	}
-	Keyword::Pluggable::define( $prefix . '_select', sub {
-		substr(${$_[0]},0,0,"$iprefix $dbh, q(fetch), sub ");
-	}, 1);
-	Keyword::Pluggable::define( $prefix . '_insert', sub {
-		substr(${$_[0]},0,0,"${iprefix}_insert $dbh, ");
-	}, 1);
+	Keyword::Pluggable::define
+		keyword    => $prefix . '_' . $$_[0], 
+		code       => $iprefix . $$_[1],
+		expression => 1,
+		package    => $pkg
+	for
+		[fetch  => " $dbh, q(fetch),  sub "],
+		[select => " $dbh, q(fetch),  sub "],
+		[update => " $dbh, q(update), sub "],
+		[delete => " $dbh, q(delete), sub "],
+		[insert => "_insert $dbh, "],
+	;
+
 	{
 		no strict 'refs';
 		*{$pkg."::${iprefix}"} = sub ($$&) { 
