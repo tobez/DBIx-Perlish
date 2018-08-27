@@ -2185,7 +2185,8 @@ if (*Devel::Cover::coverage{CODE}) {
 	$_cover = sub { $Coverage->{statement}{Devel::Cover::get_key($_[0])} ||= 1 };
 }
 
-package DBIx::Perlish::Placeholder;
+package
+	DBIx::Perlish::Placeholder;
 
 use overload '""' => sub { "?" }, eq => sub { "$_[0]" eq "$_[1]" };
 
