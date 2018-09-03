@@ -6,6 +6,7 @@ use Getopt::Long;
 
 my %opt = (
 	flavor => undef,
+	help   => undef,
 );
 
 sub usage {
@@ -16,6 +17,7 @@ format:
     perlish-parse [options] [select|update|delete] [file|-]
 
 options:
+    --help
     --flavor   [pg|oracle]
 
 HELP
@@ -23,8 +25,10 @@ HELP
 }
 
 GetOptions(\%opt,
+	"help",
 	"flavor=s",
 ) or usage;
+$opt{help} and usage;
 
 sub slurp($)
 {
