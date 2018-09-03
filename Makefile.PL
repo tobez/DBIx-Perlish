@@ -18,6 +18,7 @@ WriteMakefile(
 	VERSION_FROM	  => 'lib/DBIx/Perlish.pm',
 	MIN_PERL_VERSION  => '5.14.1',
 	LICENSE           => 'bsd',
+	EXE_FILES         => ['bin/perlish-parse'],
 	PREREQ_PM         => {
 		'Keyword::Pluggable' => 1.01,
 		'DBI'                => 0,

@@ -10,7 +10,7 @@ require Exporter;
 use base 'Exporter';
 use Keyword::Pluggable;
 
-$VERSION = '1.00';
+$VERSION = '1.01';
 @EXPORT = qw(sql);
 @EXPORT_OK = qw(union intersect except subselect);
 %EXPORT_TAGS = (all => [@EXPORT, @EXPORT_OK]);

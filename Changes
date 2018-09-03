@@ -1,4 +1,6 @@
 Revision history for DBIx-Perlish
+1.01 27 Aug 2017
+       Migrate to Keyword::Pluggable so db_ functions are macros 
 
 1.00 30 Apr 2018
        Break compatibility with 5.8-5.13 to work on perls above 5.20
