@@ -29,6 +29,15 @@ test_select_sql {
 } "like test",
 "select * from tbl t01 where t01.id like 'abc%'",
 [];
+
+my $rx = '^abc';
+$rx = qr/$rx/i;
+test_select_sql {
+	tbl->id =~ /$rx/
+} "like test",
+"select * from tbl t01 where t01.id like 'abc%'",
+[];
+
 test_select_sql {
 	tbl->id !~ /^abc/
 } "not like test",

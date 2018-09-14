@@ -1582,8 +1582,10 @@ sub parse_regex
 	my $flavor = lc($S-> {gen_args}-> {flavor} || '');
 	my $what = 'like';
 
+	$like =~ s/\(\?\^\w+\:((?:[^\)]|\\\))*)\)/$1/g; # ignore ?^flags:
+
 	my $can_like = $like =~ /^\^?[-!%\s\w]*\$?$/; # like that begins with non-% can use indexes
-	
+
 	if ( $flavor eq 'mysql') {
 		# mysql LIKE is case-insensitive
 		goto LIKE if not $case and $can_like;
