@@ -628,8 +628,8 @@ test_select_sql {
 		$t->id <- @uids;
 	}
 } "union bugfix",
-"select * from tab1 t01 where t01.id in (?,?,?) union select * from tab2 t01, tab2 t02 where t01.id = t02.id and t01.id in (?,?,?)",
-[1,2,3,1,2,3];
+"select * from tab1 t01 where t01.id in (1,2,3) union select * from tab2 t01, tab2 t02 where t01.id = t02.id and t01.id in (1,2,3)",
+[];
 
 my $hr1 = { x => 'y' };
 my %h1 = ( y => 'z' );
@@ -646,10 +646,10 @@ test_select_sql {
 		$t->y == $h1{y};
 	}
 } "union bugfix2",
-"select * from tab1 t01 where t01.id in (?,?,?) union ".
-"select * from tab2 t01, tab2 t02 where t01.id = t02.id and t01.id in (?,?,?) ".
+"select * from tab1 t01 where t01.id in (1,2,3) union ".
+"select * from tab2 t01, tab2 t02 where t01.id = t02.id and t01.id in (1,2,3) ".
 "and t01.x = ? and t01.y = ?",
-[1,2,3,1,2,3,"y","z"];
+["y","z"];
 
 test_select_sql {
 	{ return t1->name } intersect { return t2->name }
@@ -794,22 +794,22 @@ my @ary = (1,2,3);
 test_select_sql {
 	tab->id  <-  @ary;
 } "in array",
-"select * from tab t01 where t01.id in (?,?,?)",
-[@ary];
+"select * from tab t01 where t01.id in (1,2,3)",
+[];
 
 # <- @$array
 my $ary = [1,2,3];
 test_select_sql {
 	tab->id  <-  @$ary;
 } "in array",
-"select * from tab t01 where t01.id in (?,?,?)",
-[@$ary];
+"select * from tab t01 where t01.id in (1,2,3)",
+[];
 
 test_select_sql {
 	!tab->id  <-  @ary;
 } "in arrayref",
-"select * from tab t01 where t01.id not in (?,?,?)",
-[@ary];
+"select * from tab t01 where t01.id not in (1,2,3)",
+[];
 
 test_select_sql {
 	!tab->id  <-  [1,2,3];
@@ -817,17 +817,31 @@ test_select_sql {
 "select * from tab t01 where t01.id not in (1,2,3)",
 [];
 
+$main::flags{in_arg_limit} = 3;
+test_select_sql {
+	!tab->id  <-  [1,2,3,4];
+} "not in list with limit",
+"select * from tab t01 where t01.id not in (1,2,3) and t01.id not in (4)",
+[];
+
+test_select_sql {
+	tab->id  <-  [1,2,3,4];
+} "in list with limit",
+"select * from tab t01 where t01.id in (1,2,3) or t01.id in (4)",
+[];
+undef $main::flags{in_arg_limit};
+
 test_select_sql {
 	!tab->id  <-  [1,$self{id},3];
 } "in list vals",
-"select * from tab t01 where t01.id not in (1,?,3)",
-[42];
+"select * from tab t01 where t01.id not in (1,42,3)",
+[];
 
 test_select_sql {
 	!tab->id  <-  [1,$self->{id},3];
 } "in list vals",
-"select * from tab t01 where t01.id not in (1,?,3)",
-[42];
+"select * from tab t01 where t01.id not in (1,42,3)",
+[];
 
 # autogrouping
 test_select_sql {

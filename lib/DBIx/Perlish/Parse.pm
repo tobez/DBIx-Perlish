@@ -930,6 +930,36 @@ sub try_parse_funcall
 	return $sql;
 }
 
+sub in_list
+{
+	my ( $S, $sop, $list ) = @_;
+	$list //= [];
+	return '1=0' unless @$list;
+
+	my $sql = '';
+	my $left = parse_term($S, $sop->first, not_after => 1);
+
+	my $arg_limit = 
+		$S->{gen_args}->{in_arg_limit} //
+		((($S->{gen_args}->{flavor}||"") eq "oracle") ? 500 : 2_000_000_000);
+	my @args = @$list;
+	while ( @args ) {
+		my @placeholders;
+		for my $val ( splice(@args, 0, $arg_limit) ) {
+			if ( $val =~ /^-?\d+(?:\.\d+)*$/ ) {
+				push @placeholders, $val;
+			} else {
+				push @placeholders, '?';
+				push @{$S->{values}}, $val;
+			}
+		}
+		$sql .= $left =~ / not$/ ? ' and ' : ' or ' if length $sql;
+		$sql .= "$left in (" . join(',', @placeholders) . ")";
+	}
+
+	return $sql;
+}
+
 sub try_parse_subselect
 {
 	my ($S, $sop) = @_;
@@ -940,14 +970,10 @@ sub try_parse_subselect
 
 	if (is_op($sub, "padav")) {
 		my $ary = get_padlist_scalar($S, $sub->targ, "ref only");
-		return '1=0' unless $ary && @$ary;
-		$sql = join ",", ("?") x @$ary;
-		@vals = @$ary;
+		return in_list( $S, $sop, $ary);
 	} elsif (is_unop($sub, "rv2av") && is_op($sub->first, "padsv")) {
 		my $ary = get_padlist_scalar($S, $sub->first->targ, "ref only");
-		return '1=0' unless $ary && $$ary && @$$ary;
-		$sql = join ",", ("?") x @$$ary;
-		@vals = @$$ary;
+		return in_list( $S, $sop, ${ $ary // \[] });
 	} elsif (is_listop($sub, "anonlist") or
 			 is_unop($sub, "srefgen") &&
 			 is_unop($sub->first, "null") &&
@@ -958,22 +984,13 @@ sub try_parse_subselect
 		for my $v (get_all_children($alist)) {
 			next if is_pushmark_or_padrange($v);
 			if (my ($const,$sv) = is_const($S, $v)) {
-				if (($sv->isa("B::IV") && !$sv->isa("B::PVIV")) ||
-					($sv->isa("B::NV") && !$sv->isa("B::PVNV")))
-				{
-					push @what, $const;
-				} else {
-					push @what, '?';
-					push @vals, $const;
-				}
+				push @what, $const;
 			} else {
 				my ($val, $ok) = get_value($S, $v);
-				push @what, '?';
-				push @vals, $val;
+				push @what, $val;
 			}
 		}
-		bailout $S, "empty list in not valid in \"<-\"" unless @what;
-		$sql = join ",", @what;
+		return in_list($S, $sop, \@what);
 	} else {
 		my $codeop = try_get_dbfetch( $S, $sub);
 		if ($codeop) {
