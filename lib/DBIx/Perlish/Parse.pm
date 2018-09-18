@@ -946,8 +946,8 @@ sub in_list
 	while ( @args ) {
 		my @placeholders;
 		for my $val ( splice(@args, 0, $arg_limit) ) {
-			if ( $val =~ /^-?\d+(?:\.\d+)*$/ ) {
-				push @placeholders, $val;
+			if (( ref($val) // '') =~ /SCALAR/) {
+				push @placeholders, $$val;
 			} else {
 				push @placeholders, '?';
 				push @{$S->{values}}, $val;
@@ -984,7 +984,14 @@ sub try_parse_subselect
 		for my $v (get_all_children($alist)) {
 			next if is_pushmark_or_padrange($v);
 			if (my ($const,$sv) = is_const($S, $v)) {
-				push @what, $const;
+				if (
+					($sv->isa("B::IV") && !$sv->isa("B::PVIV")) ||
+					($sv->isa("B::NV") && !$sv->isa("B::PVNV"))
+				) {
+					push @what, \$const;
+				} else {
+					push @what, $const;
+				}
 			} else {
 				my ($val, $ok) = get_value($S, $v);
 				push @what, $val;
