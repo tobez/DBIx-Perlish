@@ -1607,6 +1607,7 @@ sub parse_regex
 	my $what = 'like';
 
 	$like =~ s/\(\?\^\w+\:((?:[^\)]|\\\))*)\)/$1/g; # ignore ?^flags:
+	$like =~ s/\\([^A-Za-z_0-9])/$1/g; # de-quotemeta
 
 	my $can_like = $like =~ /^\^?[-!%\s\w]*\$?$/; # like that begins with non-% can use indexes
 
