@@ -79,6 +79,13 @@ test_select_sql {
 "select * from tbl t01 where t01.id like 'abc!!!!!_!_!%!%%' escape '!'",
 [];
 
+test_select_sql {
+	tbl->id =~ /^abc\[-\-\%/
+} "like test",
+"select * from tbl t01 where t01.id like 'abc[--!%%' escape '!'",
+[];
+
+
 # lowercasing case-independent like
 $main::flavor = "oracle";
 test_select_sql {

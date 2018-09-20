@@ -1607,18 +1607,17 @@ sub parse_regex
 	my $what = 'like';
 
 	$like =~ s/\(\?\^\w+\:((?:[^\)]|\\\))*)\)/$1/g; # ignore ?^flags:
-	$like =~ s/\\([^A-Za-z_0-9])/$1/g; # de-quotemeta
 
-	my $can_like = $like =~ /^\^?[-!%\s\w]*\$?$/; # like that begins with non-% can use indexes
+	my $can_like = $like =~ /^\^?(?:[-!%\s\w]|\\.)*\$?$/; # like that begins with non-% can use indexes
 
 	if ( $flavor eq 'mysql') {
 		# mysql LIKE is case-insensitive
 		goto LIKE if not $case and $can_like;
 		$like =~ s/'/''/g;
 
-		return 
+		return
 			"$lhs ".
-			( $neg ? 'not ' : '') . 
+			( $neg ? 'not ' : '') .
 			'regexp ' .
 			( $case ? '' : 'binary ') .
 			"'$like'"
@@ -1628,11 +1627,11 @@ sub parse_regex
 		if ( $can_like) {
 			$what = 'ilike' if $case;
 			goto LIKE;
-		} 
+		}
 		$like =~ s/'/''/g;
-		return 
+		return
 			"$lhs ".
-			( $neg ? '!' : '') . 
+			( $neg ? '!' : '') .
 			'~' .
 			( $case ? '*' : '') .
 			" '$like'"
@@ -1677,12 +1676,14 @@ sub parse_regex
 		bailout $S, "Regex too complex for implementation using LIKE keyword: $like"
 			if $like =~ /(?<!\\)[\[\]\(\)\{\}\?\|]/;
 LIKE:
+		$like =~ s/\\([^A-Za-z_0-9])/$1/g; # de-quotemeta
 		my $escape = "";
 		if ($flavor eq "pg" || $flavor eq "oracle") {
 			# XXX it is possible that more flavors support like...escape
-			my $need_esc = 1 if $like =~ s/!/!!/g;
-			   $need_esc = 1 if $like =~ s/%/!%/g;
-			   $need_esc = 1 if $like =~ s/_/!_/g;
+			my $need_esc;
+			$need_esc = 1 if $like =~ s/!/!!/g;
+			$need_esc = 1 if $like =~ s/%/!%/g;
+			$need_esc = 1 if $like =~ s/_/!_/g;
 			$escape = " escape '!'" if $need_esc;
 		} else {
 			$like =~ s/%/\\%/g;
@@ -1693,8 +1694,8 @@ LIKE:
 		$like =~ s/\\\././g;
 		$like = "%$like" unless $like =~ s|^\^||;
 		$like = "$like%" unless $like =~ s|\$$||;
-		return "$lhs " . 
-			( $neg ? 'not ' : '') . 
+		return "$lhs " .
+			( $neg ? 'not ' : '') .
 			"$what '$like'$escape"
 		;
 	}
