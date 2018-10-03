@@ -107,7 +107,7 @@ test_select_sql {
 	tbl->id == 1;
 	limit: 1
 } "ilike emulation",
-"select * from (select * from tbl t01 where t01.id = 1) where ROWNUM < 2",
+"select * from (select * from tbl t01 where t01.id = 1) where ROWNUM <= 1",
 [];
 
 test_select_sql {
