@@ -4,6 +4,14 @@ use DBIx::Perlish qw/:all/;
 use Test::More;
 use t::test_utils;
 
+my $like_none = undef;
+test_select_sql {
+	my $t : tbl;
+	tbl->id =~ $like_none
+} "like undef",
+"select * from tbl t01",
+[];
+
 # lone [boolean] tests
 test_select_sql {
 	tbl->boolvar

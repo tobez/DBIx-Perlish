@@ -1573,6 +1573,7 @@ sub parse_complex_regex
 	} elsif ( is_svop( $op, 'const')) {
 		return want_const( $S, $op);
 	} elsif (my ($rx, $ok) = get_value($S, $op, soft => 1)) {
+		return undef unless $rx;
 		$rx =~ s/^\(\?\-\w*\:(.*)\)$/$1/; # (?-xism:moo) -> moo
 		return $rx;
 	} elsif (is_unop($op, "null")) {
@@ -1599,6 +1600,7 @@ sub parse_regex
 		bailout $S, "strange regex " . $op->name
 			unless $logop and is_logop( $logop, 'regcomp');
 		$like = parse_complex_regex( $S, $logop-> first);
+		return "" unless defined $like; # explicitly nulled like
 	}
 
 	my $lhs = parse_term($S, $op->first);
