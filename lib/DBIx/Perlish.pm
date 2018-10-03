@@ -433,11 +433,15 @@ sub gen_sql
 		die "unfiltered $operation is dangerous: use exec if you want it\n";
 	}
 
-	if ($S->{limit}) {
-		$sql .= " limit $S->{limit}";
-	}
-	if ($S->{offset}) {
-		$sql .= " offset $S->{offset}";
+	my $use_rownum = $args{flavor} && $args{flavor} eq "oracle";
+
+	unless ($use_rownum) {
+		if ($S->{limit}) {
+			$sql .= " limit $S->{limit}";
+		}
+		if ($S->{offset}) {
+			$sql .= " offset $S->{offset}";
+		}
 	}
 	my $v = $S->{set_values};
 	push @$v, @{$S->{ret_values}};
@@ -449,6 +453,13 @@ sub gen_sql
 		push @$v, @{$add->{vals}};
 	}
 	$sql =~ s/\s+$//;
+
+	if ( $use_rownum && ( $S->{limit} || $S->{offset} )) {
+		my @p;
+		push @p, "ROWNUM > " . $S->{offset} if $S->{offset};
+		push @p, "ROWNUM <= " . ($S->{limit} + ($S->{offset} // 0)) if $S->{limit};
+		$sql = "select * from ($sql) where " . join(' and ', @p);
+	}
 
 	return ($sql, $v, $nret, %flags);
 }

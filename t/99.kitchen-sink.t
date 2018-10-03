@@ -101,6 +101,21 @@ test_select_sql {
 } "ilike emulation",
 "select * from tbl t01 where lower(t01.id) like '%abc%'",
 [];
+
+# oracle's limit/offset
+test_select_sql {
+	tbl->id == 1;
+	limit: 1
+} "ilike emulation",
+"select * from (select * from tbl t01 where t01.id = 1) where ROWNUM < 2",
+[];
+
+test_select_sql {
+	tbl->id == 1;
+	last unless 2..3;
+} "ilike emulation",
+"select * from (select * from tbl t01 where t01.id = 1) where ROWNUM > 2 and ROWNUM <= 4",
+[];
 $main::flavor = "";
 
 # return
