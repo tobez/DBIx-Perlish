@@ -31,6 +31,13 @@ sub optree_version
 	return 2;
 }
 
+sub lexify
+{
+	my ( $text, $insert ) = @_;
+	$insert .= 'sub ' if $text =~ /^\s*\{/;
+	return $insert;
+}
+
 sub import
 {
 	my $pkg = caller;
@@ -66,17 +73,25 @@ sub import
 	my $iprefix = '__' . $dbh . '_execute_perlish';
 	$iprefix =~ s/\W//g;
 
+	for (
+		[fetch  => " $dbh, q(fetch), "],
+		[select => " $dbh, q(fetch), "],
+		[update => " $dbh, q(update), "],
+		[delete => " $dbh, q(delete), "],
+	) {	
+		my ($name, $code) = @$_;
+		Keyword::Pluggable::define
+			keyword    => $prefix . '_' . $name, 
+			code       => sub { lexify( $_[0], $iprefix.$code ) },
+			expression => 1,
+			package    => $pkg
+		;
+	}
 	Keyword::Pluggable::define
-		keyword    => $prefix . '_' . $$_[0], 
-		code       => $iprefix . $$_[1],
+		keyword    => $prefix . '_insert',
+		code       => $iprefix . "_insert $dbh, ",
 		expression => 1,
 		package    => $pkg
-	for
-		[fetch  => " $dbh, q(fetch),  sub "],
-		[select => " $dbh, q(fetch),  sub "],
-		[update => " $dbh, q(update), sub "],
-		[delete => " $dbh, q(delete), sub "],
-		[insert => "_insert $dbh, "],
 	;
 
 	{

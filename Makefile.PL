@@ -20,7 +20,7 @@ WriteMakefile(
 	LICENSE           => 'bsd',
 	EXE_FILES         => ['bin/perlish-parse'],
 	PREREQ_PM         => {
-		'Keyword::Pluggable' => 1.01,
+		'Keyword::Pluggable' => 1.02,
 		'DBI'                => 0,
 		'Devel::Caller'      => 0,
 		'Pod::Markdown'      => 3.1,
