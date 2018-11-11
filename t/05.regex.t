@@ -15,8 +15,21 @@ test_select_sql {
 # simple RE (pg)
 test_select_sql {
 	tbl->id =~ /^abc/
-} "like test",
+} "like test in front",
 "select * from tbl t01 where t01.id like 'abc%'",
+[];
+
+# simple RE (pg)
+test_select_sql {
+	tbl->id =~ /abc$/
+} "like test behind",
+"select * from tbl t01 where t01.id like '%abc'",
+[];
+
+test_select_sql {
+	tbl->id =~ /abc/
+} "like test both sides",
+"select * from tbl t01 where t01.id like '%abc%'",
 [];
 
 my $rx = '^abc';
