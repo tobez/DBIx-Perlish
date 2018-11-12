@@ -1608,7 +1608,7 @@ sub parse_regex
 	my $flavor = lc($S-> {gen_args}-> {flavor} || '');
 	my $what = 'like';
 
-	$like =~ s/\(\?\^\w+\:((?:[^\)]|\\\))*)\)/$1/g; # ignore ?^flags:
+	$like =~ s/\(\?\^\w+\:((?:[^\\]|\\.)*)\)/$1/g; # ignore ?^flags:
 
 	my $can_like = $like =~ /^\^?(?:[-!%\s\w]|\\.)*\$?$/; # like that begins with non-% can use indexes
 
