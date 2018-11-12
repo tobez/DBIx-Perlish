@@ -24,7 +24,6 @@ t/06.variables.t
 t/07.compat.t
 t/08.inline-views.t
 t/09.key-fields.t
-t/10.keyword.t
 t/11.functions.t
 t/12.unop.t
 t/13.multiselect.t
@@ -41,7 +40,6 @@ t/50.sqlite-real.t
 t/52.pglite-real.t
 t/78.sequences.t
 t/80.parse-bad.t
-t/99.kitchen-sink.t
 t/pod-coverage.t
 t/pod.t
 t/test_utils.pm
