@@ -934,10 +934,10 @@ sub in_list
 {
 	my ( $S, $sop, $list ) = @_;
 	$list //= [];
-	return '1=0' unless @$list;
 
 	my $sql = '';
 	my $left = parse_term($S, $sop->first, not_after => 1);
+	return '1=0' unless @$list;
 
 	my $arg_limit = 
 		$S->{gen_args}->{in_arg_limit} //
