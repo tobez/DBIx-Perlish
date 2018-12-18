@@ -10,7 +10,7 @@ plan skip_all => "DBD::SQLite cannot be loaded" if $@;
 eval "use PadWalker;";
 plan skip_all => "PadWalker cannot be loaded" if $@;
 
-plan tests => 99;
+plan tests => 104;
 
 my $dbh = DBI->connect("dbi:SQLite:");
 ok($dbh, "db connection");
@@ -131,6 +131,13 @@ is(scalar db_fetch { my $t : names; $t->id == 1; return $t->name; }, undef, "fet
 
 ok((db_insert 'names', { id => sql 5, name => "five" }), "insert with verbatim");
 
+@n = ();
+$r = [];
+is( scalar db_fetch { my $t : names; $t->id < -@n }, undef, "empty in 1");
+is( scalar db_fetch { my $t : names; $t->id < -@$r }, undef, "empty in 2");
+is( scalar db_fetch { my $union:table = db_fetch { my $t : names; $t->id < -@n } }, undef, "empty in 3");
+is( scalar db_fetch { my $union:table = db_fetch { my $t : names; $t->id < -@$r } }, undef, "empty in 4");
+
 # just to bump up coverage - those red things annoy me
 union     {}; pass("coverage: union");
 intersect {}; pass("coverage: intersect");
@@ -139,12 +146,15 @@ sql "haha"  ; pass("coverage: sql");
 
 ok((db_insert 'names', { id => 700, name => "bebe" },
                        { id => 701, name => sql("'wxyz'") },
-                       { id => 702, name => "meme" },
+                       { id => 702, name => "me'me" },
 ), "insert three");
 is(scalar db_fetch { my $t : names; $t->id == 700; return $t->name; }, "bebe", "fetch multi-inserted 700");
 is(scalar db_fetch { my $t : names; $t->id == 701; return $t->name; }, "wxyz", "fetch multi-inserted 701");
-is(scalar db_fetch { my $t : names; $t->id == 702; return $t->name; }, "meme", "fetch multi-inserted 702");
+is(scalar db_fetch { my $t : names; $t->id == 702; return $t->name; }, "me'me", "fetch multi-inserted 702");
 
 
 DBIx::Perlish::init($dbh);
 is(scalar db_fetch { my $t : names; $t->id == 1; return $t->name; }, undef, "one more fetch deleted");
+
+my $q = "'";
+is( scalar db_fetch { my $t : names; $t->name =~ $q; return $t->name }, "me'me", "fetch with quote");

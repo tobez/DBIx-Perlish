@@ -34,7 +34,7 @@ test_select_sql {
 	my $y : y;
 	my $z : z;
 	$y->id == $z->y_id;
-	join $x < $y => db_fetch { $x-> id > $y-> id };
+	join $x < $y => subselect { $x-> id > $y-> id };
 	my $w : w;
 	$x->id == $w->x_id;
 } "funny join 1",

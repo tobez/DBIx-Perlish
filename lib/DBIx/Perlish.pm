@@ -11,7 +11,7 @@ use base 'Exporter';
 
 $VERSION = '0.63';
 @EXPORT = qw(db_fetch db_select db_update db_delete db_insert sql);
-@EXPORT_OK = qw(union intersect except);
+@EXPORT_OK = qw(union intersect except subselect);
 %EXPORT_TAGS = (all => [@EXPORT, @EXPORT_OK]);
 
 use DBIx::Perlish::Parse;
@@ -25,9 +25,16 @@ sub db_insert { DBIx::Perlish->insert(@_) }
 sub union (&;$) {}
 sub intersect (&;$) {}
 sub except (&;$) {}
+sub subselect (&;$) {}
 
 my $default_object;
 my $non_object_quirks = {};
+
+sub optree_version
+{
+	return 1 if $^V lt 5.22.0;
+	return 2;
+}
 
 sub import
 {
@@ -61,6 +68,7 @@ sub import
 	DBIx::Perlish->export_to_level(1, @_);
 }
 
+my $has_padwalker;
 sub get_dbh
 {
 	my ($lvl) = @_;
@@ -68,8 +76,13 @@ sub get_dbh
 	if ($default_object) {
 		$dbh = $default_object->{dbh};
 	}
-	eval { require PadWalker; };
-	unless ($@) {
+	my ($pkg) = caller($lvl-1);
+
+	unless ( defined $has_padwalker ) {
+		eval { require PadWalker; };
+		$has_padwalker = $@ ? 0 : 1;
+	}
+	if ( $has_padwalker ) {
 		unless ($dbh) {
 			my $vars = PadWalker::peek_my($lvl);
 			$dbh = ${$vars->{'$dbh'}} if $vars->{'$dbh'};
@@ -78,11 +91,13 @@ sub get_dbh
 			my $vars = PadWalker::peek_our($lvl);
 			$dbh = ${$vars->{'$dbh'}} if $vars->{'$dbh'};
 		}
-		unless ($dbh) {
-			my ($pkg) = caller($lvl-1);
-			no strict 'refs';
-			$dbh = ${"${pkg}::dbh"};
-		}
+	}
+	unless ($dbh) {
+		$dbh = $pkg->dbh() if $pkg->can('dbh');
+	}
+	unless ($dbh) {
+		no strict 'refs';
+		$dbh = ${"${pkg}::dbh"};
 	}
 	die "Database handle not set.  Maybe you forgot to call DBIx::Perlish::init()?\n" unless $dbh;
 	unless (UNIVERSAL::isa($dbh, "DBI::db")) { # XXX maybe relax for other things?
@@ -604,15 +619,15 @@ Examples:
     my $dbh = DBH->connect(...);
     DBIx::Perlish::init($dbh);
 
+
 =head3 Special treatment of the C<$dbh> variable
 
-If the user did not
-call C<init()> before issuing any of the C<db_fetch {}>,
-C<db_update {}>, C<db_delete {}> or C<db_insert {}>, those
-functions look for one special case before bailing out.
+If the user did not call C<init()> before issuing any of the C<db_fetch {}>,
+C<db_update {}>, C<db_delete {}> or C<db_insert {}>, those functions look for
+one special case before bailing out.
 
 Namely, they try to locate a variable C<my $dbh>, C<our $dbh>,
-or caller's package global C<$dbh>,
+caller's package C<sub dbh()>, and finally caller's package global C<$dbh>,
 in that order, in the scope in which they are used.  If such
 variable is found, and if it contains a valid C<DBI> database
 handler, they will use it for performing the actual query.
@@ -622,22 +637,13 @@ module to do the right thing:
     my $dbh = DBI->connect(...);
     my @r = db_fetch { users->name !~ /\@/ };
 
-Initially, the author did not recommend relying on this feature in the
-production code on a theory that it is `magical' and makes assumptions
-about names used outside of the module itself.
-The author recommended to always use the C<init()> subroutine.
+The author does not recommend relying on automatic discovery of C<my $dbh>
+feature in the production code on a theory that it is `magical' and makes
+assumptions about names used outside of the module itself. Also, starting from
+perl v20, the optimizer can silently eat away a variable it deems unused, which
+makes this feature even more brittle.
 
-However, the experience of using the C<DBIx::Perlish> module
-in production environment
-has shown that the assumption about the name of the database handle
-is true in almost all cases
-in practice
-(but see L</Working with multiple database handles> below),
-and that the magical nature of the feature does not hinder,
-indeed helps writing code in a style that is easy to maintain.
-In fact, there is often B<less> of an action-at-a-distance effect when
-relying on the implicit C<$dbh> instead of using the C<init()> sub.
-
+The author recommended to always use either the C<init()>, C<sub __PACKAGE__::dbh()>, or C<$__PACKAGE__::dbh>
 
 =head3 db_fetch {}
 
@@ -947,6 +953,11 @@ This is a helper sub which is meant to be used inside
 query subs.  Please see L</Compound queries' statements>
 for details.  The C<except()> can be exported via C<:all>
 import declaration.
+
+=head3 subselect()
+
+Same as db_fetch() inside another query. Please use it if 
+migration towards v1.00 is planned.
 
 =head3 quirk()
 
@@ -1703,6 +1714,11 @@ Example:
 
 An object-oriented version of L</quirk()>.
 
+=head3 optree_version
+
+Returns 1 if perl version is prior 5.22, where there are no optimizations on the optree.
+Returns 2 otherwise, when perl introduced changes to optree, that caused certain uncompatibilities.
+See more in C<BACKWARD COMPATIBILITY>
 
 =head2 Working with multiple database handles
 
@@ -1899,6 +1915,14 @@ class.
 Mason is to blame for this, since it disregards
 warnings' handlers installed by other modules.
 
+=head1 BACKWARD COMPATIBILITY
+
+Perl 5.22 introduced certain changes to the way optree is constructed.
+Some of these cannot be adequately treated, because whole constructs might be
+simply optimized away before even they hit the parser (example: C<join(1,2)> gets translated into constant C<2>).
+
+Known cases are not documented so far, but look in the tests for I<optree_version> invocations
+to see where these are found.
 
 =head1 BUGS AND LIMITATIONS
 

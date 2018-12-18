@@ -8,6 +8,7 @@ our $_cover;
 
 use B;
 use Carp;
+use Devel::Caller qw(caller_cv);
 
 sub bailout
 {
@@ -54,6 +55,8 @@ gen_is("padop");
 gen_is("svop");
 gen_is("unop");
 gen_is("pmop");
+gen_is("methop");
+gen_is("unop_aux");
 
 sub is_const
 {
@@ -125,7 +128,7 @@ sub want_const
 sub want_variable_method
 {
 	my ($S, $op) = @_;
-	return unless is_unop($op, "method");
+	return unless is_unop($op, "method") || is_methop($op, "method");
 	$op = $op->first;
 	return unless is_null($op->sibling);
 	my ($name, $ok) = get_value($S, $op, soft => 1);
@@ -136,12 +139,16 @@ sub want_variable_method
 sub want_method
 {
 	my ($S, $op) = @_;
-	unless (is_svop($op, "method_named")) {
+	my $sv;
+	if ( is_methop($op, "method_named")) {
+		$sv = $op->meth_sv;
+	} elsif ( is_svop($op, "method_named")) {
+		$sv = $op->sv;
+	} else {
 		my $r = want_variable_method($S, $op);
 		bailout $S, "method call syntax expected" unless $r;
 		return $r;
 	}
-	my $sv = $op->sv;
 	if (!$$sv) {
 		$sv = $S->{padlist}->[1]->ARRAYelt($op->targ);
 	}
@@ -170,6 +177,7 @@ sub padname
 	my $padname = $S->{padlist}->[0]->ARRAYelt($op->targ);
 	if ($padname && !$padname->isa("B::SPECIAL")) {
 		return if $p{no_fakes} && $padname->FLAGS & B::SVf_FAKE;
+		return unless defined $padname->PVX;
 		return "my " . $padname->PVX;
 	} else {
 		return "my #" . $op->targ;
@@ -184,7 +192,7 @@ sub get_padlist_scalar_by_name
 	for (my $k = 0; $k < @n; $k++) {
 		next if $n[$k]->isa("B::SPECIAL");
 		next if $n[$k]->isa("B::NULL");
-		if ($n[$k]->PVX eq $n) {
+		if (($n[$k]->PVX // '') eq $n) {
 			my $v = $padlist->[1]->ARRAYelt($k);
 			if (!$v->isa("B::SPECIAL")) {
 				return $v;
@@ -217,6 +225,157 @@ sub get_padlist_scalar
 	$v = $v->object_2svref;
 	return $v if $ref_only;
 	return $$v;
+}
+
+sub bailout_multiref_vivify($)
+{
+	my $S = shift;
+	bailout $S, 
+		"accessing fields syntax is not supported anymore; for tables use methods instead, ".
+		"for arrayrefs and hashrefs don't leave them unassigned"
+}						
+
+sub parse_multideref
+{
+	my ( $S, $aux ) = @_;
+ 	my @items = $aux->aux_list($S->{curr_cv});
+	my @ret;
+
+	my @padlist;
+ 	my $inner      = $S->{curr_cv}->PADLIST;
+	my $orig_pads  = [ $inner->ARRAY ]->[1];
+	my @names      = $inner->NAMES->ARRAY;
+	my ($outer_padlist, @outer_padlist);
+	my $get_padsv = sub {
+		my $index = shift;
+		unless ( defined $padlist[$index] ) {
+			my $padname = $names[$index];
+			if ( $padname->FLAGS & B::SVf_FAKE && $inner->outid > 1) {
+				unless ($outer_padlist) {
+					$outer_padlist = $S->{padlists}->{$inner->outid};
+					unless ($outer_padlist) {
+						# hacky hacky - look up the caller stack to get their padlists, maybe?
+						my $id = 0;
+						while ( 1 ) {
+							my $sub  = caller_cv($id++) or last;
+							my $padlist = B::svref_2object($sub)->PADLIST;
+							$S->{padlists}->{$padlist->id} //= [$padlist->ARRAY];
+							next unless $padlist->id == $inner->outid;
+							$outer_padlist = $S->{padlists}->{$inner->outid};
+							last;
+						}
+					}
+					bailout $S, "cannot refer to an outer padlist ".$inner->outid
+						unless $outer_padlist;
+					@outer_padlist = $outer_padlist->[1]->ARRAY;
+				}
+				$padlist[$index] = $outer_padlist[ $padname->PARENT_PAD_INDEX ];
+			} else {
+				$padlist[$index] = $orig_pads->ARRAYelt($index);
+			}
+		}
+
+		return $padlist[$index];
+	};
+
+ 	ITEMS: while ( @items ) {
+ 		my $actions = shift @items;
+
+		my $ref;
+		my $sv = shift(@items) or bailout $S, "unexpected empty multideref";
+
+		while ( my $ptr = shift @items ) {
+ 			my $access  = $actions & B::MDEREF_ACTION_MASK();
+			unless ($ref) {
+ 				if (
+ 					$access == B::MDEREF_HV_padhv_helem() ||
+ 					$access == B::MDEREF_AV_padav_aelem() ||
+ 					$access == B::MDEREF_HV_padsv_vivify_rv2hv_helem() ||
+ 					$access == B::MDEREF_AV_padsv_vivify_rv2av_aelem()
+ 				) {
+ 					$ref  = $get_padsv->($sv)->object_2svref;
+					bailout_multiref_vivify $S
+						if !$ref || ((ref($ref) eq 'SCALAR') && !$$ref);
+				} elsif (
+                		        $access == B::MDEREF_HV_pop_rv2hv_helem() ||
+                		        $access == B::MDEREF_HV_vivify_rv2hv_helem() ||
+					$access == B::MDEREF_HV_gvhv_helem()
+				) {
+					bailout_multiref_vivify $S unless ref($sv);
+					$ref = $sv->HV->object_2svref;
+				} elsif (
+                		        $access == B::MDEREF_AV_pop_rv2av_aelem() ||
+                		        $access == B::MDEREF_AV_vivify_rv2av_aelem() ||
+					$access == B::MDEREF_AV_gvav_aelem()
+				) {
+					bailout_multiref_vivify $S unless ref($sv);
+					$ref = $sv->AV->object_2svref;
+				} else {
+					bailout $S, "don't quite know what to do with multideref access=$access";
+ 				}
+			}
+ 			
+			my $key;
+			my $index = $actions & B::MDEREF_INDEX_MASK();
+
+			if ( $index != B::MDEREF_INDEX_none() ) {
+				if ( $index == B::MDEREF_INDEX_const() ) {
+					$key = ${$ptr->object_2svref};
+				} elsif ( $index == B::MDEREF_INDEX_padsv() ) {
+ 					$key  = $get_padsv->($ptr)->object_2svref;
+				} elsif ( $index == B::MDEREF_INDEX_gvsv() ) {
+					$key = ${$ptr->object_2svref};
+				}
+ 				$ref = $$ref if ref($ref) =~ /REF|SCALAR/;
+ 				$ref = (
+ 					$access == B::MDEREF_HV_padhv_helem() ||
+ 					$access == B::MDEREF_HV_padsv_vivify_rv2hv_helem() ||
+                		        $access == B::MDEREF_HV_pop_rv2hv_helem() ||
+                		        $access == B::MDEREF_HV_vivify_rv2hv_helem() ||
+					$access == B::MDEREF_HV_gvhv_helem()
+				) ? $ref->{$key} : $ref->[$key];
+
+				if (!$ref && (
+					$access == B::MDEREF_AV_gvsv_vivify_rv2av_aelem () ||  
+					$access == B::MDEREF_AV_padsv_vivify_rv2av_aelem() || 
+					$access == B::MDEREF_AV_vivify_rv2av_aelem      () || 
+					$access == B::MDEREF_HV_gvsv_vivify_rv2hv_helem () || 
+					$access == B::MDEREF_HV_padsv_vivify_rv2hv_helem() || 
+					$access == B::MDEREF_HV_vivify_rv2hv_helem      ()
+				)) {
+					push @ret, undef;
+					last ITEMS;
+				}
+			}
+			if ($index == B::MDEREF_INDEX_none() || $index & B::MDEREF_FLAG_last()) {
+				push @ret, $ref;
+				last;
+			}
+			$actions >>= B::MDEREF_SHIFT();
+ 		}
+
+		push @ret, $ref unless @ret;
+	}
+
+	bailout $S, "cannot infer single multideref value" unless 1 == @ret;
+
+	return $ret[0];
+}
+
+sub get_concat_value
+{
+	my ( $S, @args) = @_;
+	my $val = '';
+	for my $op ( @args ) {
+		my ($rv, $ok);
+		if ( $rv = is_const($S, $op)) {
+		} else {
+			($rv, $ok) = get_value($S, $op, soft => 1, eval => 1);
+			bailout $S, "cannot parse expression (near $val)" unless $ok;
+		}
+		$val .= $rv;
+	}
+	return $val;
 }
 
 sub get_value
@@ -259,7 +418,14 @@ sub get_value
 	} elsif (is_unop($op, "null") && (is_svop($op->first, "gvsv") || is_padop($op->first, "gvsv"))) {
 		my $gv = get_gv($S, $op->first, bailout => 1);
 		$val = ${$gv->SV->object_2svref};
+	} elsif (is_unop($op, "null") && is_unop_aux($op->first, "multideref")) {
+		$val = parse_multideref($S, $op->first);
+	} elsif ( $p{eval} && is_binop($op, "concat")) {
+		my @args = ($op->first);
+		push @args, $args[-1]->sibling while !is_null($args[-1]) && !is_null($args[-1]->sibling);
+		$val = get_concat_value($S, @args);
 	} else {
+	BAILOUT:
 		return () if $p{soft};
 		bailout $S, "cannot parse \"", $op->name, "\" op as a value or value reference";
 	}
@@ -290,6 +456,8 @@ sub find_aliased_tab
 {
 	my ($S, $op) = @_;
 	my $var = padname($S, $op);
+	return "" unless defined $var;
+
 	my $ss = $S;
 	while ($ss) {
 		my $tab;
@@ -402,7 +570,7 @@ sub try_parse_attr_assignment
 	my @attr = grep { length($_) } split /(?:[\(\)])/, $attr;
 	return unless @attr;
 	$op = $op->sibling;
-	return unless is_svop($op, "method_named");
+	return unless is_methop($op, "method_named") || is_svop($op, "method_named");
 	return unless want_method($S, $op, "import");
 	if ($realname) {
 		if (lc $attr[0] eq "table") {
@@ -608,7 +776,12 @@ sub parse_term
 		}
 	} elsif (is_pmop($op, "match")) {
 		return parse_regex($S, $op, 0);
+	} elsif (is_unop_aux($op, "multideref")) {
+		my $val = parse_multideref($S, $op);
+		return placeholder_value($S, $val);
+		
 	} else {
+	BAILOUT:
 		bailout $S, "cannot reconstruct term from operation \"",
 				$op->name, '"';
 	}
@@ -630,6 +803,19 @@ sub parse_simple_term
 	if (my ($const,$sv) = is_const($S, $op)) {
 		return $const;
 	} elsif (my ($val, $ok) = get_value($S, $op, soft => 1)) {
+		return $val;
+	} else {
+		bailout $S, "cannot reconstruct simple term from operation \"",
+				$op->name, '"';
+	}
+}
+
+sub parse_simple_eval
+{
+	my ($S, $op) = @_;
+	if (my ($const,$sv) = is_const($S, $op)) {
+		return $const;
+	} elsif (my ($val, $ok) = get_value($S, $op, eval => 1)) {
 		return $val;
 	} else {
 		bailout $S, "cannot reconstruct simple term from operation \"",
@@ -677,17 +863,17 @@ sub try_get_dbfetch
 	return if is_null($dbfetch);
 	return unless is_null($dbfetch->sibling);
 
-	return unless is_unop($rg, "refgen");
+	return unless is_unop($rg, "refgen") || is_unop($rg, "srefgen");
 	$rg = $rg->first if is_unop($rg->first, "null");
-	return unless is_pushmark_or_padrange($rg->first);
-	my $codeop = $rg->first->sibling;
+	my $codeop = $rg->first;
+	$codeop = $codeop->sibling if is_pushmark_or_padrange($codeop);
 	return unless is_svop($codeop, "anoncode");
 
 	$dbfetch = $dbfetch->first if is_unop($dbfetch->first, "null");
 	$dbfetch = $dbfetch->first;
 	my $gv = get_gv($S, $dbfetch);
 	return unless $gv;
-	return unless $gv->NAME =~ /^(db_fetch|db_select)$/;
+	return unless $gv->NAME =~ /^(db_fetch|db_select|subselect)$/;
 
 	return $codeop;
 }
@@ -702,14 +888,12 @@ sub try_parse_subselect
 
 	if (is_op($sub, "padav")) {
 		my $ary = get_padlist_scalar($S, $sub->targ, "ref only");
-		#my $ary = $S->{padlist}->[1]->ARRAYelt($sub->targ)->object_2svref;
-		bailout $S, "empty array in not valid in \"<-\"" unless @$ary;
+		return '1=0' unless $ary && @$ary;
 		$sql = join ",", ("?") x @$ary;
 		@vals = @$ary;
 	} elsif (is_unop($sub, "rv2av") && is_op($sub->first, "padsv")) {
 		my $ary = get_padlist_scalar($S, $sub->first->targ, "ref only");
-		#my $ary = $S->{padlist}->[1]->ARRAYelt($sub->first->targ)->object_2svref;
-		bailout $S, "empty array in not valid in \"<-\"" unless @$$ary;
+		return '1=0' unless $ary && $$ary && @$$ary;
 		$sql = join ",", ("?") x @$$ary;
 		@vals = @$$ary;
 	} elsif (is_listop($sub, "anonlist") or
@@ -841,7 +1025,8 @@ sub parse_simple_assign
 sub callarg
 {
 	my ($S, $op) = @_;
-	$op = $op->first if is_unop($op, "null");
+	$op = $op->first   if is_unop($op, "null");
+	$op = $op->sibling if !is_null($op) && is_op($op, "null");
 	return () if is_pushmark_or_padrange($op);
 	return $op;
 }
@@ -869,10 +1054,10 @@ sub try_funcall
 			return if $p{only_normal_funcs};
 			return unless @args == 1 || @args == 2;
 			my $rg = $args[0];
-			return unless is_unop($rg, "refgen");
+			return unless is_unop($rg, "refgen") || is_unop($rg, "srefgen");
 			$rg = $rg->first if is_unop($rg->first, "null");
-			return unless is_pushmark_or_padrange($rg->first);
-			my $codeop = $rg->first->sibling;
+			my $codeop = $rg->first;
+			$codeop = $codeop->sibling if is_pushmark_or_padrange($codeop);
 			return unless is_svop($codeop, "anoncode");
 			return unless $S->{operation} eq "select";
 			my $cv = $codeop->sv;
@@ -901,14 +1086,14 @@ sub try_funcall
 		if ($p{union_or_friends}) {
 			bailout $S, "missing semicolon after $p{union_or_friends} sub";
 		}
-		if ($func =~ /^(db_fetch|db_select)$/) {
+		if ($func =~ /^(db_fetch|db_select|subselect)$/) {
 			return if $p{only_normal_funcs};
 			return unless @args == 1;
 			my $rg = $args[0];
-			return unless is_unop($rg, "refgen");
+			return unless is_unop($rg, "refgen") || is_unop($rg, "srefgen");
 			$rg = $rg->first if is_unop($rg->first, "null");
-			return unless is_pushmark_or_padrange($rg->first);
-			my $codeop = $rg->first->sibling;
+			my $codeop = $rg->first;
+			$codeop = $codeop->sibling if is_pushmark_or_padrange($codeop);
 			return unless is_svop($codeop, "anoncode");
 			my $sql = handle_subselect($S, $codeop, returns_dont_care => 1);
 			return "exists ($sql)";
@@ -917,7 +1102,7 @@ sub try_funcall
 			return unless @args == 1;
 			# XXX understand more complex expressions here
 			my $sql;
-			return unless $sql = is_const($S, $args[0]);
+			return unless $sql = parse_simple_eval($S, $args[0]);
 			return $sql;
 		}
 		if ($S->{parsing_return} && $S->{aggregates}{lc $func}) {
@@ -1295,9 +1480,9 @@ sub parse_regex
 	my $can_like = $like =~ /^\^?[-!%\s\w]*\$?$/; # like that begins with non-% can use indexes
 	
 	if ( $flavor eq 'mysql') {
-	
 		# mysql LIKE is case-insensitive
 		goto LIKE if not $case and $can_like;
+		$like =~ s/'/''/g;
 
 		return 
 			"$lhs ".
@@ -1312,6 +1497,7 @@ sub parse_regex
 			$what = 'ilike' if $case;
 			goto LIKE;
 		} 
+		$like =~ s/'/''/g;
 		return 
 			"$lhs ".
 			( $neg ? '!' : '') . 
@@ -1350,6 +1536,7 @@ sub parse_regex
 		# return "$lhs $what ?";
 		return ($neg ? "not " : "") . "$what(?, $lhs)";
 	} else {
+		$like =~ s/'/''/g;
 		# XXX is SQL-standard LIKE case-sensitive or not?
 		if ($case) {
 			$lhs = "lower($lhs)";
@@ -1433,9 +1620,9 @@ sub parse_join
 	# table names
 	my @tab;
 	$tab[0] = find_aliased_tab($S, $op[1]-> first) or 
-		bailout $S, "first argument join() is not a table";
+		bailout $S, "first argument of join() is not a table";
 	$tab[1] = find_aliased_tab($S, $op[1]-> last) or 
-		bailout $S, "second argument join() is not a table";
+		bailout $S, "second argument of join() is not a table";
 	
 	# db_fetch
 	my ( $condition, $codeop);
@@ -1735,6 +1922,8 @@ sub parse_op
 {
 	my ($S, $op) = @_;
 
+	return if $S->{seen}->{$$op}++;
+
 	if ($S->{skipnext}) {
 		delete $S->{skipnext};
 		return;
@@ -1782,6 +1971,7 @@ sub parse_op
 		# skip
 	} elsif (is_op($op, "null")) {
 		# skip
+		parse_op($S, $op->sibling);
 	} elsif (is_cop($op, "nextstate")) {
 		$S->{file} = $op->file;
 		$S->{line} = $op->line;
@@ -1831,6 +2021,8 @@ sub parse_sub
 	}
 	my $root = B::svref_2object($sub);
 	$S->{padlist} = [$root->PADLIST->ARRAY];
+	$S->{curr_cv} = $root;
+	$S->{padlists}->{ $root->PADLIST->id } = $S->{padlist} if $root->PADLIST->can('id');
 	$root = $root->ROOT;
 	parse_op($S, $root);
 }
@@ -1858,6 +2050,8 @@ sub init
 		aggregates  => { avg => 1, count => 1, max => 1, min => 1, sum => 1 },
 		autogroup_by     => [],
 		autogroup_fields => {},
+		seen        => {},
+		padlists    => $args{prev_S} ? $args{prev_S}->{padlists} : {},
 	};
 	$S->{alias} = $args{prefix} ? "$args{prefix}_t01" : "t01";
 	$S;

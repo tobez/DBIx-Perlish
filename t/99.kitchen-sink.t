@@ -1,7 +1,7 @@
 use warnings;
 use strict;
-use Test::More tests => 439;
 use DBIx::Perlish qw/:all/;
+use Test::More tests => 432 + ((DBIx::Perlish->optree_version == 1) ? 9 : 0);
 use t::test_utils;
 
 # lone [boolean] tests
@@ -495,9 +495,10 @@ test_select_sql {
 [];
 
 my $limit = undef;
+my $days = 86;
 test_select_sql {
 	my $e : event_log;
-	$e->time < sql("localtimestamp - interval '86 days'");
+	$e->time < sql("localtimestamp - interval '$days days'");
 	return $e->id, $e->circuit_number, time => sql("date_trunc('second', time)"), $e->type;
 	if ($limit) {
 		last unless 0..$limit;
@@ -505,6 +506,7 @@ test_select_sql {
 } "conditional real-if with limit, false",
 "select t01.id, t01.circuit_number, date_trunc('second', time) as time, t01.type from event_log t01 where t01.time < localtimestamp - interval '86 days'",
 [];
+
 $limit = 5;
 test_select_sql {
 	my $e : event_log;
@@ -657,12 +659,19 @@ test_select_sql {
 "select (? || t01.firstname || ? || t01.lastname || ?) from tab t01",
 ["foo-", " ", "-moo"];
 
-test_select_sql {
-	my $t : tab;
-	return "abc$t->{name}xyz";
-} "concat, interp, hash syntax",
-"select (? || t01.name || ?) from tab t01",
-["abc", "xyz"];
+if ( DBIx::Perlish->optree_version == 1 ) {
+	test_select_sql {
+	       my $t : tab;
+	       return "abc$t->{name}xyz";
+	} "concat, interp, hash syntax",
+	"select (? || t01.name || ?) from tab t01",
+	["abc", "xyz"];
+} else {
+	test_bad_select {
+		my $t : tab;
+		return "abc$t->{name}xyz";
+	} "concat, interp, hash syntax", qr/not supported anymore/;
+}
 
 # mysql string concatentation really is different
 $main::flavor = "mysql";
@@ -700,12 +709,20 @@ test_select_sql {
 "select (concat(?, t01.firstname, ?, t01.lastname, ?)) from tab t01",
 ["foo-", " ", "-moo"];
 
-test_select_sql {
-	my $t : tab;
-	return "abc$t->{name}xyz";
-} "mysql: concat, interp, hash syntax",
-"select (concat(?, t01.name, ?)) from tab t01",
-["abc", "xyz"];
+if ( DBIx::Perlish->optree_version == 1 ) {
+	test_select_sql {
+	       my $t : tab;
+	       return "abc$t->{name}xyz";
+	} "mysql: concat, interp, hash syntax",
+	"select (concat(?, t01.name, ?)) from tab t01",
+	["abc", "xyz"];
+} else {
+	test_bad_select {
+		my $t : tab;
+		return "abc$t->{name}xyz";
+	} "mysql: concat, interp, hash syntax", qr/not supported anymore/;
+}
+
 $main::flavor = "";
 
 # defined
@@ -1181,21 +1198,45 @@ test_select_sql {
 # regression, $not_a_hash->{blah}, $not_a_hash->{blah}{bluh}
 my $not_a_hash = undef;
 my %not_a_hash;
-test_select_sql {
-	return $not_a_hash->{blah};
-} "not a hash 1",
-"select null",
-[];
-test_select_sql {
-	return $not_a_hash->{blah}{bluh};
-} "not a hash 2",
-"select null",
-[];
-test_select_sql {
-	return $not_a_hash{blah}{bluh};
-} "not a hash 3",
-"select null",
-[];
+if ( DBIx::Perlish->optree_version == 1 ) {
+	test_select_sql {
+		return $not_a_hash->{blah};
+	} "not a hash 1",
+	"select null",
+	[];
+	
+	test_select_sql {
+		return $not_a_hash->{blah}{bluh};
+	} "not a hash 2",
+	"select null",
+	[];
+	test_select_sql {
+		return $not_a_hash{blah}{bluh};
+	} "not a hash 3",
+	"select null",
+	[];
+} else {
+	test_bad_select {
+		return $not_a_hash->{blah};
+	} "undefined hashref", qr/not supported/;
+	test_bad_select {
+		return $not_a_hash->{blah}{bluh};
+	} "undefined hashref 2", qr/not supported/;
+	test_bad_select {
+		return $not_a_hash{blah}{bluh};
+	} "undefined hashref 3", qr/not supported/;
+}
+
+# nonlocal padlists
+sub foo
+{
+	my $me = shift;
+	test_select_sql {
+		my $t : table = $me->{table};
+		!$t->id == 5;
+	} "nonlocal padlist", "select * from tbl t01 where not t01.id = 5", [];
+}
+foo({ table => 'tbl' });
 
 # having
 test_select_sql {
