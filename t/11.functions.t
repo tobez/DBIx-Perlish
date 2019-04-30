@@ -93,6 +93,15 @@ test_select_sql {
 "select extract(t01.f1, t01.f2) from tab t01",
 [];
 
+# cast
+test_select_sql {
+	my $a : tab;
+	cast($a->x, 'text') == 'foo';
+	return cast($a->y, 'integer');
+} "cast",
+"select cast(t01.y as integer) from tab t01 where cast(t01.x as text) = ?",
+['foo'];
+
 # having
 test_select_sql {
 	my $w : weather;

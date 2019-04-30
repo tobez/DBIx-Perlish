@@ -923,6 +923,7 @@ sub try_parse_funcall
 		}
 		$sql = "table($sql)";
 		$sql = "select * from $sql" if $opt{select};
+		$sql = "select * from $sql" if $opt{select};
 	} elsif ($opt{select})  {
 		# XXX we know this works in postgres, what about the rest?
 		$sql = "select $sql";
@@ -1205,6 +1206,10 @@ sub try_funcall
 				my $val = $terms[0]->undo;
 				@terms = ("$val from $terms[1]");
 			}
+		}
+		if (lc($func) eq 'cast' && @terms == 2) {
+			$terms[1] = $terms[1]->undo if UNIVERSAL::isa($terms[1], "DBIx::Perlish::Placeholder");
+			return "cast($terms[0] as $terms[1])";
 		}
 		return "$func(" . join(", ", @terms) . ")";
 	}
