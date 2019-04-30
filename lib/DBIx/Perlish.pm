@@ -34,8 +34,8 @@ sub optree_version
 sub lexify
 {
 	my ( $text, $insert ) = @_;
-	$insert .= 'sub ' if $text =~ /^\s*\{/;
-	return $insert;
+	$insert .= 'sub ' if $$text =~ /^\s*\{/;
+	substr($$text, 0, 0, $insert);
 }
 
 sub import

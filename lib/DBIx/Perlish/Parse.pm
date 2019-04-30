@@ -923,7 +923,6 @@ sub try_parse_funcall
 		}
 		$sql = "table($sql)";
 		$sql = "select * from $sql" if $opt{select};
-		$sql = "select * from $sql" if $opt{select};
 	} elsif ($opt{select})  {
 		# XXX we know this works in postgres, what about the rest?
 		$sql = "select $sql";
