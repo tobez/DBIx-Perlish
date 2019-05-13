@@ -1673,7 +1673,6 @@ sub parse_regex
 		# return "$lhs $what ?";
 		return ($neg ? "not " : "") . "$what(?, $lhs)";
 	} else {
-		$like =~ s/'/''/g;
 		# XXX is SQL-standard LIKE case-sensitive or not?
 		if ($case) {
 			$lhs = "lower($lhs)";
@@ -1682,6 +1681,7 @@ sub parse_regex
 		bailout $S, "Regex too complex for implementation using LIKE keyword: $like"
 			if $like =~ /(?<!\\)[\[\]\(\)\{\}\?\|]/;
 LIKE:
+		$like =~ s/'/''/g;
 		$like =~ s/\\([^A-Za-z_0-9])/$1/g; # de-quotemeta
 		my $escape = "";
 		if ($flavor eq "pg" || $flavor eq "oracle") {
