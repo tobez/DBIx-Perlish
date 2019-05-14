@@ -46,6 +46,11 @@ sub slurp($)
 	}
 }
 
+my $int  = 5;
+my $str  = 'x';
+my $like = 'LIKE%';
+my $rx   = '.*';
+
 my ( $mode, $text );
 if ( 0 == @ARGV ) {
 	($mode, $text) = ('select', slurp('-'));

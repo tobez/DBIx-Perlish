@@ -10,6 +10,8 @@ use B;
 use Carp;
 use Devel::Caller qw(caller_cv);
 
+sub _o($) { ref($_[0]) . ( $_[0]->can('name') ? ("." . $_[0]->name) : '' ) }
+
 sub bailout
 {
 	my ($S, @rest) = @_;
@@ -111,7 +113,7 @@ sub want_pushmark_or_padrange
 {
 	my ($S, $op) = @_;
 	unless (is_pushmark_or_padrange($op)) {
-		bailout $S, "want op pushmark or op padrange";
+		bailout $S, "want op pushmark or op padrange, got " . _o $op;
 	}
 }
 
@@ -873,17 +875,26 @@ sub get_gv
 	if (!$gv || !$$gv) {
 		$gv = $S->{padlist}->[1]->ARRAYelt($gv_idx);
 	}
+	if ( $p{get_name} && $gv->isa("B::IV")) {
+		my $subref = $gv->object_2svref;
+		if (ref($subref) eq 'REF' && ref($$subref) eq 'CODE') {
+			my $cv = B::svref_2object($$subref);
+			return $cv->NAME_HEK;
+		}
+	}
 	goto BAIL_OUT unless $gv->isa("B::GV");
-	return $gv;
+	return $p{get_name} ? $gv->NAME : $gv;
 BAIL_OUT:
 	bailout $S, "unable to get GV from \"", $op->name, "\"" if $p{bailout};
 	return;
 }
 
+sub  get_gv_name { get_gv(@_, get_name => 1) }
+
 sub try_get_dbfetch
 {
 	my ($S, $sub) = @_;
-		
+
 	return unless is_unop($sub, "entersub");
 	$sub = $sub->first if is_unop($sub->first, "null");
 	return unless is_pushmark_or_padrange($sub->first);
@@ -902,9 +913,7 @@ sub try_get_dbfetch
 
 	$dbfetch = $dbfetch->first if is_unop($dbfetch->first, "null");
 	$dbfetch = $dbfetch->first;
-	my $gv = get_gv($S, $dbfetch);
-	return unless $gv;
-	return unless $gv->NAME eq 'subselect';
+	return unless (get_gv_name($S, $dbfetch) // '') eq 'subselect';
 
 	return $codeop;
 }
@@ -1122,9 +1131,8 @@ sub try_funcall
 		return unless @args;
 		$op = pop @args;
 		return unless is_svop($op, "gv") || is_padop($op, "gv");
-		my $gv = get_gv($S, $op);
-		return unless $gv;
-		my $func = $gv->NAME;
+		my $func = get_gv_name( $S, $op);
+		return unless defined $func;
 		${$p{func_name_return}} = $func if $p{func_name_return};
 		if ($func =~ /^(union|intersect|except)$/) {
 			return if $p{only_normal_funcs};
@@ -1274,8 +1282,8 @@ sub parse_multi_assign
 		$op = $op->first if is_unop($op, "null");
 		$op = $op->sibling if is_pushmark_or_padrange($op);
 		$op = $op->first if is_unop($op, "rv2cv");
-		my $gv = get_gv($S, $op);
-		$tab = $gv->NAME if $gv;
+		my $gv = get_gv_name($S, $op);
+		$tab = $gv if defined $gv;
 	}
 	bailout $S, "cannot get a table to update" unless $tab;
 }
