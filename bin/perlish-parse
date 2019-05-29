@@ -50,6 +50,7 @@ my $int  = 5;
 my $str  = 'x';
 my $like = 'LIKE%';
 my $rx   = '.*';
+my @arr  = (1,2);
 
 my ( $mode, $text );
 if ( 0 == @ARGV ) {
