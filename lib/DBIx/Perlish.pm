@@ -908,7 +908,7 @@ the function might throw any of the exceptions thrown by DBI.
 
 The C<db_insert {}> function is exported by default.
 
-=head3 subselect()
+=head3 subselect {}
 
 This call, formerly known as as internal form of C<db_fetch>, 
 is basically an SQL SELECT statement. See L</Subqueries>.
