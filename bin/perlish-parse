@@ -9,6 +9,7 @@ my %opt = (
 	flavor  => undef,
 	help    => undef,
 	deparse => undef,
+	beautify => undef,
 );
 
 sub usage {
@@ -22,6 +23,7 @@ options:
     --help
     --flavor   [pg|oracle]
     --deparse
+    --beautify
 
 HELP
 	exit 1;
@@ -31,6 +33,7 @@ GetOptions(\%opt,
 	"help",
 	"flavor=s",
 	"deparse",
+	"beautify",
 ) or usage;
 $opt{help} and usage;
 
@@ -80,4 +83,16 @@ if ( $opt{deparse} ) {
 my ($sql, $bind_values, $nret, %flags) = DBIx::Perlish::gen_sql($sub, $mode,
 	flavor => $opt{flavor},
 );
+
+if ( $opt{beautify}) {
+	eval "require SQL::Beautify;";
+	if ($@) {
+		warn "SQL::Beautify is required\n";
+	} else {
+		my $b = SQL::Beautify->new;
+		$b->query($sql);
+		$sql = $b->beautify;
+	}
+}
+
 print $sql, "\n";
