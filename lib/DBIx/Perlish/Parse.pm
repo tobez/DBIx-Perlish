@@ -1509,7 +1509,7 @@ sub try_special_concat
 		my $t = shift @terms;
 		if (exists $t->{str}) {
 			$str .= $t->{str};
-		} elsif ($t->{field}) {
+		} elsif (exists $t->{field}) {
 			if ($str) {
 				push @v, $str;
 				push @sql, '?';
@@ -1523,10 +1523,10 @@ sub try_special_concat
 		} else {
 			my $t2 = shift @terms;
 			return () unless $t2;
-			return () unless $t2->{str};
+			return () unless defined $t2->{str};
 			return () unless $t2->{str} =~ s/^->(\w+)//;
 			my $f = $1;
-			if ($str) {
+			if (length($str)) {
 				push @v, $str;
 				push @sql, '?';
 			}
@@ -1538,7 +1538,7 @@ sub try_special_concat
 			$str = $t2->{str};
 		}
 	}
-	if ($str) {
+	if (length($str)) {
 		push @v, $str;
 		push @sql, '?';
 	}
