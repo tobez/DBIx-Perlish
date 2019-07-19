@@ -1510,7 +1510,7 @@ sub try_special_concat
 		if (exists $t->{str}) {
 			$str .= $t->{str};
 		} elsif (exists $t->{field}) {
-			if (length $str) {
+			if (length($str)) {
 				push @v, $str;
 				push @sql, '?';
 			}
@@ -1538,7 +1538,7 @@ sub try_special_concat
 			$str = $t2->{str};
 		}
 	}
-	if (defined($str)) {
+	if (length($str)) {
 		push @v, $str;
 		push @sql, '?';
 	}
