@@ -1507,7 +1507,7 @@ sub try_special_concat
 	@terms = grep { !$_->{skip} } @terms;
 	while (@terms) {
 		my $t = shift @terms;
-		if ($t->{str}) {
+		if (exists $t->{str}) {
 			$str .= $t->{str};
 		} elsif ($t->{field}) {
 			if ($str) {
