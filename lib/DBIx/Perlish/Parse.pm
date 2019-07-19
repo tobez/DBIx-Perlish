@@ -891,7 +891,7 @@ BAIL_OUT:
 
 sub  get_gv_name { get_gv(@_, get_name => 1) }
 
-sub try_get_dbfetch
+sub try_get_subselect
 {
 	my ($S, $sub) = @_;
 
@@ -1008,7 +1008,7 @@ sub try_parse_subselect
 		}
 		return in_list($S, $sop, \@what);
 	} else {
-		my $codeop = try_get_dbfetch( $S, $sub);
+		my $codeop = try_get_subselect( $S, $sub);
 		if ($codeop) {
 			$sql = handle_subselect($S, $codeop);
 		} else {
@@ -1066,7 +1066,7 @@ sub parse_assign
 			my $tab = try_parse_attr_assignment($S,
 				$op->last->first->sibling, $val);
 			return if $tab;
-		} elsif (my $codeop = try_get_dbfetch($S, $op->first)) {
+		} elsif (my $codeop = try_get_subselect($S, $op->first)) {
 			my $sql = handle_subselect($S, $codeop, returns_dont_care => 1);
 			my $tab = try_parse_attr_assignment($S,
 				$op->last->first->sibling, "($sql)");
@@ -1774,7 +1774,7 @@ sub parse_join
 	# subselect
 	my ( $condition, $codeop);
 	if ( $op[2]) {
-		$codeop = try_get_dbfetch( $S, $op[2]);
+		$codeop = try_get_subselect( $S, $op[2]);
 		bailout $S, "third argument to join is not a subselect expression"
 			unless $codeop;
 
