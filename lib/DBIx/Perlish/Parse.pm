@@ -274,12 +274,12 @@ sub aux_get_padsv
 						last;
 					}
 				}
-				bailout $store->{S}, "cannot refer to an outer padlist ".$store->{inner}->outid
-					unless $store->{outer_padlist};
+				goto DEFAULT_PADLIST unless $store->{outer_padlist};
 				$store->{outer_padlist_array} = [$store->{outer_padlist}->[1]->ARRAY];
 			}
 			$store->{padlist}->[$index] = $store->{outer_padlist_array}->[ $padname->PARENT_PAD_INDEX ];
 		} else {
+		DEFAULT_PADLIST:
 			$store->{padlist}->[$index] = $store->{orig_pads}->ARRAYelt($index);
 		}
 	}
@@ -298,12 +298,16 @@ sub parse_multideref
  	ITEMS: while ( @items ) {
  		my $actions = shift @items;
 
-		my $ref;
+		my ($ref, $reftype);
 		my $sv = shift(@items) or return undef;
 
 		while ( @items ) {
 			my $ptr = shift @items;
  			my $access  = $actions & B::MDEREF_ACTION_MASK();
+			if ( $access == B::MDEREF_reload ) { # XXX
+				$actions = $sv;
+				next;
+			}
 			unless ($ref) {
  				if (
  					$access == B::MDEREF_HV_padhv_helem() ||
@@ -330,7 +334,7 @@ sub parse_multideref
 					$ref = $sv->AV->object_2svref;
 				} elsif (
 					$access == B::MDEREF_AV_gvsv_vivify_rv2av_aelem() ||
-					$access == B::MDEREF_HV_gvsv_vivify_rv2hv_aelem()
+					$access == B::MDEREF_HV_gvsv_vivify_rv2hv_helem()
 				) {
 					$ref = $sv->object_2svref;
 					bailout_multiref_vivify $S
@@ -340,30 +344,40 @@ sub parse_multideref
 					bailout $S, "don't quite know what to do with multideref access=$access";
  				}
 			}
+
+			$reftype = (
+				$access == B::MDEREF_HV_padhv_helem() ||
+				$access == B::MDEREF_HV_gvsv_vivify_rv2hv_helem() ||
+				$access == B::MDEREF_HV_padsv_vivify_rv2hv_helem() ||
+        		        $access == B::MDEREF_HV_pop_rv2hv_helem() ||
+        		        $access == B::MDEREF_HV_vivify_rv2hv_helem() ||
+				$access == B::MDEREF_HV_gvhv_helem()
+			) ? 'HASH' : 'ARRAY';
  
 			my $key;
 			my $index = $actions & B::MDEREF_INDEX_MASK();
 
 			if ( $index != B::MDEREF_INDEX_none() ) {
-				if ( !ref($ptr)) {
-					$key = $ptr;
-				} elsif ( $index == B::MDEREF_INDEX_const() ) {
-					$key = ${$ptr->object_2svref};
+				if ( $index == B::MDEREF_INDEX_const() ) {
+					$key = ref($ptr) ? $ptr->object_2svref : $ptr;
 				} elsif ( $index == B::MDEREF_INDEX_padsv() ) {
- 					$key  = aux_get_padsv($AUX, $ptr)->object_2svref;
+ 					$key = aux_get_padsv($AUX, $ptr)->object_2svref;
 				} elsif ( $index == B::MDEREF_INDEX_gvsv() ) {
-					$key = ${$ptr->object_2svref};
+					$key = ref($ptr) ? $ptr->object_2svref : $ptr;
 				}
- 				$ref = $$ref if ref($ref) =~ /REF|SCALAR/;
- 				$ref = (
- 					$access == B::MDEREF_HV_padhv_helem() ||
- 					$access == B::MDEREF_HV_padsv_vivify_rv2hv_helem() ||
-                		        $access == B::MDEREF_HV_pop_rv2hv_helem() ||
-                		        $access == B::MDEREF_HV_vivify_rv2hv_helem() ||
-					$access == B::MDEREF_HV_gvhv_helem()
-				) ? $ref->{$key} : $ref->[$key];
 
-				if (!$ref && (
+ 				$ref = $$ref if ref($ref) =~ /REF|SCALAR/;
+ 				$key = $$key if ref($key) =~ /REF|SCALAR/;
+
+				bailout $S, "Can't use value (\"$ref\") as an $reftype ref"
+					unless $reftype eq ref($ref);
+				if ( $reftype eq 'ARRAY') {
+					$ref = $ref->[$key];
+				} else {
+					$ref = $ref->{$key};
+				}
+
+				if (!defined($ref) && (
 					$access == B::MDEREF_AV_gvsv_vivify_rv2av_aelem () ||
 					$access == B::MDEREF_AV_padsv_vivify_rv2av_aelem() ||
 					$access == B::MDEREF_AV_vivify_rv2av_aelem      () ||
@@ -460,8 +474,10 @@ sub get_value
 		goto BAILOUT unless $sv;
 		$sv = $sv->object_2svref;
 		$val = $sv->[$op->private];
-	} elsif (is_svop($op, "aelemfast")) {
-		my $sv = $op->sv or goto BAILOUT;
+	} elsif (is_svop($op, "aelemfast") || is_padop($op, "aelemfast")) {
+		my $sv = is_padop($op, "aelemfast") ?
+			$S->{padlist}->[1]->ARRAYelt($op->padix) :
+			$op->sv or goto BAILOUT;
 		$sv = $sv->object_2svref or goto BAILOUT;
 		$sv = ${$sv} or goto BAILOUT;
 		$val = $sv->[$op->private];
