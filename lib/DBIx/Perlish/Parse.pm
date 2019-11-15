@@ -757,7 +757,7 @@ sub parse_term
 			("$term is not null", "$term is null") :
 			"$term is not null";
 	} elsif (($placeholder) = get_value($S, $op, soft => 1)) {
-		return 'null' unless defined $placeholder;
+		return 'null' if !defined($placeholder) && $S->{gen_args}->{inline};
 		goto PLACEHOLDER;
 	} elsif (is_unop($op, "backtick")) {
 		my $fop = $op->first;

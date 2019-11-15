@@ -11,6 +11,7 @@ my %opt = (
 	deparse => undef,
 	beautify => undef,
 	strict   => undef,
+	inline   => 0,
 );
 
 sub usage {
@@ -23,9 +24,10 @@ format:
 options:
     --help
     --flavor   [pg|oracle]
-    --deparse   -- print perl AST
-    --beautify  -- print nicer sql
-    --strict    -- if set, no attempt to declare missing variables will be made
+    --deparse  -- print perl AST
+    --beautify -- print nicer sql
+    --strict   -- if set, no attempt to declare missing variables will be made
+    --inline   -- if set, will try to dereference scalars and generate SQL accordingly
   
 HELP
 	exit 1;
@@ -37,6 +39,7 @@ GetOptions(\%opt,
 	"deparse",
 	"beautify",
 	"strict",
+	"inline",
 ) or usage;
 $opt{help} and usage;
 
@@ -57,6 +60,8 @@ my $str  = 'x';
 my $like = 'LIKE%';
 my $rx   = '.*';
 my @arr  = (1,2);
+our $our_int  = 5;
+our @our_arr  = (1,2);
 
 my ( $mode, $text );
 if ( 0 == @ARGV ) {
@@ -99,6 +104,7 @@ if ( $opt{deparse} ) {
 
 my ($sql, $bind_values, $nret, %flags) = DBIx::Perlish::gen_sql($sub, $mode,
 	flavor => $opt{flavor},
+	inline => $opt{inline},
 );
 
 if ( $opt{beautify}) {

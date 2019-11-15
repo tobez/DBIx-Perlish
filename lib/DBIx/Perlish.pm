@@ -329,6 +329,8 @@ sub gen_sql
 	my ($sub, $operation, %args) = @_;
 
 	$args{quirks} = $non_object_quirks unless $args{quirks};
+	$args{inline} //= 1;
+
 	my $S = DBIx::Perlish::Parse::init(%args, operation => $operation);
 	DBIx::Perlish::Parse::parse_sub($S, $sub);
 	my $sql = "";
