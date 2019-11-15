@@ -301,7 +301,8 @@ sub parse_multideref
 		my $ref;
 		my $sv = shift(@items) or return undef;
 
-		while ( my $ptr = shift @items ) {
+		while ( @items ) {
+			my $ptr = shift @items;
  			my $access  = $actions & B::MDEREF_ACTION_MASK();
 			unless ($ref) {
  				if (
@@ -327,6 +328,14 @@ sub parse_multideref
 				) {
 					bailout_multiref_vivify $S unless ref($sv);
 					$ref = $sv->AV->object_2svref;
+				} elsif (
+					$access == B::MDEREF_AV_gvsv_vivify_rv2av_aelem() ||
+					$access == B::MDEREF_HV_gvsv_vivify_rv2hv_aelem()
+				) {
+					$ref = $sv->object_2svref;
+					bailout_multiref_vivify $S
+						if !$ref || ((ref($ref) eq 'SCALAR') && !$$ref);
+					$ref = $$ref;
 				} else {
 					bailout $S, "don't quite know what to do with multideref access=$access";
  				}
@@ -336,7 +345,9 @@ sub parse_multideref
 			my $index = $actions & B::MDEREF_INDEX_MASK();
 
 			if ( $index != B::MDEREF_INDEX_none() ) {
-				if ( $index == B::MDEREF_INDEX_const() ) {
+				if ( !ref($ptr)) {
+					$key = $ptr;
+				} elsif ( $index == B::MDEREF_INDEX_const() ) {
 					$key = ${$ptr->object_2svref};
 				} elsif ( $index == B::MDEREF_INDEX_padsv() ) {
  					$key  = aux_get_padsv($AUX, $ptr)->object_2svref;

@@ -60,8 +60,13 @@ my $str  = 'x';
 my $like = 'LIKE%';
 my $rx   = '.*';
 my @arr  = (1,2);
+my %hash = ( a => 1);
+my $arr_ref  = [1, 2];
+my $hash_ref = {a => 1};
 our $our_int  = 5;
 our @our_arr  = (1,2);
+our $arr_our_ref  = [1, 2];
+our $hash_our_ref = {a => 1};
 
 my ( $mode, $text );
 if ( 0 == @ARGV ) {
