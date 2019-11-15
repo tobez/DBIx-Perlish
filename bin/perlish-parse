@@ -10,6 +10,7 @@ my %opt = (
 	help    => undef,
 	deparse => undef,
 	beautify => undef,
+	strict   => undef,
 );
 
 sub usage {
@@ -22,9 +23,10 @@ format:
 options:
     --help
     --flavor   [pg|oracle]
-    --deparse
-    --beautify
-
+    --deparse   -- print perl AST
+    --beautify  -- print nicer sql
+    --strict    -- if set, no attempt to declare missing variables will be made
+  
 HELP
 	exit 1;
 }
@@ -34,6 +36,7 @@ GetOptions(\%opt,
 	"flavor=s",
 	"deparse",
 	"beautify",
+	"strict",
 ) or usage;
 $opt{help} and usage;
 
@@ -73,7 +76,21 @@ if ( 0 == @ARGV ) {
 	usage;
 }
 
-my $sub = eval "sub { $text };";
+my ($sub, $prevars, $last_eval_failure) = (undef, '', '');
+while ( 1 ) {
+	$sub = eval "$prevars sub { $text };";
+	last unless $@;
+	last if $opt{strict};
+	last if $last_eval_failure eq $@;
+	$last_eval_failure = $@;
+	last unless $@ =~ /Global symbol "(.)(.*?)" requires explicit package name/;
+	my ( $sigil, $var ) = ($1, "$1$2");
+	if ( $sigil eq '$') {
+		$prevars .= "my $var = '$var';\n";
+	} else {
+		$prevars .= "my $var;\n";
+	}
+}
 die $@ if $@;
 
 if ( $opt{deparse} ) {
