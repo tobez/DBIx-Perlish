@@ -299,7 +299,7 @@ sub parse_multideref
  		my $actions = shift @items;
 
 		my $ref;
-		my $sv = shift(@items) or bailout $S, "unexpected empty multideref";
+		my $sv = shift(@items) or return undef;
 
 		while ( my $ptr = shift @items ) {
  			my $access  = $actions & B::MDEREF_ACTION_MASK();
@@ -444,6 +444,16 @@ sub get_value
 	} elsif ( $p{eval} && is_unop_aux($op, "multiconcat")) {
 		my @terms = parse_multiconcat($S, $op, eval => 1) or goto BAILOUT;
 		$val = join('', map { $_->{str} } @terms);
+	} elsif (is_op($op, "aelemfast_lex")) {
+		my $sv = $S->{padlist}->[1]->ARRAYelt($op->targ);
+		goto BAILOUT unless $sv;
+		$sv = $sv->object_2svref;
+		$val = $sv->[$op->private];
+	} elsif (is_svop($op, "aelemfast")) {
+		my $sv = $op->sv or goto BAILOUT;
+		$sv = $sv->object_2svref or goto BAILOUT;
+		$sv = ${$sv} or goto BAILOUT;
+		$val = $sv->[$op->private];
 	} else {
 	BAILOUT:
 		return () if $p{soft};
