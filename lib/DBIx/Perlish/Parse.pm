@@ -304,7 +304,7 @@ sub parse_multideref
 		while ( @items ) {
 			my $ptr = shift @items;
  			my $access  = $actions & B::MDEREF_ACTION_MASK();
-			if ( $access == B::MDEREF_reload ) { # XXX
+			if ( $access == B::MDEREF_reload() ) { # XXX
 				$actions = $sv;
 				next;
 			}
