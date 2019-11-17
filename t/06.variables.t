@@ -3,6 +3,7 @@ use strict;
 use DBIx::Perlish qw/:all/;
 use Test::More;
 use t::test_utils;
+use Config;
 
 my $vart = 'table1';
 my $self = { table => 'table1', id => 42,
@@ -274,6 +275,10 @@ test_select_sql {
 "select * from table1 t01 where t01.id = ?",
 [42];
 
+SKIP: {
+
+skip "https://github.com/Perl/perl5/issues/17301", 6 if $] > 5.025;
+
 test_select_sql {
 	my $t : table1;
 	$t->id == $self->{h1}{h2}{h3}{v};
@@ -287,6 +292,7 @@ test_select_sql {
 } "hashelement l4",
 "select * from table1 t01 where t01.id = ?",
 [42];
+}
 
 test_select_sql {
 	my $t : table = $self->{table};
