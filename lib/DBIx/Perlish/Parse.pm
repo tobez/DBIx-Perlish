@@ -431,11 +431,22 @@ sub get_value
 		}
 		$val = get_padlist_scalar($S, $op->targ);
 	} elsif (is_binop($op, "helem")) {
-		my $key = is_const($S, $op->last);
-		bailout $S, "only constant hash keys are understood" unless $key;
+		my @key = is_const($S, $op->last);
+		my $key = $key[0];
+		unless ( @key ) {
+			my $xop = $op->last;
+			if (is_op($xop, "padsv")) {
+				if (find_aliased_tab($S, $xop)) {
+					bailout $S, "cannot use a table variable as a value";
+				}
+				$key = get_padlist_scalar($S, $xop->targ);
+			} else {
+				bailout $S, "hash key not understood";
+			}
+		}
 		$op = $op->first;
-		my $vv;
 
+		my $vv;
 		if (is_op($op, "padhv")) {
 			$vv = get_padlist_scalar($S, $op->targ, "ref only");
 		} elsif (is_unop($op, "rv2hv")) {
@@ -448,12 +459,47 @@ sub get_value
 			} elsif (is_svop($op, "gv") || is_padop($op, "gv")) {
 				my $gv = get_gv($S, $op, bailout => 1);
 				$vv = $gv->HV->object_2svref;
-			} elsif (is_binop($op, "helem")) {
+			} elsif (is_binop($op, "helem") || is_binop($op, "aelem")) {
 				my ($nv, $ok) = get_value($S, $op, %p);
 				$vv = $nv if $ok;
 			}
 		}
 		$val = $vv->{$key};
+	} elsif (is_binop($op, "aelem")) {
+		my @key = is_const($S, $op->last);
+		my $key = $key[0];
+		unless ( @key ) {
+			my $xop = $op->last;
+			if (is_op($xop, "padsv")) {
+				if (find_aliased_tab($S, $xop)) {
+					bailout $S, "cannot use a table variable as a value";
+				}
+				$key = get_padlist_scalar($S, $xop->targ);
+			} else {
+				bailout $S, "array index not understood";
+			}
+		}
+		$op = $op->first;
+
+		my $vv;
+		if (is_op($op, "padav")) {
+			$vv = get_padlist_scalar($S, $op->targ, "ref only");
+		} elsif (is_unop($op, "rv2av")) {
+			$op = $op->first;
+			if (is_op($op, "padsv")) {
+				if (find_aliased_tab($S, $op)) {
+					bailout $S, "cannot use a table variable as a value";
+				}
+				$vv = get_padlist_scalar($S, $op->targ);
+			} elsif (is_svop($op, "gv") || is_padop($op, "gv")) {
+				my $gv = get_gv($S, $op, bailout => 1);
+				$vv = $gv->AV->object_2svref;
+			} elsif (is_binop($op, "helem") || is_binop($op, "aelem")) {
+				my ($nv, $ok) = get_value($S, $op, %p);
+				$vv = $nv if $ok;
+			}
+		}
+		$val = $vv->[$key];
 	} elsif (is_svop($op, "gvsv") || is_padop($op, "gvsv")) {
 		my $gv = get_gv($S, $op, bailout => 1);
 		$val = ${$gv->SV->object_2svref};
@@ -1445,6 +1491,7 @@ sub parse_expr
 		parse_assign($S, $op);
 		return ();
 	} else {
+	BAILOUT:
 		bailout $S, "unsupported binop " . $op->name;
 	}
 }
