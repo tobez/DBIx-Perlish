@@ -987,9 +987,14 @@ sub try_get_subselect
 	return if is_null($dbfetch);
 	return unless is_null($dbfetch->sibling);
 
-	return unless is_unop($rg, "refgen") || is_unop($rg, "srefgen");
-	$rg = $rg->first if is_unop($rg->first, "null");
-	my $codeop = $rg->first;
+	my $codeop;
+	if ( $] < 5.037 ) {
+		return unless is_unop($rg, "refgen") || is_unop($rg, "srefgen");
+		$rg = $rg->first if is_unop($rg->first, "null");
+		$codeop = $rg->first;
+	} else {
+		$codeop = $sub->first->sibling;
+	}
 	$codeop = $codeop->sibling if is_pushmark_or_padrange($codeop);
 	return unless is_svop($codeop, "anoncode");
 
