@@ -10,7 +10,7 @@ use B;
 use Carp;
 use Devel::Caller qw(caller_cv);
 
-sub _o($) { ref($_[0]) . ( $_[0]->can('name') ? ("." . $_[0]->name) : '' ) }
+sub _o($) { ref($_[0]) . sprintf (" (0x%x)", ${$_[0]}) . ( $_[0]->can('name') ? (" " . $_[0]->name) : '' ) }
 
 sub bailout
 {
@@ -1205,6 +1205,23 @@ sub callarg
 	return $op;
 }
 
+sub get_codeop
+{
+	my $op = shift;
+	my $codeop;
+	if ( $] < 5.037 ) {
+		my $rg = $op;
+		return unless is_unop($rg, "refgen") || is_unop($rg, "srefgen");
+		$rg = $rg->first if is_unop($rg->first, "null");
+		$codeop = $rg->first;
+	} else {
+		$codeop = $op;
+	}
+	$codeop = $codeop->sibling if is_pushmark_or_padrange($codeop);
+	return unless is_svop($codeop, "anoncode");
+	return $codeop;
+}
+
 sub try_funcall
 {
 	my ($S, $op, %p) = @_;
@@ -1226,17 +1243,7 @@ sub try_funcall
 		if ($func =~ /^(union|intersect|except)$/) {
 			return if $p{only_normal_funcs};
 			return unless @args == 1 || @args == 2;
-			my $codeop;
-			if ( $] < 5.037 ) {
-				my $rg = $args[0];
-				return unless is_unop($rg, "refgen") || is_unop($rg, "srefgen");
-				$rg = $rg->first if is_unop($rg->first, "null");
-				$codeop = $rg->first;
-			} else {
-				$codeop = $args[0];
-			}
-			$codeop = $codeop->sibling if is_pushmark_or_padrange($codeop);
-			return unless is_svop($codeop, "anoncode");
+			my $codeop = get_codeop($args[0]) or return;
 			return unless $S->{operation} eq "select";
 			my $cv = $codeop->sv;
 			if (!$$cv) {
@@ -1268,12 +1275,7 @@ sub try_funcall
 		if ($func eq 'subselect') {
 			return if $p{only_normal_funcs};
 			return unless @args == 1;
-			my $rg = $args[0];
-			return unless is_unop($rg, "refgen") || is_unop($rg, "srefgen");
-			$rg = $rg->first if is_unop($rg->first, "null");
-			my $codeop = $rg->first;
-			$codeop = $codeop->sibling if is_pushmark_or_padrange($codeop);
-			return unless is_svop($codeop, "anoncode");
+			my $codeop = get_codeop($args[0]) or return;
 			my $sql = handle_subselect($S, $codeop, returns_dont_care => 1);
 			return "exists ($sql)";
 		} elsif ($func eq "sql") {
@@ -2088,6 +2090,8 @@ sub parse_table_label
 	my $varn;
 	if ( $] >= 5.037 ) {
 		$varn = padname($S, $op, no_fakes => 1);
+		bailout $S, "label ", $lop->label, " must be followed by a lexical variable declaration"
+			unless defined $varn;
 	} else {
 		bailout $S, "label ", $lop->label, " must be followed by a lexical variable declaration"
 			unless is_op($op->last, "padsv") && ($varn = padname($S, $op->last, no_fakes => 1));
